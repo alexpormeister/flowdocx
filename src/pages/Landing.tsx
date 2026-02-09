@@ -4,17 +4,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Workflow,
-  BarChart3,
-  FileText,
-  Globe,
-  CheckCircle,
-  ArrowRight,
-  Zap,
-  Shield,
-  Users,
-} from "lucide-react";
+import { Workflow, BarChart3, FileText, Globe, CheckCircle, ArrowRight, Zap, Shield, Users } from "lucide-react";
 
 export default function Landing() {
   const { t } = useLanguage();
@@ -42,11 +32,7 @@ export default function Landing() {
       name: t("landing.pricingFree"),
       price: "€0",
       period: t("landing.perMonth"),
-      features: [
-        t("landing.freeFeature1"),
-        t("landing.freeFeature2"),
-        t("landing.freeFeature3"),
-      ],
+      features: [t("landing.freeFeature1"), t("landing.freeFeature2"), t("landing.freeFeature3")],
       cta: t("landing.getStarted"),
       highlighted: false,
     },
@@ -85,7 +71,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Workflow className="w-7 h-7 text-accent" />
-            <span className="text-xl font-semibold">BPMN Modeler</span>
+            <span className="text-xl font-semibold">FlowDocx</span>
           </div>
           <div className="flex items-center gap-4">
             <LanguageToggle />
@@ -103,9 +89,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 md:py-32">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            {t("landing.heroTitle")}
-          </h1>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">{t("landing.heroTitle")}</h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             {t("landing.heroSubtitle")}
           </p>
@@ -126,12 +110,8 @@ export default function Landing() {
       {/* Features Section */}
       <section className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            {t("landing.featuresTitle")}
-          </h2>
-          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            {t("landing.featuresSubtitle")}
-          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">{t("landing.featuresTitle")}</h2>
+          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">{t("landing.featuresSubtitle")}</p>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {features.map((feature, idx) => (
               <Card key={idx} className="border-0 shadow-lg bg-card">
@@ -155,9 +135,7 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                {t("landing.benefitsTitle")}
-              </h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">{t("landing.benefitsTitle")}</h2>
               <div className="space-y-4">
                 {[
                   { icon: Zap, text: t("landing.benefit1") },
@@ -185,21 +163,13 @@ export default function Landing() {
       {/* Pricing Section */}
       <section className="bg-muted/50 py-20">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
-            {t("landing.pricingTitle")}
-          </h2>
-          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            {t("landing.pricingSubtitle")}
-          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">{t("landing.pricingTitle")}</h2>
+          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">{t("landing.pricingSubtitle")}</p>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {pricingPlans.map((plan, idx) => (
               <Card
                 key={idx}
-                className={`relative ${
-                  plan.highlighted
-                    ? "border-accent shadow-lg scale-105"
-                    : "border-border"
-                }`}
+                className={`relative ${plan.highlighted ? "border-accent shadow-lg scale-105" : "border-border"}`}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -212,9 +182,7 @@ export default function Landing() {
                   <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-4xl font-bold">{plan.price}</span>
-                    {plan.period && (
-                      <span className="text-muted-foreground">/{plan.period}</span>
-                    )}
+                    {plan.period && <span className="text-muted-foreground">/{plan.period}</span>}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -227,10 +195,7 @@ export default function Landing() {
                     ))}
                   </ul>
                   <Link to="/auth" className="block">
-                    <Button
-                      className="w-full"
-                      variant={plan.highlighted ? "default" : "outline"}
-                    >
+                    <Button className="w-full" variant={plan.highlighted ? "default" : "outline"}>
                       {plan.cta}
                     </Button>
                   </Link>
@@ -245,18 +210,10 @@ export default function Landing() {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-12 text-primary-foreground">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {t("landing.ctaTitle")}
-            </h2>
-            <p className="text-lg opacity-90 mb-8">
-              {t("landing.ctaSubtitle")}
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("landing.ctaTitle")}</h2>
+            <p className="text-lg opacity-90 mb-8">{t("landing.ctaSubtitle")}</p>
             <Link to="/auth">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="gap-2"
-              >
+              <Button size="lg" variant="secondary" className="gap-2">
                 {t("landing.getStarted")}
                 <ArrowRight className="w-4 h-4" />
               </Button>
@@ -271,11 +228,9 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Workflow className="w-5 h-5 text-accent" />
-              <span className="font-medium">BPMN Modeler</span>
+              <span className="font-medium">FlowDocx</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © 2026 BPMN Modeler. {t("landing.allRightsReserved")}
-            </p>
+            <p className="text-sm text-muted-foreground">© 2026 FlowDocx. {t("landing.allRightsReserved")}</p>
           </div>
         </div>
       </footer>
