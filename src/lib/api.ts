@@ -24,6 +24,7 @@ export interface Folder {
   name: string;
   color: string;
   parent_id: string | null;
+  system_tags: string[];
   created_at: string;
   updated_at: string;
 }
@@ -157,10 +158,13 @@ export async function getFolders(): Promise<Folder[]> {
     .order("name", { ascending: true });
   
   if (error) throw error;
-  return data || [];
+  return (data || []).map(f => ({
+    ...f,
+    system_tags: f.system_tags || [],
+  }));
 }
 
-export async function createFolder(name: string, color?: string, parentId?: string | null): Promise<Folder> {
+export async function createFolder(name: string, color?: string, parentId?: string | null, systemTags?: string[]): Promise<Folder> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -171,15 +175,19 @@ export async function createFolder(name: string, color?: string, parentId?: stri
       name,
       color: color || "#0891b2",
       parent_id: parentId || null,
+      system_tags: systemTags || [],
     })
     .select()
     .single();
   
   if (error) throw error;
-  return data;
+  return {
+    ...data,
+    system_tags: data.system_tags || [],
+  };
 }
 
-export async function updateFolder(id: string, updates: { name?: string; color?: string }): Promise<Folder> {
+export async function updateFolder(id: string, updates: { name?: string; color?: string; system_tags?: string[] }): Promise<Folder> {
   const { data, error } = await supabase
     .from("folders")
     .update(updates)
@@ -188,7 +196,10 @@ export async function updateFolder(id: string, updates: { name?: string; color?:
     .single();
   
   if (error) throw error;
-  return data;
+  return {
+    ...data,
+    system_tags: data.system_tags || [],
+  };
 }
 
 export async function deleteFolder(id: string): Promise<void> {

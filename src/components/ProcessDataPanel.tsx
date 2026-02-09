@@ -17,12 +17,12 @@ interface ProcessDataPanelProps {
   steps: ProcessStep[];
   onStepsChange: (steps: ProcessStep[]) => void;
   selectedElementId?: string | null;
+  availableTags?: string[];
 }
 
-const SYSTEM_OPTIONS = ["iCabbi", "Outlook", "Netvisor", "SAP", "Salesforce", "Jira", "Slack", "Custom"];
-
-export default function ProcessDataPanel({ steps, onStepsChange, selectedElementId }: ProcessDataPanelProps) {
+export default function ProcessDataPanel({ steps, onStepsChange, selectedElementId, availableTags = [] }: ProcessDataPanelProps) {
   const [newSystemTag, setNewSystemTag] = useState<{ stepId: string; value: string } | null>(null);
+  const [customTagInput, setCustomTagInput] = useState("");
 
   const addStep = () => {
     const newStep: ProcessStep = {
@@ -56,6 +56,13 @@ export default function ProcessDataPanel({ steps, onStepsChange, selectedElement
     const step = steps.find(s => s.id === stepId);
     if (step) {
       updateStep(stepId, "system", step.system.filter(t => t !== tag));
+    }
+  };
+
+  const handleCustomTagAdd = (stepId: string) => {
+    if (customTagInput.trim()) {
+      addSystemTag(stepId, customTagInput.trim());
+      setCustomTagInput("");
     }
   };
 
@@ -138,20 +145,55 @@ export default function ProcessDataPanel({ steps, onStepsChange, selectedElement
               ))}
 
               {newSystemTag?.stepId === step.id ? (
-                <div className="flex gap-1">
-                  <select
-                    className="h-6 text-xs rounded border border-border bg-background px-1 text-foreground"
-                    onChange={(e) => {
-                      if (e.target.value) addSystemTag(step.id, e.target.value);
-                    }}
-                    autoFocus
-                    onBlur={() => setNewSystemTag(null)}
-                  >
-                    <option value="">Select...</option>
-                    {SYSTEM_OPTIONS.filter(o => !step.system.includes(o)).map(o => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
+                <div className="flex gap-1 items-center">
+                  {availableTags.length > 0 ? (
+                    <select
+                      className="h-6 text-xs rounded border border-border bg-background px-1 text-foreground"
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          // Show custom input
+                        } else if (e.target.value) {
+                          addSystemTag(step.id, e.target.value);
+                        }
+                      }}
+                      autoFocus
+                      onBlur={() => {
+                        if (!customTagInput) setNewSystemTag(null);
+                      }}
+                    >
+                      <option value="">Select...</option>
+                      {availableTags.filter(o => !step.system.includes(o)).map(o => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                      <option value="__custom__">+ Custom...</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-1">
+                      <Input
+                        className="h-6 text-xs w-24"
+                        placeholder="Tag name..."
+                        value={customTagInput}
+                        onChange={(e) => setCustomTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleCustomTagAdd(step.id);
+                          } else if (e.key === "Escape") {
+                            setNewSystemTag(null);
+                            setCustomTagInput("");
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => handleCustomTagAdd(step.id)}
+                        disabled={!customTagInput.trim()}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button

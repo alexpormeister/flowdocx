@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      folder_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          folder_id: string
+          id: string
+          permission: string
+          shared_with_email: string
+          shared_with_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          folder_id: string
+          id?: string
+          permission: string
+          shared_with_email: string
+          shared_with_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          folder_id?: string
+          id?: string
+          permission?: string
+          shared_with_email?: string
+          shared_with_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folder_shares_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folders: {
         Row: {
           color: string | null
@@ -21,6 +59,7 @@ export type Database = {
           id: string
           name: string
           parent_id: string | null
+          system_tags: string[] | null
           updated_at: string
           user_id: string
         }
@@ -30,6 +69,7 @@ export type Database = {
           id?: string
           name: string
           parent_id?: string | null
+          system_tags?: string[] | null
           updated_at?: string
           user_id: string
         }
@@ -39,6 +79,7 @@ export type Database = {
           id?: string
           name?: string
           parent_id?: string | null
+          system_tags?: string[] | null
           updated_at?: string
           user_id?: string
         }
@@ -84,6 +125,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      project_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          permission: string
+          project_id: string
+          shared_with_email: string
+          shared_with_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          permission: string
+          project_id: string
+          shared_with_email: string
+          shared_with_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          permission?: string
+          project_id?: string
+          shared_with_email?: string
+          shared_with_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_shares_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {
@@ -146,7 +225,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_folder_system_tags: {
+        Args: { _folder_id: string }
+        Returns: string[]
+      }
+      has_folder_access: {
+        Args: { _folder_id: string; _permission?: string; _user_id: string }
+        Returns: boolean
+      }
+      has_project_access: {
+        Args: { _permission?: string; _project_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getProject, updateProject } from "@/lib/api";
+import { getProject, updateProject, getFolders, type Folder } from "@/lib/api";
 import { generateSOPDocument, downloadSOP } from "@/lib/sopGenerator";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,27 @@ export default function Editor() {
     queryFn: () => getProject(id!),
     enabled: !!id && !!user,
   });
+
+  const { data: folders = [] } = useQuery({
+    queryKey: ["folders"],
+    queryFn: getFolders,
+    enabled: !!user,
+  });
+
+  // Get available system tags from the project's folder hierarchy
+  const availableTags = useMemo(() => {
+    if (!project?.folder_id || folders.length === 0) return [];
+    
+    const collectTags = (folderId: string | null): string[] => {
+      if (!folderId) return [];
+      const folder = folders.find(f => f.id === folderId);
+      if (!folder) return [];
+      const parentTags = collectTags(folder.parent_id);
+      return [...new Set([...parentTags, ...(folder.system_tags || [])])];
+    };
+    
+    return collectTags(project.folder_id);
+  }, [project?.folder_id, folders]);
 
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof updateProject>[1]) => updateProject(id!, updates),
@@ -356,6 +377,7 @@ export default function Editor() {
                   steps={steps}
                   onStepsChange={handleStepsChange}
                   selectedElementId={selectedElement?.id}
+                  availableTags={availableTags}
                 />
               </TabsContent>
               <TabsContent value="analysis" className="flex-1 m-0 overflow-hidden">
