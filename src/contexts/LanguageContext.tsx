@@ -214,6 +214,19 @@ const translations: Translations = {
   "landing.ctaTitle": { en: "Ready to Transform Your Processes?", fi: "Valmis muuttamaan prosessisi?" },
   "landing.ctaSubtitle": { en: "Join thousands of professionals who trust us for their process documentation.", fi: "Liity tuhansien ammattilaisten joukkoon, jotka luottavat meihin prosessidokumentaatiossaan." },
   "landing.allRightsReserved": { en: "All rights reserved.", fi: "Kaikki oikeudet pidätetään." },
+
+  // Background settings
+  "background.title": { en: "Dashboard Background", fi: "Työpöydän tausta" },
+  "background.uploadCustom": { en: "Upload custom image", fi: "Lataa mukautettu kuva" },
+  "background.uploadImage": { en: "Upload Image", fi: "Lataa kuva" },
+  "background.current": { en: "Current background", fi: "Nykyinen tausta" },
+  "background.presets": { en: "Preset backgrounds", fi: "Valmiit taustat" },
+  "background.invalidType": { en: "Please upload an image file", fi: "Lataa kuvatiedosto" },
+  "background.tooLarge": { en: "Image must be less than 5MB", fi: "Kuvan on oltava alle 5MB" },
+  "background.uploaded": { en: "Background uploaded", fi: "Tausta ladattu" },
+  "background.uploadError": { en: "Failed to upload background", fi: "Taustan lataus epäonnistui" },
+  "background.changed": { en: "Background changed", fi: "Tausta vaihdettu" },
+  "background.removed": { en: "Background removed", fi: "Tausta poistettu" },
 };
 interface LanguageContextType {
   language: Language;

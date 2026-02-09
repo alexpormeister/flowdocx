@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, updateFolder, type Project, type Folder } from "@/lib/api";
+import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, updateFolder, getProfile, updateProfile, type Project, type Folder, type Profile } from "@/lib/api";
 import { getFolderShares, createFolderShare, deleteFolderShare, getProjectShares, createProjectShare, deleteProjectShare } from "@/lib/sharingApi";
 import {
   getOrganizations,
@@ -41,6 +41,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
+import { BackgroundSettings } from "@/components/dashboard/BackgroundSettings";
 import {
   Workflow,
   Plus,
@@ -116,6 +117,20 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  // Profile for background settings
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+    enabled: !!user,
+  });
+
+  const updateBackgroundMutation = useMutation({
+    mutationFn: (backgroundUrl: string | null) => 
+      updateProfile({ dashboard_background_url: backgroundUrl }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
   // Filter folders and projects by organization
   const filteredFolders = useMemo(() => {
     if (!selectedOrgId) {
@@ -442,6 +457,23 @@ export default function Dashboard() {
     setShowRootProjects(false);
   }, [selectedOrgId]);
 
+  // Background style - must be before early return
+  const backgroundStyle = useMemo(() => {
+    const bgUrl = profile?.dashboard_background_url;
+    if (!bgUrl) return {};
+    
+    // Check if it's a gradient or an image URL
+    if (bgUrl.startsWith("linear-gradient")) {
+      return { background: bgUrl };
+    }
+    return {
+      backgroundImage: `url(${bgUrl})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundAttachment: "fixed",
+    };
+  }, [profile?.dashboard_background_url]);
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -478,7 +510,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={backgroundStyle}>
       {/* Header */}
       <header className="h-14 border-b bg-card flex items-center justify-between px-3 md:px-6">
         <div className="flex items-center gap-2 md:gap-3">
@@ -535,6 +567,16 @@ export default function Dashboard() {
               onDeletePosition={async (positionId) => {
                 await deletePositionMutation.mutateAsync(positionId);
               }}
+            />
+          )}
+          {/* Background Settings */}
+          {user && (
+            <BackgroundSettings
+              currentBackground={profile?.dashboard_background_url || null}
+              onBackgroundChange={async (url) => {
+                await updateBackgroundMutation.mutateAsync(url);
+              }}
+              userId={user.id}
             />
           )}
           <div className="hidden sm:flex items-center gap-2">
