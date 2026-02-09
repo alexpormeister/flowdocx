@@ -275,6 +275,7 @@ export type Database = {
           address: string | null
           avatar_url: string | null
           created_at: string
+          dashboard_background_url: string | null
           display_name: string | null
           id: string
           phone_number: string | null
@@ -285,6 +286,7 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           created_at?: string
+          dashboard_background_url?: string | null
           display_name?: string | null
           id?: string
           phone_number?: string | null
@@ -295,6 +297,7 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           created_at?: string
+          dashboard_background_url?: string | null
           display_name?: string | null
           id?: string
           phone_number?: string | null

@@ -40,6 +40,7 @@ export interface Profile {
   avatar_url: string | null;
   phone_number: string | null;
   address: string | null;
+  dashboard_background_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -237,6 +238,7 @@ export async function updateProfile(updates: {
   avatar_url?: string;
   phone_number?: string;
   address?: string;
+  dashboard_background_url?: string | null;
 }): Promise<Profile> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
