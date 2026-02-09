@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,19 +21,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole } from "@/lib/organizationApi";
+import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition } from "@/lib/organizationApi";
 
 interface OrganizationSettingsProps {
   organization: Organization;
   members: OrganizationMember[];
   tags: OrganizationSystemTag[];
+  positions: OrganizationPosition[];
   currentUserRole: OrgRole | null;
-  onUpdateOrg: (updates: { name?: string; business_id?: string }) => Promise<void>;
-  onInviteMember: (email: string, role: OrgRole) => Promise<void>;
+  onUpdateOrg: (updates: { name?: string; notes?: string }) => Promise<void>;
+  onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
   onUpdateMemberRole: (memberId: string, role: OrgRole) => Promise<void>;
+  onUpdateMemberDetails: (memberId: string, updates: { title?: string; position_id?: string | null }) => Promise<void>;
   onRemoveMember: (memberId: string) => Promise<void>;
   onAddTag: (tagName: string) => Promise<void>;
   onRemoveTag: (tagId: string) => Promise<void>;
+  onAddPosition: (name: string, parentId?: string) => Promise<void>;
+  onUpdatePosition: (positionId: string, updates: { name?: string; parent_position_id?: string | null }) => Promise<void>;
+  onDeletePosition: (positionId: string) => Promise<void>;
 }
 
 const roleIcons: Record<OrgRole, typeof Crown> = {
@@ -45,21 +52,31 @@ export function OrganizationSettings({
   organization,
   members,
   tags,
+  positions,
   currentUserRole,
   onUpdateOrg,
   onInviteMember,
   onUpdateMemberRole,
+  onUpdateMemberDetails,
   onRemoveMember,
   onAddTag,
   onRemoveTag,
+  onAddPosition,
+  onUpdatePosition,
+  onDeletePosition,
 }: OrganizationSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [orgName, setOrgName] = useState(organization.name);
-  const [businessId, setBusinessId] = useState(organization.business_id || "");
+  const [orgNotes, setOrgNotes] = useState(organization.notes || "");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("viewer");
+  const [inviteTitle, setInviteTitle] = useState("");
+  const [invitePositionId, setInvitePositionId] = useState("");
+  const [sendEmailInvite, setSendEmailInvite] = useState(false);
   const [newTag, setNewTag] = useState("");
+  const [newPositionName, setNewPositionName] = useState("");
+  const [newPositionParentId, setNewPositionParentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
@@ -67,7 +84,7 @@ export function OrganizationSettings({
   const handleSaveProfile = async () => {
     setIsSubmitting(true);
     try {
-      await onUpdateOrg({ name: orgName, business_id: businessId || undefined });
+      await onUpdateOrg({ name: orgName, notes: orgNotes || undefined });
     } finally {
       setIsSubmitting(false);
     }
@@ -77,8 +94,15 @@ export function OrganizationSettings({
     if (!inviteEmail.trim()) return;
     setIsSubmitting(true);
     try {
-      await onInviteMember(inviteEmail.trim(), inviteRole);
+      await onInviteMember(inviteEmail.trim(), inviteRole, {
+        title: inviteTitle.trim() || undefined,
+        positionId: invitePositionId || undefined,
+        sendEmailInvite,
+      });
       setInviteEmail("");
+      setInviteTitle("");
+      setInvitePositionId("");
+      setSendEmailInvite(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -95,6 +119,57 @@ export function OrganizationSettings({
     }
   };
 
+  const handleAddPosition = async () => {
+    if (!newPositionName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onAddPosition(newPositionName.trim(), newPositionParentId || undefined);
+      setNewPositionName("");
+      setNewPositionParentId("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const buildPositionTree = (parentId: string | null = null): OrganizationPosition[] => {
+    return positions
+      .filter(p => p.parent_position_id === parentId)
+      .sort((a, b) => a.order_index - b.order_index);
+  };
+
+  const renderPositionNode = (position: OrganizationPosition, depth: number = 0) => {
+    const children = buildPositionTree(position.id);
+    const membersInPosition = members.filter(m => m.position_id === position.id);
+    
+    return (
+      <div key={position.id} className="space-y-1">
+        <div 
+          className="flex items-center justify-between p-2 rounded-md bg-muted hover:bg-muted/80"
+          style={{ marginLeft: `${depth * 16}px` }}
+        >
+          <div className="flex items-center gap-2">
+            <Network className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{position.name}</span>
+            {membersInPosition.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({membersInPosition.map(m => m.email).join(", ")})
+              </span>
+            )}
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => onDeletePosition(position.id)}
+              className="text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        {children.map(child => renderPositionNode(child, depth + 1))}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -102,7 +177,7 @@ export function OrganizationSettings({
           <Settings className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
@@ -111,18 +186,26 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profile">
-              <Building2 className="w-4 h-4 mr-2" />
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="profile" className="text-xs">
+              <Building2 className="w-4 h-4 mr-1" />
               {t("org.profile")}
             </TabsTrigger>
-            <TabsTrigger value="members">
-              <Users className="w-4 h-4 mr-2" />
+            <TabsTrigger value="members" className="text-xs">
+              <Users className="w-4 h-4 mr-1" />
               {t("org.members")}
             </TabsTrigger>
-            <TabsTrigger value="tags">
-              <Tags className="w-4 h-4 mr-2" />
+            <TabsTrigger value="structure" className="text-xs">
+              <Network className="w-4 h-4 mr-1" />
+              {t("org.structure")}
+            </TabsTrigger>
+            <TabsTrigger value="tags" className="text-xs">
+              <Tags className="w-4 h-4 mr-1" />
               {t("org.globalTags")}
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="text-xs">
+              <FileText className="w-4 h-4 mr-1" />
+              {t("org.notes")}
             </TabsTrigger>
           </TabsList>
 
@@ -133,14 +216,6 @@ export function OrganizationSettings({
               <Input
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                disabled={!isAdmin}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("org.businessId")}</Label>
-              <Input
-                value={businessId}
-                onChange={(e) => setBusinessId(e.target.value)}
                 disabled={!isAdmin}
               />
             </div>
@@ -175,6 +250,38 @@ export function OrganizationSettings({
                     </SelectContent>
                   </Select>
                 </div>
+                
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t("org.memberTitle")}
+                    value={inviteTitle}
+                    onChange={(e) => setInviteTitle(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Select value={invitePositionId} onValueChange={setInvitePositionId}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder={t("org.assignPosition")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">{t("org.noParent")}</SelectItem>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="sendEmailInvite"
+                    checked={sendEmailInvite}
+                    onCheckedChange={(checked) => setSendEmailInvite(checked === true)}
+                  />
+                  <label htmlFor="sendEmailInvite" className="text-sm">
+                    {t("org.sendEmailInvite")}
+                  </label>
+                </div>
+
                 <Button onClick={handleInvite} disabled={!inviteEmail.trim() || isSubmitting} className="w-full">
                   <Mail className="w-4 h-4 mr-2" />
                   {t("share.sendInvite")}
@@ -185,6 +292,7 @@ export function OrganizationSettings({
             <div className="space-y-2 max-h-64 overflow-auto">
               {members.map((member) => {
                 const RoleIcon = roleIcons[member.role];
+                const position = positions.find(p => p.id === member.position_id);
                 return (
                   <div
                     key={member.id}
@@ -196,6 +304,8 @@ export function OrganizationSettings({
                         <p className="text-sm font-medium">{member.email}</p>
                         <p className="text-xs text-muted-foreground">
                           {t(`org.role${member.role.charAt(0).toUpperCase() + member.role.slice(1)}`)}
+                          {member.title && ` • ${member.title}`}
+                          {position && ` • ${position.name}`}
                           {!member.accepted_at && ` (${t("org.pending")})`}
                         </p>
                       </div>
@@ -226,6 +336,47 @@ export function OrganizationSettings({
                   </div>
                 );
               })}
+            </div>
+          </TabsContent>
+
+          {/* Structure Tab */}
+          <TabsContent value="structure" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t("org.positions")}
+            </p>
+
+            {isAdmin && (
+              <div className="flex gap-2 p-3 rounded-lg border bg-muted/30">
+                <Input
+                  placeholder={t("org.positionName")}
+                  value={newPositionName}
+                  onChange={(e) => setNewPositionName(e.target.value)}
+                  className="flex-1"
+                />
+                <Select value={newPositionParentId} onValueChange={setNewPositionParentId}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder={t("org.parentPosition")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t("org.noParent")}</SelectItem>
+                    {positions.map((pos) => (
+                      <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAddPosition} disabled={!newPositionName.trim() || isSubmitting}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {buildPositionTree(null).map(position => renderPositionNode(position))}
+              {positions.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t("folder.noTags")}
+                </p>
+              )}
             </div>
           </TabsContent>
 
@@ -270,6 +421,23 @@ export function OrganizationSettings({
                 <p className="text-sm text-muted-foreground">{t("folder.noTags")}</p>
               )}
             </div>
+          </TabsContent>
+
+          {/* Notes Tab */}
+          <TabsContent value="notes" className="space-y-4">
+            <Textarea
+              placeholder={t("org.notesPlaceholder")}
+              value={orgNotes}
+              onChange={(e) => setOrgNotes(e.target.value)}
+              disabled={!isAdmin}
+              rows={8}
+              className="resize-none"
+            />
+            {isAdmin && (
+              <Button onClick={handleSaveProfile} disabled={isSubmitting}>
+                {t("common.save")}
+              </Button>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

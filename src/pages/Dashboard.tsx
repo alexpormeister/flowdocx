@@ -10,13 +10,18 @@ import {
   createOrganization,
   getOrganizationMembers,
   getOrganizationTags,
+  getOrganizationPositions,
   inviteOrganizationMember,
   updateMemberRole,
+  updateMemberDetails,
   removeOrganizationMember,
   addOrganizationTag,
   removeOrganizationTag,
   updateOrganization,
   getCurrentUserMembership,
+  createOrganizationPosition,
+  updateOrganizationPosition,
+  deleteOrganizationPosition,
   type Organization,
   type OrgRole,
 } from "@/lib/organizationApi";
@@ -85,6 +90,12 @@ export default function Dashboard() {
   const { data: currentMembership } = useQuery({
     queryKey: ["org-membership", selectedOrgId],
     queryFn: () => selectedOrgId ? getCurrentUserMembership(selectedOrgId) : Promise.resolve(null),
+    enabled: !!user && !!selectedOrgId,
+  });
+
+  const { data: orgPositions = [] } = useQuery({
+    queryKey: ["org-positions", selectedOrgId],
+    queryFn: () => selectedOrgId ? getOrganizationPositions(selectedOrgId) : Promise.resolve([]),
     enabled: !!user && !!selectedOrgId,
   });
 
@@ -220,11 +231,47 @@ export default function Dashboard() {
   });
 
   const inviteMemberMutation = useMutation({
-    mutationFn: ({ orgId, email, role }: { orgId: string; email: string; role: OrgRole }) =>
-      inviteOrganizationMember(orgId, email, role),
+    mutationFn: ({ orgId, email, role, options }: { 
+      orgId: string; 
+      email: string; 
+      role: OrgRole;
+      options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }
+    }) =>
+      inviteOrganizationMember(orgId, email, role, options),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
       toast.success(t("share.shareCreated"));
+    },
+  });
+
+  const updateMemberDetailsMutation = useMutation({
+    mutationFn: ({ memberId, updates }: { memberId: string; updates: { title?: string; position_id?: string | null } }) =>
+      updateMemberDetails(memberId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
+    },
+  });
+
+  const addPositionMutation = useMutation({
+    mutationFn: ({ orgId, name, parentId }: { orgId: string; name: string; parentId?: string }) =>
+      createOrganizationPosition(orgId, name, parentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-positions", selectedOrgId] });
+    },
+  });
+
+  const updatePositionMutation = useMutation({
+    mutationFn: ({ positionId, updates }: { positionId: string; updates: { name?: string; parent_position_id?: string | null } }) =>
+      updateOrganizationPosition(positionId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-positions", selectedOrgId] });
+    },
+  });
+
+  const deletePositionMutation = useMutation({
+    mutationFn: deleteOrganizationPosition,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-positions", selectedOrgId] });
     },
   });
 
@@ -359,15 +406,19 @@ export default function Dashboard() {
               organization={selectedOrg}
               members={orgMembers}
               tags={orgTags}
+              positions={orgPositions}
               currentUserRole={currentMembership?.role || null}
               onUpdateOrg={async (updates) => {
                 await updateOrgMutation.mutateAsync({ id: selectedOrg.id, updates });
               }}
-              onInviteMember={async (email, role) => {
-                await inviteMemberMutation.mutateAsync({ orgId: selectedOrg.id, email, role });
+              onInviteMember={async (email, role, options) => {
+                await inviteMemberMutation.mutateAsync({ orgId: selectedOrg.id, email, role, options });
               }}
               onUpdateMemberRole={async (memberId, role) => {
                 await updateMemberMutation.mutateAsync({ memberId, role });
+              }}
+              onUpdateMemberDetails={async (memberId, updates) => {
+                await updateMemberDetailsMutation.mutateAsync({ memberId, updates });
               }}
               onRemoveMember={async (memberId) => {
                 await removeMemberMutation.mutateAsync(memberId);
@@ -377,6 +428,15 @@ export default function Dashboard() {
               }}
               onRemoveTag={async (tagId) => {
                 await removeOrgTagMutation.mutateAsync(tagId);
+              }}
+              onAddPosition={async (name, parentId) => {
+                await addPositionMutation.mutateAsync({ orgId: selectedOrg.id, name, parentId });
+              }}
+              onUpdatePosition={async (positionId, updates) => {
+                await updatePositionMutation.mutateAsync({ positionId, updates });
+              }}
+              onDeletePosition={async (positionId) => {
+                await deletePositionMutation.mutateAsync(positionId);
               }}
             />
           )}

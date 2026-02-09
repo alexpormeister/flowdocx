@@ -47,15 +47,13 @@ export function OrganizationSelector({
   const [open, setOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
-  const [newOrgBusinessId, setNewOrgBusinessId] = useState("");
 
   const selectedOrg = organizations.find((o) => o.id === selectedOrgId);
 
   const handleCreate = async () => {
     if (!newOrgName.trim()) return;
-    await onCreateOrg(newOrgName.trim(), newOrgBusinessId.trim() || undefined);
+    await onCreateOrg(newOrgName.trim());
     setNewOrgName("");
-    setNewOrgBusinessId("");
     setCreateDialogOpen(false);
   };
 
@@ -148,14 +146,6 @@ export function OrganizationSelector({
                 placeholder={t("org.namePlaceholder")}
                 value={newOrgName}
                 onChange={(e) => setNewOrgName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("org.businessId")}</Label>
-              <Input
-                placeholder={t("org.businessIdPlaceholder")}
-                value={newOrgBusinessId}
-                onChange={(e) => setNewOrgBusinessId(e.target.value)}
               />
             </div>
             <Button

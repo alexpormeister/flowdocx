@@ -7,6 +7,17 @@ export interface Organization {
   name: string;
   business_id: string | null;
   logo_url: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationPosition {
+  id: string;
+  organization_id: string;
+  name: string;
+  parent_position_id: string | null;
+  order_index: number;
   created_at: string;
   updated_at: string;
 }
@@ -14,11 +25,14 @@ export interface Organization {
 export interface OrganizationMember {
   id: string;
   organization_id: string;
-  user_id: string;
+  user_id: string | null;
   email: string;
   role: OrgRole;
   invited_by: string | null;
   accepted_at: string | null;
+  position_id: string | null;
+  title: string | null;
+  send_email_invite: boolean;
   created_at: string;
 }
 
@@ -112,7 +126,8 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
 export async function inviteOrganizationMember(
   organizationId: string,
   email: string,
-  role: OrgRole
+  role: OrgRole,
+  options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }
 ): Promise<OrganizationMember> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -121,10 +136,13 @@ export async function inviteOrganizationMember(
     .from("organization_members")
     .insert({
       organization_id: organizationId,
-      user_id: user.id, // temporary, will be updated when user accepts
+      user_id: null, // null for pending invites
       email,
       role,
       invited_by: user.id,
+      title: options?.title || null,
+      position_id: options?.positionId || null,
+      send_email_invite: options?.sendEmailInvite ?? false,
     })
     .select()
     .single();
@@ -212,6 +230,91 @@ export async function getCurrentUserMembership(
     .eq("organization_id", organizationId)
     .eq("user_id", user.id)
     .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+// Organization Positions
+export async function getOrganizationPositions(organizationId: string): Promise<OrganizationPosition[]> {
+  const { data, error } = await supabase
+    .from("organization_positions")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("order_index", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createOrganizationPosition(
+  organizationId: string,
+  name: string,
+  parentPositionId?: string
+): Promise<OrganizationPosition> {
+  const { data, error } = await supabase
+    .from("organization_positions")
+    .insert({
+      organization_id: organizationId,
+      name,
+      parent_position_id: parentPositionId || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOrganizationPosition(
+  positionId: string,
+  updates: { name?: string; parent_position_id?: string | null; order_index?: number }
+): Promise<OrganizationPosition> {
+  const { data, error } = await supabase
+    .from("organization_positions")
+    .update(updates)
+    .eq("id", positionId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteOrganizationPosition(positionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("organization_positions")
+    .delete()
+    .eq("id", positionId);
+
+  if (error) throw error;
+}
+
+export async function updateMemberDetails(
+  memberId: string,
+  updates: { title?: string; position_id?: string | null }
+): Promise<OrganizationMember> {
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update(updates)
+    .eq("id", memberId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOrganizationNotes(
+  organizationId: string,
+  notes: string
+): Promise<Organization> {
+  const { data, error } = await supabase
+    .from("organizations")
+    .update({ notes })
+    .eq("id", organizationId)
+    .select()
+    .single();
 
   if (error) throw error;
   return data;
