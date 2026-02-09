@@ -6,8 +6,10 @@ export interface Project {
   id: string;
   user_id: string;
   folder_id: string | null;
+  organization_id: string | null;
   name: string;
   description: string | null;
+  notes: string | null;
   bpmn_xml: string;
   process_steps: ProcessStep[];
   system_tags: string[];
@@ -21,8 +23,10 @@ export interface Project {
 export interface Folder {
   id: string;
   user_id: string;
+  organization_id: string | null;
   name: string;
   color: string;
+  notes: string | null;
   parent_id: string | null;
   system_tags: string[];
   created_at: string;
@@ -86,6 +90,7 @@ export async function createProject(project: {
   system_tags?: string[];
   folder_id?: string | null;
   description?: string;
+  organization_id?: string | null;
 }): Promise<Project> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -100,6 +105,7 @@ export async function createProject(project: {
       system_tags: project.system_tags || [],
       folder_id: project.folder_id || null,
       description: project.description || null,
+      organization_id: project.organization_id || null,
     })
     .select()
     .single();
@@ -164,7 +170,7 @@ export async function getFolders(): Promise<Folder[]> {
   }));
 }
 
-export async function createFolder(name: string, color?: string, parentId?: string | null, systemTags?: string[]): Promise<Folder> {
+export async function createFolder(name: string, color?: string, parentId?: string | null, organizationId?: string): Promise<Folder> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -175,7 +181,7 @@ export async function createFolder(name: string, color?: string, parentId?: stri
       name,
       color: color || "#0891b2",
       parent_id: parentId || null,
-      system_tags: systemTags || [],
+      organization_id: organizationId || null,
     })
     .select()
     .single();

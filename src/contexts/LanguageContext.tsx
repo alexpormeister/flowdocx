@@ -55,7 +55,8 @@ const translations: Translations = {
   "dashboard.systemsMapped": { en: "Systems Mapped", fi: "Järjestelmiä kartoitettu" },
   "dashboard.currentFolder": { en: "Current Folder", fi: "Nykyinen kansio" },
   "dashboard.projectMoved": { en: "Project moved", fi: "Projekti siirretty" },
-  
+  "dashboard.desktop": { en: "Desktop", fi: "Työpöytä" },
+  "dashboard.sharedWithMe": { en: "Shared with me", fi: "Jaettu kanssani" },
   // Editor
   "editor.processSteps": { en: "Process Steps", fi: "Prosessin vaiheet" },
   "editor.addStep": { en: "Add Step", fi: "Lisää vaihe" },
@@ -213,11 +214,7 @@ const translations: Translations = {
   "landing.ctaTitle": { en: "Ready to Transform Your Processes?", fi: "Valmis muuttamaan prosessisi?" },
   "landing.ctaSubtitle": { en: "Join thousands of professionals who trust us for their process documentation.", fi: "Liity tuhansien ammattilaisten joukkoon, jotka luottavat meihin prosessidokumentaatiossaan." },
   "landing.allRightsReserved": { en: "All rights reserved.", fi: "Kaikki oikeudet pidätetään." },
-
-  // Shared Items
-  "dashboard.sharedWithMe": { en: "Shared with me", fi: "Jaettu minulle" },
 };
-
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;

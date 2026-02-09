@@ -132,14 +132,15 @@ export function OrganizationSettings({
   };
 
   const buildPositionTree = (parentId: string | null = null): OrganizationPosition[] => {
+    if (!positions || positions.length === 0) return [];
     return positions
       .filter(p => p.parent_position_id === parentId)
-      .sort((a, b) => a.order_index - b.order_index);
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
   };
 
   const renderPositionNode = (position: OrganizationPosition, depth: number = 0) => {
     const children = buildPositionTree(position.id);
-    const membersInPosition = members.filter(m => m.position_id === position.id);
+    const membersInPosition = (members || []).filter(m => m.position_id === position.id);
     
     return (
       <div key={position.id} className="space-y-1">
@@ -177,7 +178,7 @@ export function OrganizationSettings({
           <Settings className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
@@ -186,26 +187,26 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile" className="text-xs">
-              <Building2 className="w-4 h-4 mr-1" />
-              {t("org.profile")}
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
+            <TabsTrigger value="profile" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <Building2 className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("org.profile")}</span>
             </TabsTrigger>
-            <TabsTrigger value="members" className="text-xs">
-              <Users className="w-4 h-4 mr-1" />
-              {t("org.members")}
+            <TabsTrigger value="members" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("org.members")}</span>
             </TabsTrigger>
-            <TabsTrigger value="structure" className="text-xs">
-              <Network className="w-4 h-4 mr-1" />
-              {t("org.structure")}
+            <TabsTrigger value="structure" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <Network className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("org.structure")}</span>
             </TabsTrigger>
-            <TabsTrigger value="tags" className="text-xs">
-              <Tags className="w-4 h-4 mr-1" />
-              {t("org.globalTags")}
+            <TabsTrigger value="tags" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <Tags className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("org.globalTags")}</span>
             </TabsTrigger>
-            <TabsTrigger value="notes" className="text-xs">
-              <FileText className="w-4 h-4 mr-1" />
-              {t("org.notes")}
+            <TabsTrigger value="notes" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("org.notes")}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -290,7 +291,7 @@ export function OrganizationSettings({
             )}
 
             <div className="space-y-2 max-h-64 overflow-auto">
-              {members.map((member) => {
+              {(members || []).map((member) => {
                 const RoleIcon = roleIcons[member.role];
                 const position = positions.find(p => p.id === member.position_id);
                 return (
