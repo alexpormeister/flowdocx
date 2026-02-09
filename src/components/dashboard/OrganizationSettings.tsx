@@ -259,13 +259,13 @@ export function OrganizationSettings({
                     onChange={(e) => setInviteTitle(e.target.value)}
                     className="flex-1"
                   />
-                  <Select value={invitePositionId} onValueChange={setInvitePositionId}>
+                  <Select value={invitePositionId || "none"} onValueChange={(v) => setInvitePositionId(v === "none" ? "" : v)}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder={t("org.assignPosition")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t("org.noParent")}</SelectItem>
-                      {positions.map((pos) => (
+                      <SelectItem value="none">{t("org.noParent")}</SelectItem>
+                      {(positions || []).map((pos) => (
                         <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -293,7 +293,7 @@ export function OrganizationSettings({
             <div className="space-y-2 max-h-64 overflow-auto">
               {(members || []).map((member) => {
                 const RoleIcon = roleIcons[member.role];
-                const position = positions.find(p => p.id === member.position_id);
+                const position = (positions || []).find(p => p.id === member.position_id);
                 return (
                   <div
                     key={member.id}
@@ -354,13 +354,13 @@ export function OrganizationSettings({
                   onChange={(e) => setNewPositionName(e.target.value)}
                   className="flex-1"
                 />
-                <Select value={newPositionParentId} onValueChange={setNewPositionParentId}>
+                <Select value={newPositionParentId || "none"} onValueChange={(v) => setNewPositionParentId(v === "none" ? "" : v)}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder={t("org.parentPosition")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t("org.noParent")}</SelectItem>
-                    {positions.map((pos) => (
+                    <SelectItem value="none">{t("org.noParent")}</SelectItem>
+                    {(positions || []).map((pos) => (
                       <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -373,7 +373,7 @@ export function OrganizationSettings({
 
             <div className="space-y-2">
               {buildPositionTree(null).map(position => renderPositionNode(position))}
-              {positions.length === 0 && (
+              {(!positions || positions.length === 0) && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t("folder.noTags")}
                 </p>
