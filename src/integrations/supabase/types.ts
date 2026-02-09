@@ -58,6 +58,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          notes: string | null
           organization_id: string | null
           parent_id: string | null
           system_tags: string[] | null
@@ -69,6 +70,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          notes?: string | null
           organization_id?: string | null
           parent_id?: string | null
           system_tags?: string[] | null
@@ -80,6 +82,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          notes?: string | null
           organization_id?: string | null
           parent_id?: string | null
           system_tags?: string[] | null
@@ -111,8 +114,11 @@ export type Database = {
           id: string
           invited_by: string | null
           organization_id: string
+          position_id: string | null
           role: Database["public"]["Enums"]["org_role"]
-          user_id: string
+          send_email_invite: boolean | null
+          title: string | null
+          user_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -121,8 +127,11 @@ export type Database = {
           id?: string
           invited_by?: string | null
           organization_id: string
+          position_id?: string | null
           role?: Database["public"]["Enums"]["org_role"]
-          user_id: string
+          send_email_invite?: boolean | null
+          title?: string | null
+          user_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -131,8 +140,11 @@ export type Database = {
           id?: string
           invited_by?: string | null
           organization_id?: string
+          position_id?: string | null
           role?: Database["public"]["Enums"]["org_role"]
-          user_id?: string
+          send_email_invite?: boolean | null
+          title?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -140,6 +152,58 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "organization_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_positions: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_index: number | null
+          organization_id: string
+          parent_position_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number | null
+          organization_id: string
+          parent_position_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number | null
+          organization_id?: string
+          parent_position_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_positions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_positions_parent_position_id_fkey"
+            columns: ["parent_position_id"]
+            isOneToOne: false
+            referencedRelation: "organization_positions"
             referencedColumns: ["id"]
           },
         ]
@@ -183,6 +247,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          notes: string | null
           updated_at: string
         }
         Insert: {
@@ -191,6 +256,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          notes?: string | null
           updated_at?: string
         }
         Update: {
@@ -199,6 +265,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          notes?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -283,6 +350,7 @@ export type Database = {
           id: string
           is_template: boolean | null
           name: string
+          notes: string | null
           organization_id: string | null
           process_steps: Json | null
           system_tags: string[] | null
@@ -299,6 +367,7 @@ export type Database = {
           id?: string
           is_template?: boolean | null
           name?: string
+          notes?: string | null
           organization_id?: string | null
           process_steps?: Json | null
           system_tags?: string[] | null
@@ -315,6 +384,7 @@ export type Database = {
           id?: string
           is_template?: boolean | null
           name?: string
+          notes?: string | null
           organization_id?: string | null
           process_steps?: Json | null
           system_tags?: string[] | null
@@ -345,6 +415,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_current_user_email: { Args: never; Returns: string }
       get_folder_system_tags: {
         Args: { _folder_id: string }
         Returns: string[]
