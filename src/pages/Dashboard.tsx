@@ -4,8 +4,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, updateFolder, getProfile, updateProfile, type Project, type Folder, type Profile } from "@/lib/api";
-import { getFolderShares, createFolderShare, deleteFolderShare, getProjectShares, createProjectShare, deleteProjectShare } from "@/lib/sharingApi";
+import {
+  getProjects,
+  getFolders,
+  createFolder,
+  deleteFolder,
+  deleteProject,
+  createProject,
+  updateProject,
+  updateFolder,
+  getProfile,
+  updateProfile,
+  type Project,
+  type Folder,
+  type Profile,
+} from "@/lib/api";
+import {
+  getFolderShares,
+  createFolderShare,
+  deleteFolderShare,
+  getProjectShares,
+  createProjectShare,
+  deleteProjectShare,
+} from "@/lib/sharingApi";
 import {
   getOrganizations,
   createOrganization,
@@ -31,7 +52,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { FolderSidebar } from "@/components/dashboard/FolderSidebar";
 import { MobileFolderSheet } from "@/components/dashboard/MobileFolderSheet";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
@@ -39,16 +66,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import {
-  Workflow,
-  Plus,
-  Search,
-  LogOut,
-  User,
-  FileText,
-  FolderOpen,
-  Folder as FolderIcon,
-} from "lucide-react";
+import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Dashboard() {
@@ -93,25 +111,25 @@ export default function Dashboard() {
 
   const { data: orgMembers = [] } = useQuery({
     queryKey: ["org-members", selectedOrgId],
-    queryFn: () => selectedOrgId ? getOrganizationMembers(selectedOrgId) : Promise.resolve([]),
+    queryFn: () => (selectedOrgId ? getOrganizationMembers(selectedOrgId) : Promise.resolve([])),
     enabled: !!user && !!selectedOrgId,
   });
 
   const { data: orgTags = [] } = useQuery({
     queryKey: ["org-tags", selectedOrgId],
-    queryFn: () => selectedOrgId ? getOrganizationTags(selectedOrgId) : Promise.resolve([]),
+    queryFn: () => (selectedOrgId ? getOrganizationTags(selectedOrgId) : Promise.resolve([])),
     enabled: !!user && !!selectedOrgId,
   });
 
   const { data: currentMembership } = useQuery({
     queryKey: ["org-membership", selectedOrgId],
-    queryFn: () => selectedOrgId ? getCurrentUserMembership(selectedOrgId) : Promise.resolve(null),
+    queryFn: () => (selectedOrgId ? getCurrentUserMembership(selectedOrgId) : Promise.resolve(null)),
     enabled: !!user && !!selectedOrgId,
   });
 
   const { data: orgPositions = [] } = useQuery({
     queryKey: ["org-positions", selectedOrgId],
-    queryFn: () => selectedOrgId ? getOrganizationPositions(selectedOrgId) : Promise.resolve([]),
+    queryFn: () => (selectedOrgId ? getOrganizationPositions(selectedOrgId) : Promise.resolve([])),
     enabled: !!user && !!selectedOrgId,
   });
 
@@ -137,22 +155,22 @@ export default function Dashboard() {
   // Filter folders and projects by organization
   const filteredFolders = useMemo(() => {
     if (!selectedOrgId) {
-      return folders.filter(f => !f.organization_id);
+      return folders.filter((f) => !f.organization_id);
     }
-    return folders.filter(f => f.organization_id === selectedOrgId);
+    return folders.filter((f) => f.organization_id === selectedOrgId);
   }, [folders, selectedOrgId]);
 
   const filteredProjectsByOrg = useMemo(() => {
     if (!selectedOrgId) {
-      return projects.filter(p => !p.organization_id);
+      return projects.filter((p) => !p.organization_id);
     }
-    return projects.filter(p => p.organization_id === selectedOrgId);
+    return projects.filter((p) => p.organization_id === selectedOrgId);
   }, [projects, selectedOrgId]);
 
   // Folder shares for the selected folder
   const { data: folderShares = [] } = useQuery({
     queryKey: ["folder-shares", selectedFolder],
-    queryFn: () => selectedFolder ? getFolderShares(selectedFolder) : Promise.resolve([]),
+    queryFn: () => (selectedFolder ? getFolderShares(selectedFolder) : Promise.resolve([])),
     enabled: !!user && !!selectedFolder,
   });
 
@@ -163,26 +181,24 @@ export default function Dashboard() {
     let current = filteredFolders.find((f) => f.id === selectedFolder);
     while (current) {
       path.unshift(current);
-      current = current.parent_id
-        ? filteredFolders.find((f) => f.id === current!.parent_id)
-        : undefined;
+      current = current.parent_id ? filteredFolders.find((f) => f.id === current!.parent_id) : undefined;
     }
     return path;
   }, [selectedFolder, filteredFolders]);
 
   // Projects not in any folder (root/desktop)
   const rootProjects = useMemo(() => {
-    return filteredProjectsByOrg.filter(p => !p.folder_id);
+    return filteredProjectsByOrg.filter((p) => !p.folder_id);
   }, [filteredProjectsByOrg]);
 
   // Child folders of selected folder (or root folders)
   const childFolders = useMemo(() => {
     if (showRootProjects) return [];
     if (selectedFolder) {
-      return filteredFolders.filter(f => f.parent_id === selectedFolder);
+      return filteredFolders.filter((f) => f.parent_id === selectedFolder);
     }
     // Root-level folders
-    return filteredFolders.filter(f => !f.parent_id);
+    return filteredFolders.filter((f) => !f.parent_id);
   }, [filteredFolders, selectedFolder, showRootProjects]);
 
   const createFolderMutation = useMutation({
@@ -234,8 +250,7 @@ export default function Dashboard() {
   });
 
   const updateFolderMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { system_tags?: string[] } }) =>
-      updateFolder(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: { system_tags?: string[] } }) => updateFolder(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
     },
@@ -263,8 +278,7 @@ export default function Dashboard() {
 
   // Organization mutations
   const createOrgMutation = useMutation({
-    mutationFn: ({ name, businessId }: { name: string; businessId?: string }) =>
-      createOrganization(name, businessId),
+    mutationFn: ({ name, businessId }: { name: string; businessId?: string }) => createOrganization(name, businessId),
     onSuccess: (org) => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
       setSelectedOrgId(org.id);
@@ -285,13 +299,17 @@ export default function Dashboard() {
   });
 
   const inviteMemberMutation = useMutation({
-    mutationFn: ({ orgId, email, role, options }: { 
-      orgId: string; 
-      email: string; 
+    mutationFn: ({
+      orgId,
+      email,
+      role,
+      options,
+    }: {
+      orgId: string;
+      email: string;
       role: OrgRole;
-      options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }
-    }) =>
-      inviteOrganizationMember(orgId, email, role, options),
+      options?: { title?: string; positionId?: string; sendEmailInvite?: boolean };
+    }) => inviteOrganizationMember(orgId, email, role, options),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
       toast.success(t("share.shareCreated"));
@@ -299,8 +317,13 @@ export default function Dashboard() {
   });
 
   const updateMemberDetailsMutation = useMutation({
-    mutationFn: ({ memberId, updates }: { memberId: string; updates: { title?: string; position_id?: string | null } }) =>
-      updateMemberDetails(memberId, updates),
+    mutationFn: ({
+      memberId,
+      updates,
+    }: {
+      memberId: string;
+      updates: { title?: string; position_id?: string | null };
+    }) => updateMemberDetails(memberId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
     },
@@ -315,8 +338,13 @@ export default function Dashboard() {
   });
 
   const updatePositionMutation = useMutation({
-    mutationFn: ({ positionId, updates }: { positionId: string; updates: { name?: string; parent_position_id?: string | null } }) =>
-      updateOrganizationPosition(positionId, updates),
+    mutationFn: ({
+      positionId,
+      updates,
+    }: {
+      positionId: string;
+      updates: { name?: string; parent_position_id?: string | null };
+    }) => updateOrganizationPosition(positionId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-positions", selectedOrgId] });
     },
@@ -330,8 +358,7 @@ export default function Dashboard() {
   });
 
   const updateMemberMutation = useMutation({
-    mutationFn: ({ memberId, role }: { memberId: string; role: OrgRole }) =>
-      updateMemberRole(memberId, role),
+    mutationFn: ({ memberId, role }: { memberId: string; role: OrgRole }) => updateMemberRole(memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
     },
@@ -346,8 +373,7 @@ export default function Dashboard() {
   });
 
   const addOrgTagMutation = useMutation({
-    mutationFn: ({ orgId, tagName }: { orgId: string; tagName: string }) =>
-      addOrganizationTag(orgId, tagName),
+    mutationFn: ({ orgId, tagName }: { orgId: string; tagName: string }) => addOrganizationTag(orgId, tagName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-tags", selectedOrgId] });
     },
@@ -367,13 +393,11 @@ export default function Dashboard() {
     if (showRootProjects) {
       projectsToShow = rootProjects;
     } else if (selectedFolder) {
-      projectsToShow = projectsToShow.filter(p => p.folder_id === selectedFolder);
+      projectsToShow = projectsToShow.filter((p) => p.folder_id === selectedFolder);
     }
 
     if (search) {
-      projectsToShow = projectsToShow.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase())
-      );
+      projectsToShow = projectsToShow.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
     }
 
     return projectsToShow;
@@ -463,7 +487,7 @@ export default function Dashboard() {
   const backgroundStyle = useMemo(() => {
     const bgUrl = profile?.dashboard_background_url;
     if (!bgUrl) return {};
-    
+
     if (bgUrl.startsWith("linear-gradient")) {
       return { background: bgUrl };
     }
@@ -496,7 +520,7 @@ export default function Dashboard() {
     onNewProject: handleNewProject,
     onOpenTemplateGallery: () => setTemplateGalleryOpen(true),
     isCreatingFolder: createFolderMutation.isPending,
-    folderShares: folderShares.map(s => ({
+    folderShares: folderShares.map((s) => ({
       id: s.id,
       email: s.shared_with_email,
       permission: s.permission,
@@ -517,7 +541,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 md:gap-3">
           <MobileFolderSheet {...sidebarProps} />
           <Workflow className="w-5 h-5 md:w-6 md:h-6 text-accent" />
-          <h1 className="text-base md:text-lg font-semibold hidden sm:block">BPMN Modeler</h1>
+          <h1 className="text-base md:text-lg font-semibold hidden sm:block">FlowDoc</h1>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <OrganizationSelector
@@ -609,9 +633,7 @@ export default function Dashboard() {
             <ProjectStats
               projects={displayedProjects}
               currentFolderName={
-                showRootProjects 
-                  ? t("dashboard.desktop") 
-                  : currentPath[currentPath.length - 1]?.name || null
+                showRootProjects ? t("dashboard.desktop") : currentPath[currentPath.length - 1]?.name || null
               }
             />
 
@@ -627,9 +649,7 @@ export default function Dashboard() {
                 {t("dashboard.desktop")} ({rootProjects.length})
               </Button>
               {!showRootProjects && !selectedFolder && (
-                <span className="text-sm text-muted-foreground">
-                  {t("dashboard.allProjects")}
-                </span>
+                <span className="text-sm text-muted-foreground">{t("dashboard.allProjects")}</span>
               )}
             </div>
 
@@ -647,9 +667,7 @@ export default function Dashboard() {
             </div>
 
             {projectsLoading ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {t("common.loading")}
-              </div>
+              <div className="text-center py-12 text-muted-foreground">{t("common.loading")}</div>
             ) : (
               <>
                 {/* Folders - Windows style */}
@@ -672,9 +690,7 @@ export default function Dashboard() {
                             style={{ color: folder.color || "#0891b2" }}
                             fill={folder.color || "#0891b2"}
                           />
-                          <span className="text-sm font-medium truncate w-full text-center">
-                            {folder.name}
-                          </span>
+                          <span className="text-sm font-medium truncate w-full text-center">{folder.name}</span>
                           {(folder.system_tags?.length || 0) > 0 && (
                             <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                               {folder.system_tags?.length} tags
@@ -698,31 +714,33 @@ export default function Dashboard() {
                       {t("dashboard.createFirst")}
                     </Button>
                   </div>
-                ) : displayedProjects.length > 0 && (
-                  <>
-                    {childFolders.length > 0 && (
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        {t("dashboard.files")}
-                      </h3>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {displayedProjects.map((project) => (
-                        <ProjectCard
-                          key={project.id}
-                          project={project}
-                          folders={filteredFolders}
-                          onOpen={(id) => {
-                            const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
-                            navigate(`/editor/${id}${orgParam}`);
-                          }}
-                          onDelete={(id) => deleteProjectMutation.mutate(id)}
-                          onMoveToFolder={(projectId, folderId) =>
-                            moveProjectMutation.mutate({ projectId, folderId })
-                          }
-                        />
-                      ))}
-                    </div>
-                  </>
+                ) : (
+                  displayedProjects.length > 0 && (
+                    <>
+                      {childFolders.length > 0 && (
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                          {t("dashboard.files")}
+                        </h3>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {displayedProjects.map((project) => (
+                          <ProjectCard
+                            key={project.id}
+                            project={project}
+                            folders={filteredFolders}
+                            onOpen={(id) => {
+                              const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
+                              navigate(`/editor/${id}${orgParam}`);
+                            }}
+                            onDelete={(id) => deleteProjectMutation.mutate(id)}
+                            onMoveToFolder={(projectId, folderId) =>
+                              moveProjectMutation.mutate({ projectId, folderId })
+                            }
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )
                 )}
               </>
             )}
@@ -745,19 +763,14 @@ export default function Dashboard() {
               >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">{template.name}</CardTitle>
-                  <CardDescription className="text-xs">
-                    {template.category}
-                  </CardDescription>
+                  <CardDescription className="text-xs">{template.category}</CardDescription>
                 </CardHeader>
                 <CardContent className="text-xs text-muted-foreground">
                   <p className="line-clamp-2">{template.description}</p>
                   {template.systemTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {template.systemTags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground"
-                        >
+                        <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground">
                           {tag}
                         </span>
                       ))}
