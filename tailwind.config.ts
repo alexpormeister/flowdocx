@@ -62,8 +62,8 @@ export default {
           grid: "hsl(var(--canvas-grid))",
         },
         tag: {
-          DEFAULT: "hsl(var(--tag-bg))",
-          foreground: "hsl(var(--tag-text))",
+          DEFAULT: "hsl(var(--tag))",
+          foreground: "hsl(var(--tag-foreground))",
         },
         panel: {
           header: "hsl(var(--panel-header))",

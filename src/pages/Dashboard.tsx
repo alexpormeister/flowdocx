@@ -1,31 +1,28 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, type Project, type Folder } from "@/lib/api";
+import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, type Project, type Folder } from "@/lib/api";
 import { BPMN_TEMPLATES, type TemplateId } from "@/data/bpmnTemplates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import LanguageToggle from "@/components/LanguageToggle";
+import { FolderSidebar } from "@/components/dashboard/FolderSidebar";
+import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
+import { ProjectCard } from "@/components/dashboard/ProjectCard";
+import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import {
   Workflow,
   Plus,
-  FolderPlus,
   Search,
-  MoreVertical,
-  Trash2,
   LogOut,
   User,
-  FolderOpen,
   FileText,
-  Clock,
-  LayoutTemplate,
 } from "lucide-react";
-import { format } from "date-fns";
 import { toast } from "sonner";
 
 export default function Dashboard() {
@@ -35,8 +32,6 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
 
   // Redirect to auth if not logged in
@@ -58,12 +53,25 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  // Build breadcrumb path from selected folder to root
+  const currentPath = useMemo(() => {
+    if (!selectedFolder) return [];
+    const path: Folder[] = [];
+    let current = folders.find((f) => f.id === selectedFolder);
+    while (current) {
+      path.unshift(current);
+      current = current.parent_id
+        ? folders.find((f) => f.id === current!.parent_id)
+        : undefined;
+    }
+    return path;
+  }, [selectedFolder, folders]);
+
   const createFolderMutation = useMutation({
-    mutationFn: ({ name, color }: { name: string; color?: string }) => createFolder(name, color),
+    mutationFn: ({ name, parentId }: { name: string; parentId: string | null }) =>
+      createFolder(name, undefined, parentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
-      setNewFolderDialogOpen(false);
-      setNewFolderName("");
       toast.success("Folder created");
     },
     onError: (error) => {
@@ -94,6 +102,15 @@ export default function Dashboard() {
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       navigate(`/editor/${project.id}`);
+    },
+  });
+
+  const moveProjectMutation = useMutation({
+    mutationFn: ({ projectId, folderId }: { projectId: string; folderId: string | null }) =>
+      updateProject(projectId, { folder_id: folderId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(t("dashboard.projectMoved"));
     },
   });
 
@@ -157,6 +174,14 @@ export default function Dashboard() {
     navigate("/auth");
   };
 
+  const handleFolderDrop = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault();
+    const projectId = e.dataTransfer.getData("projectId");
+    if (projectId) {
+      moveProjectMutation.mutate({ projectId, folderId });
+    }
+  };
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -201,138 +226,37 @@ export default function Dashboard() {
 
       <div className="flex h-[calc(100vh-56px)]">
         {/* Sidebar */}
-        <aside className="w-64 border-r bg-card p-4 flex flex-col">
-          <div className="space-y-2 mb-6">
-            <Button onClick={handleNewProject} className="w-full justify-start gap-2">
-              <Plus className="w-4 h-4" />
-              {t("dashboard.newProject")}
-            </Button>
-            <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full justify-start gap-2">
-                  <LayoutTemplate className="w-4 h-4" />
-                  {t("dashboard.newFromTemplate")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>{t("dashboard.chooseTemplate")}</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  {Object.entries(BPMN_TEMPLATES).map(([id, template]) => (
-                    <Card
-                      key={id}
-                      className="cursor-pointer hover:border-accent transition-colors"
-                      onClick={() => handleCreateFromTemplate(id as TemplateId)}
-                    >
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">{template.name}</CardTitle>
-                        <CardDescription className="text-xs">
-                          {template.category}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="text-xs text-muted-foreground">
-                        <p className="line-clamp-2">{template.description}</p>
-                        {template.systemTags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {template.systemTags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {t("dashboard.folders")}
-              </span>
-              <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
-                <DialogTrigger asChild>
-                  <button className="text-muted-foreground hover:text-foreground">
-                    <FolderPlus className="w-4 h-4" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t("dashboard.createFolder")}</DialogTitle>
-                  </DialogHeader>
-                  <Input
-                    placeholder={t("dashboard.folderName")}
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && newFolderName.trim()) {
-                        createFolderMutation.mutate({ name: newFolderName.trim() });
-                      }
-                    }}
-                  />
-                  <DialogFooter>
-                    <Button
-                      onClick={() => createFolderMutation.mutate({ name: newFolderName.trim() })}
-                      disabled={!newFolderName.trim()}
-                    >
-                      {t("common.create")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <div className="space-y-1">
-              <button
-                onClick={() => setSelectedFolder(null)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${
-                  selectedFolder === null
-                    ? "bg-accent/10 text-accent"
-                    : "text-foreground hover:bg-muted"
-                }`}
-              >
-                <FolderOpen className="w-4 h-4" />
-                {t("dashboard.allProjects")}
-              </button>
-              {folders.map((folder) => (
-                <div key={folder.id} className="flex items-center group">
-                  <button
-                    onClick={() => setSelectedFolder(folder.id)}
-                    className={`flex-1 flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${
-                      selectedFolder === folder.id
-                        ? "bg-accent/10 text-accent"
-                        : "text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <div
-                      className="w-3 h-3 rounded-sm"
-                      style={{ backgroundColor: folder.color || "#0891b2" }}
-                    />
-                    <span className="truncate">{folder.name}</span>
-                  </button>
-                  <button
-                    onClick={() => deleteFolderMutation.mutate(folder.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
+        <FolderSidebar
+          folders={folders}
+          selectedFolderId={selectedFolder}
+          currentPath={currentPath}
+          onSelectFolder={setSelectedFolder}
+          onCreateFolder={(name, parentId) =>
+            createFolderMutation.mutate({ name, parentId })
+          }
+          onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+          onNewProject={handleNewProject}
+          onOpenTemplateGallery={() => setTemplateGalleryOpen(true)}
+          isCreatingFolder={createFolderMutation.isPending}
+        />
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main
+          className="flex-1 p-6 overflow-auto"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => handleFolderDrop(e, selectedFolder)}
+        >
           <div className="max-w-5xl mx-auto">
+            {/* Breadcrumb */}
+            <BreadcrumbNav currentPath={currentPath} onNavigate={setSelectedFolder} />
+
+            {/* Project Stats */}
+            <ProjectStats
+              projects={filteredProjects}
+              currentFolderName={currentPath[currentPath.length - 1]?.name || null}
+            />
+
+            {/* Search */}
             <div className="flex items-center gap-4 mb-6">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -363,72 +287,62 @@ export default function Dashboard() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredProjects.map((project) => (
-                  <Card
+                  <ProjectCard
                     key={project.id}
-                    className="group cursor-pointer hover:border-accent transition-colors"
-                    onClick={() => navigate(`/editor/${project.id}`)}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-sm font-medium truncate pr-2">
-                          {project.name}
-                        </CardTitle>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <button className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-all">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover z-50">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteProjectMutation.mutate(project.id);
-                              }}
-                              className="text-destructive cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              {t("common.delete")}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      {project.description && (
-                        <CardDescription className="text-xs line-clamp-1">
-                          {project.description}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {format(new Date(project.updated_at), "MMM d, yyyy")}
-                      </div>
-                      {project.system_tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {project.system_tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {project.system_tags.length > 3 && (
-                            <span className="text-[10px] text-muted-foreground">
-                              +{project.system_tags.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                    project={project}
+                    folders={folders}
+                    onOpen={(id) => navigate(`/editor/${id}`)}
+                    onDelete={(id) => deleteProjectMutation.mutate(id)}
+                    onMoveToFolder={(projectId, folderId) =>
+                      moveProjectMutation.mutate({ projectId, folderId })
+                    }
+                  />
                 ))}
               </div>
             )}
           </div>
         </main>
       </div>
+
+      {/* Template Gallery Dialog */}
+      <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t("dashboard.chooseTemplate")}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {Object.entries(BPMN_TEMPLATES).map(([id, template]) => (
+              <Card
+                key={id}
+                className="cursor-pointer hover:border-accent transition-colors"
+                onClick={() => handleCreateFromTemplate(id as TemplateId)}
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{template.name}</CardTitle>
+                  <CardDescription className="text-xs">
+                    {template.category}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-xs text-muted-foreground">
+                  <p className="line-clamp-2">{template.description}</p>
+                  {template.systemTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {template.systemTags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
