@@ -117,7 +117,7 @@ export default function Auth() {
               <Workflow className="w-6 h-6 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-xl">BPMN Process Modeler</CardTitle>
+          <CardTitle className="text-xl">FlowDocx</CardTitle>
           <CardDescription>{t("auth.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -135,9 +135,7 @@ export default function Auth() {
             )}
 
             {successMessage && (
-              <div className="mb-4 p-3 rounded-lg bg-accent/20 text-accent-foreground text-sm">
-                {successMessage}
-              </div>
+              <div className="mb-4 p-3 rounded-lg bg-accent/20 text-accent-foreground text-sm">{successMessage}</div>
             )}
 
             <TabsContent value="login">
