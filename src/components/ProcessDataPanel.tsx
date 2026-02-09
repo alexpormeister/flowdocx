@@ -18,9 +18,18 @@ interface ProcessDataPanelProps {
   onStepsChange: (steps: ProcessStep[]) => void;
   selectedElementId?: string | null;
   availableTags?: string[];
+  description?: string;
+  onDescriptionChange?: (description: string) => void;
 }
 
-export default function ProcessDataPanel({ steps, onStepsChange, selectedElementId, availableTags = [] }: ProcessDataPanelProps) {
+export default function ProcessDataPanel({ 
+  steps, 
+  onStepsChange, 
+  selectedElementId, 
+  availableTags = [],
+  description = "",
+  onDescriptionChange,
+}: ProcessDataPanelProps) {
   const [newSystemTag, setNewSystemTag] = useState<{ stepId: string; value: string } | null>(null);
   const [customTagInput, setCustomTagInput] = useState("");
 
@@ -82,7 +91,20 @@ export default function ProcessDataPanel({ steps, onStepsChange, selectedElement
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto p-3 space-y-2">
+      <div className="flex-1 overflow-auto p-3 space-y-3">
+        {/* Description field */}
+        {onDescriptionChange && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="Add a description for this project..."
+              className="w-full h-16 px-2 py-1.5 text-xs border rounded-md bg-background resize-none focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+          </div>
+        )}
+
         {steps.length === 0 && (
           <div className="text-center py-12 text-muted-foreground text-sm">
             <Tag className="w-8 h-8 mx-auto mb-3 opacity-40" />

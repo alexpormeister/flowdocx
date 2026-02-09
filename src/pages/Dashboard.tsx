@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import LanguageToggle from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { FolderSidebar } from "@/components/dashboard/FolderSidebar";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
@@ -76,8 +77,8 @@ export default function Dashboard() {
   }, [selectedFolder, folders]);
 
   const createFolderMutation = useMutation({
-    mutationFn: ({ name, parentId }: { name: string; parentId: string | null }) =>
-      createFolder(name, undefined, parentId),
+    mutationFn: ({ name, parentId, color }: { name: string; parentId: string | null; color: string }) =>
+      createFolder(name, color, parentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
       toast.success("Folder created");
@@ -236,9 +237,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <LanguageToggle />
-          <span className="text-sm text-muted-foreground hidden sm:inline">
-            {user.email}
-          </span>
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
@@ -267,8 +266,8 @@ export default function Dashboard() {
           selectedFolderId={selectedFolder}
           currentPath={currentPath}
           onSelectFolder={setSelectedFolder}
-          onCreateFolder={(name, parentId) =>
-            createFolderMutation.mutate({ name, parentId })
+          onCreateFolder={(name, parentId, color) =>
+            createFolderMutation.mutate({ name, parentId, color })
           }
           onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
           onUpdateFolderTags={(folderId, tags) =>
