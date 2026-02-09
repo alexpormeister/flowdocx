@@ -415,6 +415,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_organization_with_owner: {
+        Args: { org_business_id?: string; org_name: string }
+        Returns: {
+          business_id: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_current_user_email: { Args: never; Returns: string }
       get_folder_system_tags: {
         Args: { _folder_id: string }
