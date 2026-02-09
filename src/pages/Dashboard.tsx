@@ -5,6 +5,21 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, updateFolder, type Project, type Folder } from "@/lib/api";
 import { getFolderShares, createFolderShare, deleteFolderShare, getProjectShares, createProjectShare, deleteProjectShare } from "@/lib/sharingApi";
+import {
+  getOrganizations,
+  createOrganization,
+  getOrganizationMembers,
+  getOrganizationTags,
+  inviteOrganizationMember,
+  updateMemberRole,
+  removeOrganizationMember,
+  addOrganizationTag,
+  removeOrganizationTag,
+  updateOrganization,
+  getCurrentUserMembership,
+  type Organization,
+  type OrgRole,
+} from "@/lib/organizationApi";
 import { BPMN_TEMPLATES, type TemplateId } from "@/data/bpmnTemplates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +32,8 @@ import { FolderSidebar } from "@/components/dashboard/FolderSidebar";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
+import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
+import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
 import {
   Workflow,
   Plus,
@@ -35,6 +52,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -42,6 +60,33 @@ export default function Dashboard() {
       navigate("/auth");
     }
   }, [user, authLoading, navigate]);
+
+  // Organizations
+  const { data: organizations = [] } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: getOrganizations,
+    enabled: !!user,
+  });
+
+  const selectedOrg = organizations.find((o) => o.id === selectedOrgId);
+
+  const { data: orgMembers = [] } = useQuery({
+    queryKey: ["org-members", selectedOrgId],
+    queryFn: () => selectedOrgId ? getOrganizationMembers(selectedOrgId) : Promise.resolve([]),
+    enabled: !!user && !!selectedOrgId,
+  });
+
+  const { data: orgTags = [] } = useQuery({
+    queryKey: ["org-tags", selectedOrgId],
+    queryFn: () => selectedOrgId ? getOrganizationTags(selectedOrgId) : Promise.resolve([]),
+    enabled: !!user && !!selectedOrgId,
+  });
+
+  const { data: currentMembership } = useQuery({
+    queryKey: ["org-membership", selectedOrgId],
+    queryFn: () => selectedOrgId ? getCurrentUserMembership(selectedOrgId) : Promise.resolve(null),
+    enabled: !!user && !!selectedOrgId,
+  });
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ["projects"],
@@ -151,6 +196,69 @@ export default function Dashboard() {
     },
   });
 
+  // Organization mutations
+  const createOrgMutation = useMutation({
+    mutationFn: ({ name, businessId }: { name: string; businessId?: string }) =>
+      createOrganization(name, businessId),
+    onSuccess: (org) => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      setSelectedOrgId(org.id);
+      toast.success(t("org.createOrganization"));
+    },
+    onError: (error) => {
+      toast.error("Failed to create organization: " + (error as Error).message);
+    },
+  });
+
+  const updateOrgMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string } }) =>
+      updateOrganization(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      toast.success(t("common.saved"));
+    },
+  });
+
+  const inviteMemberMutation = useMutation({
+    mutationFn: ({ orgId, email, role }: { orgId: string; email: string; role: OrgRole }) =>
+      inviteOrganizationMember(orgId, email, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
+      toast.success(t("share.shareCreated"));
+    },
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ memberId, role }: { memberId: string; role: OrgRole }) =>
+      updateMemberRole(memberId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: removeOrganizationMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
+      toast.success(t("share.shareRemoved"));
+    },
+  });
+
+  const addOrgTagMutation = useMutation({
+    mutationFn: ({ orgId, tagName }: { orgId: string; tagName: string }) =>
+      addOrganizationTag(orgId, tagName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-tags", selectedOrgId] });
+    },
+  });
+
+  const removeOrgTagMutation = useMutation({
+    mutationFn: removeOrganizationTag,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-tags", selectedOrgId] });
+    },
+  });
+
   const filteredProjects = projects.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchesFolder = selectedFolder ? p.folder_id === selectedFolder : true;
@@ -235,7 +343,43 @@ export default function Dashboard() {
           <Workflow className="w-6 h-6 text-accent" />
           <h1 className="text-lg font-semibold">BPMN Modeler</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          {/* Organization Selector */}
+          <OrganizationSelector
+            organizations={organizations}
+            selectedOrgId={selectedOrgId}
+            onSelectOrg={setSelectedOrgId}
+            onCreateOrg={async (name, businessId) => {
+              await createOrgMutation.mutateAsync({ name, businessId });
+            }}
+            isCreating={createOrgMutation.isPending}
+          />
+          {selectedOrg && (
+            <OrganizationSettings
+              organization={selectedOrg}
+              members={orgMembers}
+              tags={orgTags}
+              currentUserRole={currentMembership?.role || null}
+              onUpdateOrg={async (updates) => {
+                await updateOrgMutation.mutateAsync({ id: selectedOrg.id, updates });
+              }}
+              onInviteMember={async (email, role) => {
+                await inviteMemberMutation.mutateAsync({ orgId: selectedOrg.id, email, role });
+              }}
+              onUpdateMemberRole={async (memberId, role) => {
+                await updateMemberMutation.mutateAsync({ memberId, role });
+              }}
+              onRemoveMember={async (memberId) => {
+                await removeMemberMutation.mutateAsync(memberId);
+              }}
+              onAddTag={async (tagName) => {
+                await addOrgTagMutation.mutateAsync({ orgId: selectedOrg.id, tagName });
+              }}
+              onRemoveTag={async (tagId) => {
+                await removeOrgTagMutation.mutateAsync(tagId);
+              }}
+            />
+          )}
           <LanguageToggle />
           <ThemeToggle />
           <DropdownMenu>

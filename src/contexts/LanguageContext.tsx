@@ -113,7 +113,6 @@ const translations: Translations = {
   // Theme
   "theme.light": { en: "Light", fi: "Vaalea" },
   "theme.dark": { en: "Dark", fi: "Tumma" },
-  "theme.system": { en: "System", fi: "Järjestelmä" },
 
   // Project Description
   "project.description": { en: "Description", fi: "Kuvaus" },
@@ -133,6 +132,29 @@ const translations: Translations = {
   "share.projectShareHelp": { en: "Share this project with specific users.", fi: "Jaa tämä projekti tietyille käyttäjille." },
   "share.shareCreated": { en: "Invitation sent", fi: "Kutsu lähetetty" },
   "share.shareRemoved": { en: "Access removed", fi: "Pääsy poistettu" },
+
+  // Organization
+  "org.personal": { en: "Personal Workspace", fi: "Henkilökohtainen työtila" },
+  "org.searchOrg": { en: "Search organization...", fi: "Hae organisaatiota..." },
+  "org.noOrgsFound": { en: "No organizations found", fi: "Organisaatioita ei löytynyt" },
+  "org.createNew": { en: "Create Organization", fi: "Luo organisaatio" },
+  "org.createOrganization": { en: "Create Organization", fi: "Luo organisaatio" },
+  "org.organizationName": { en: "Organization Name", fi: "Organisaation nimi" },
+  "org.namePlaceholder": { en: "Acme Inc.", fi: "Yritys Oy" },
+  "org.businessId": { en: "Business ID", fi: "Y-tunnus" },
+  "org.businessIdPlaceholder": { en: "1234567-8", fi: "1234567-8" },
+  "org.create": { en: "Create", fi: "Luo" },
+  "org.settings": { en: "Settings", fi: "Asetukset" },
+  "org.profile": { en: "Profile", fi: "Profiili" },
+  "org.members": { en: "Members", fi: "Jäsenet" },
+  "org.globalTags": { en: "Global Tags", fi: "Globaalit tagit" },
+  "org.globalTagsHelp": { en: "Global tags are available for all folders and projects in this organization.", fi: "Globaalit tagit ovat käytettävissä kaikissa tämän organisaation kansioissa ja projekteissa." },
+  "org.inviteMember": { en: "Invite team member", fi: "Kutsu tiimin jäsen" },
+  "org.roleOwner": { en: "Owner", fi: "Omistaja" },
+  "org.roleAdmin": { en: "Admin", fi: "Ylläpitäjä" },
+  "org.roleEditor": { en: "Editor", fi: "Muokkaaja" },
+  "org.roleViewer": { en: "Viewer", fi: "Katsoja" },
+  "org.pending": { en: "pending", fi: "odottaa" },
 
   // Landing Page
   "landing.heroTitle": { en: "Optimize Your Business Processes", fi: "Optimoi liiketoimintaprosessisi" },
@@ -175,6 +197,9 @@ const translations: Translations = {
   "landing.ctaTitle": { en: "Ready to Transform Your Processes?", fi: "Valmis muuttamaan prosessisi?" },
   "landing.ctaSubtitle": { en: "Join thousands of professionals who trust us for their process documentation.", fi: "Liity tuhansien ammattilaisten joukkoon, jotka luottavat meihin prosessidokumentaatiossaan." },
   "landing.allRightsReserved": { en: "All rights reserved.", fi: "Kaikki oikeudet pidätetään." },
+
+  // Shared Items
+  "dashboard.sharedWithMe": { en: "Shared with me", fi: "Jaettu minulle" },
 };
 
 interface LanguageContextType {

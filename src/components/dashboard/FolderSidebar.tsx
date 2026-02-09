@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -9,6 +10,7 @@ import {
   ChevronDown,
   LayoutTemplate,
   Folder as FolderIcon,
+  Share2,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
 import { FolderTagsManager } from "./FolderTagsManager";
@@ -47,10 +49,37 @@ export function FolderSidebar({
   onRemoveFolderShare,
 }: FolderSidebarProps) {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  const rootFolders = folders.filter((f) => !f.parent_id);
+  // Separate owned folders from shared folders
+  // For shared subfolders, show them at root level if parent is not accessible
+  const { ownedRootFolders, sharedRootFolders } = useMemo(() => {
+    const owned: Folder[] = [];
+    const shared: Folder[] = [];
+    
+    const folderIds = new Set(folders.map(f => f.id));
+    
+    folders.forEach(folder => {
+      const isOwned = folder.user_id === user?.id;
+      
+      if (isOwned) {
+        // Only show at root if no parent
+        if (!folder.parent_id) {
+          owned.push(folder);
+        }
+      } else {
+        // Shared folder: show at root if parent doesn't exist in our list
+        // (meaning we don't have access to the parent)
+        if (!folder.parent_id || !folderIds.has(folder.parent_id)) {
+          shared.push(folder);
+        }
+      }
+    });
+    
+    return { ownedRootFolders: owned, sharedRootFolders: shared };
+  }, [folders, user?.id]);
 
   const getChildFolders = (parentId: string) =>
     folders.filter((f) => f.parent_id === parentId);
@@ -69,6 +98,7 @@ export function FolderSidebar({
   };
 
   const selectedFolder = selectedFolderId ? folders.find(f => f.id === selectedFolderId) : null;
+  const isOwnFolder = selectedFolder?.user_id === user?.id;
 
   const toggleExpanded = (folderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,7 +118,8 @@ export function FolderSidebar({
     setNewFolderDialogOpen(false);
   };
 
-  const renderFolder = (folder: Folder, depth = 0) => {
+  const renderFolder = (folder: Folder, depth = 0, isSharedSection = false) => {
+    const canDelete = folder.user_id === user?.id;
     const children = getChildFolders(folder.id);
     const hasChildren = children.length > 0;
     const isExpanded = expandedFolders.has(folder.id);
@@ -133,16 +164,18 @@ export function FolderSidebar({
               </span>
             )}
           </button>
-          <button
-            onClick={() => onDeleteFolder(folder.id)}
-            className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
+          {canDelete && (
+            <button
+              onClick={() => onDeleteFolder(folder.id)}
+              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
         </div>
         {hasChildren && isExpanded && (
           <div>
-            {children.map((child) => renderFolder(child, depth + 1))}
+            {children.map((child) => renderFolder(child, depth + 1, isSharedSection))}
           </div>
         )}
       </div>
@@ -173,18 +206,27 @@ export function FolderSidebar({
             {selectedFolder.name}
           </p>
           <div className="flex gap-2 flex-wrap">
-            <FolderTagsManager
-              tags={selectedFolder.system_tags || []}
-              onTagsChange={(tags) => onUpdateFolderTags(selectedFolder.id, tags)}
-              inheritedTags={getInheritedTags(selectedFolder.id)}
-            />
-            <ShareDialog
-              type="folder"
-              name={selectedFolder.name}
-              shares={folderShares}
-              onShare={(email, permission) => onShareFolder(selectedFolder.id, email, permission)}
-              onRemoveShare={onRemoveFolderShare}
-            />
+            {isOwnFolder && (
+              <>
+                <FolderTagsManager
+                  tags={selectedFolder.system_tags || []}
+                  onTagsChange={(tags) => onUpdateFolderTags(selectedFolder.id, tags)}
+                  inheritedTags={getInheritedTags(selectedFolder.id)}
+                />
+                <ShareDialog
+                  type="folder"
+                  name={selectedFolder.name}
+                  shares={folderShares}
+                  onShare={(email, permission) => onShareFolder(selectedFolder.id, email, permission)}
+                  onRemoveShare={onRemoveFolderShare}
+                />
+              </>
+            )}
+            {!isOwnFolder && (
+              <span className="text-xs text-muted-foreground italic">
+                {t("share.view")}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -215,8 +257,23 @@ export function FolderSidebar({
             <FolderOpen className="w-4 h-4" />
             {t("dashboard.allProjects")}
           </button>
-          {rootFolders.map((folder) => renderFolder(folder))}
+          {ownedRootFolders.map((folder) => renderFolder(folder))}
         </div>
+
+        {/* Shared folders section */}
+        {sharedRootFolders.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Share2 className="w-3 h-3 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("dashboard.sharedWithMe")}
+              </span>
+            </div>
+            <div className="space-y-1">
+              {sharedRootFolders.map((folder) => renderFolder(folder, 0, true))}
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
