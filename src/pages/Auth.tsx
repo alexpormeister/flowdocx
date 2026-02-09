@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Workflow, Mail, Lock, User, AlertCircle } from "lucide-react";
+import LanguageToggle from "@/components/LanguageToggle";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -14,6 +16,7 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 
 export default function Auth() {
   const { user, loading, signIn, signUp } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +32,7 @@ export default function Auth() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
       </div>
     );
   }
@@ -94,7 +97,7 @@ export default function Auth() {
         setError(error.message);
       }
     } else {
-      setSuccessMessage("Check your email to confirm your account before signing in.");
+      setSuccessMessage(t("auth.checkEmail"));
       setSignupEmail("");
       setSignupPassword("");
       setSignupName("");
@@ -104,6 +107,9 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -112,13 +118,13 @@ export default function Auth() {
             </div>
           </div>
           <CardTitle className="text-xl">BPMN Process Modeler</CardTitle>
-          <CardDescription>Sign in to access your diagrams</CardDescription>
+          <CardDescription>{t("auth.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="login">{t("auth.signIn")}</TabsTrigger>
+              <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
             </TabsList>
 
             {error && (
@@ -137,7 +143,7 @@ export default function Auth() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email">{t("auth.email")}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -152,7 +158,7 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password">{t("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -167,15 +173,21 @@ export default function Auth() {
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Signing in..." : "Sign In"}
+                  {isSubmitting ? t("common.loading") : t("auth.signIn")}
                 </Button>
+                <p className="text-center text-sm text-muted-foreground">
+                  {t("auth.noAccount")}{" "}
+                  <button type="button" className="text-accent hover:underline" onClick={() => {}}>
+                    {t("auth.signUp")}
+                  </button>
+                </p>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Display Name (optional)</Label>
+                  <Label htmlFor="signup-name">{t("auth.displayName")}</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -189,7 +201,7 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">{t("auth.email")}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -204,7 +216,7 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">{t("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -219,8 +231,14 @@ export default function Auth() {
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating account..." : "Create Account"}
+                  {isSubmitting ? t("common.loading") : t("auth.signUp")}
                 </Button>
+                <p className="text-center text-sm text-muted-foreground">
+                  {t("auth.haveAccount")}{" "}
+                  <button type="button" className="text-accent hover:underline" onClick={() => {}}>
+                    {t("auth.signIn")}
+                  </button>
+                </p>
               </form>
             </TabsContent>
           </Tabs>

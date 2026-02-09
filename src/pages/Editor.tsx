@@ -2,23 +2,44 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getProject, updateProject } from "@/lib/api";
-import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff } from "lucide-react";
+import { generateSOPDocument, downloadSOP } from "@/lib/sopGenerator";
+import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BpmnCanvas from "@/components/BpmnCanvas";
 import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
+import StrategicAnalysisPanel from "@/components/StrategicAnalysisPanel";
 import ExportMenu from "@/components/ExportMenu";
 import { toast } from "sonner";
+
+interface SwotData {
+  strengths: string;
+  weaknesses: string;
+  opportunities: string;
+  threats: string;
+}
+
+interface SipocData {
+  suppliers: string;
+  inputs: string;
+  process: string;
+  outputs: string;
+  customers: string;
+}
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const [modeler, setModeler] = useState<any>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [activePanel, setActivePanel] = useState<"steps" | "analysis">("steps");
   const [steps, setSteps] = useState<ProcessStep[]>([]);
   const [selectedElement, setSelectedElement] = useState<any>(null);
   const [projectName, setProjectName] = useState("Untitled Project");
@@ -26,6 +47,21 @@ export default function Editor() {
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedRef = useRef<string>("");
+
+  // Strategic analysis data
+  const [swot, setSwot] = useState<SwotData>({
+    strengths: "",
+    weaknesses: "",
+    opportunities: "",
+    threats: "",
+  });
+  const [sipoc, setSipoc] = useState<SipocData>({
+    suppliers: "",
+    inputs: "",
+    process: "",
+    outputs: "",
+    customers: "",
+  });
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -143,6 +179,23 @@ export default function Editor() {
     setHasUnsavedChanges(true);
   };
 
+  const handleSwotChange = (newSwot: SwotData) => {
+    setSwot(newSwot);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSipocChange = (newSipoc: SipocData) => {
+    setSipoc(newSipoc);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleGenerateSOP = () => {
+    const systemTags = [...new Set(steps.flatMap(s => s.system))];
+    const sopContent = generateSOPDocument(projectName, steps, swot, sipoc, systemTags);
+    downloadSOP(sopContent, projectName);
+    toast.success(t("strategic.sopGenerated"));
+  };
+
   const handleExport = useCallback(async (format: "png" | "svg") => {
     if (!modeler) return;
 
@@ -185,13 +238,13 @@ export default function Editor() {
 
   const handleManualSave = () => {
     triggerAutoSave();
-    toast.success("Project saved");
+    toast.success(t("common.saved"));
   };
 
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
       </div>
     );
   }
@@ -199,7 +252,7 @@ export default function Editor() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading project...</div>
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
       </div>
     );
   }
@@ -209,7 +262,7 @@ export default function Editor() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Project not found</p>
-          <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+          <Button onClick={() => navigate("/dashboard")}>{t("editor.backToDashboard")}</Button>
         </div>
       </div>
     );
@@ -238,17 +291,17 @@ export default function Editor() {
             {isSaving ? (
               <>
                 <Cloud className="w-3 h-3 animate-pulse" />
-                Saving...
+                {t("common.saving")}
               </>
             ) : hasUnsavedChanges ? (
               <>
                 <CloudOff className="w-3 h-3" />
-                Unsaved
+                {t("common.unsaved")}
               </>
             ) : (
               <>
                 <Cloud className="w-3 h-3 text-accent" />
-                Saved
+                {t("common.saved")}
               </>
             )}
           </div>
@@ -257,7 +310,7 @@ export default function Editor() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
             <Save className="w-3.5 h-3.5" />
-            Save
+            {t("common.save")}
           </Button>
           <ExportMenu onExport={handleExport} />
           <Button
@@ -288,11 +341,34 @@ export default function Editor() {
         {/* Side Panel */}
         {panelOpen && (
           <div className="w-80 border-l bg-card flex flex-col shrink-0">
-            <ProcessDataPanel
-              steps={steps}
-              onStepsChange={handleStepsChange}
-              selectedElementId={selectedElement?.id}
-            />
+            <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as "steps" | "analysis")} className="flex flex-col h-full">
+              <TabsList className="mx-3 mt-3 grid grid-cols-2 h-8">
+                <TabsTrigger value="steps" className="text-xs">
+                  {t("editor.processSteps")}
+                </TabsTrigger>
+                <TabsTrigger value="analysis" className="text-xs flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  {t("strategic.analysis")}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="steps" className="flex-1 m-0 overflow-hidden">
+                <ProcessDataPanel
+                  steps={steps}
+                  onStepsChange={handleStepsChange}
+                  selectedElementId={selectedElement?.id}
+                />
+              </TabsContent>
+              <TabsContent value="analysis" className="flex-1 m-0 overflow-hidden">
+                <StrategicAnalysisPanel
+                  steps={steps}
+                  swot={swot}
+                  sipoc={sipoc}
+                  onSwotChange={handleSwotChange}
+                  onSipocChange={handleSipocChange}
+                  onGenerateSOP={handleGenerateSOP}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </div>
