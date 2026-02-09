@@ -67,33 +67,14 @@ export async function getOrganization(id: string): Promise<Organization | null> 
 }
 
 export async function createOrganization(name: string, businessId?: string): Promise<Organization> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  // Create organization
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({ name, business_id: businessId || null })
-    .select()
-    .single();
-
-  if (orgError) throw orgError;
-
-  // Add creator as owner
-  const { error: memberError } = await supabase
-    .from("organization_members")
-    .insert({
-      organization_id: org.id,
-      user_id: user.id,
-      email: user.email!,
-      role: "owner",
-      invited_by: user.id,
-      accepted_at: new Date().toISOString(),
+  const { data, error } = await supabase
+    .rpc('create_organization_with_owner', {
+      org_name: name,
+      org_business_id: businessId || null
     });
 
-  if (memberError) throw memberError;
-
-  return org;
+  if (error) throw error;
+  return data as Organization;
 }
 
 export async function updateOrganization(
