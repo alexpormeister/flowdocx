@@ -43,6 +43,7 @@ export default function Editor() {
   const [steps, setSteps] = useState<ProcessStep[]>([]);
   const [selectedElement, setSelectedElement] = useState<any>(null);
   const [projectName, setProjectName] = useState("Untitled Project");
+  const [projectDescription, setProjectDescription] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -112,6 +113,7 @@ export default function Editor() {
   useEffect(() => {
     if (project) {
       setProjectName(project.name);
+      setProjectDescription(project.description || "");
       setSteps(project.process_steps || []);
     }
   }, [project]);
@@ -139,6 +141,7 @@ export default function Editor() {
         setIsSaving(true);
         await updateMutation.mutateAsync({
           name: projectName,
+          description: projectDescription,
           bpmn_xml: xml,
           process_steps: steps,
           system_tags: [...new Set(steps.flatMap(s => s.system))],
@@ -197,6 +200,11 @@ export default function Editor() {
 
   const handleNameChange = (newName: string) => {
     setProjectName(newName);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleDescriptionChange = (newDescription: string) => {
+    setProjectDescription(newDescription);
     setHasUnsavedChanges(true);
   };
 
@@ -378,6 +386,8 @@ export default function Editor() {
                   onStepsChange={handleStepsChange}
                   selectedElementId={selectedElement?.id}
                   availableTags={availableTags}
+                  description={projectDescription}
+                  onDescriptionChange={handleDescriptionChange}
                 />
               </TabsContent>
               <TabsContent value="analysis" className="flex-1 m-0 overflow-hidden">

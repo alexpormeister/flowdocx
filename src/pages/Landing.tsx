@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageToggle from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -88,6 +89,7 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-4">
             <LanguageToggle />
+            <ThemeToggle />
             <Link to="/auth">
               <Button variant="ghost">{t("auth.signIn")}</Button>
             </Link>

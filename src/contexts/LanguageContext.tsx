@@ -107,6 +107,18 @@ const translations: Translations = {
   "folder.noTags": { en: "No tags defined", fi: "Ei tageja määritetty" },
   "folder.tagsHelp": { en: "Tags defined here will be available in all projects within this folder and its subfolders.", fi: "Täällä määritetyt tagit ovat käytettävissä kaikissa tämän kansion ja sen alikansioiden projekteissa." },
 
+  // Folder Colors
+  "dashboard.folderColor": { en: "Folder Color", fi: "Kansion väri" },
+
+  // Theme
+  "theme.light": { en: "Light", fi: "Vaalea" },
+  "theme.dark": { en: "Dark", fi: "Tumma" },
+  "theme.system": { en: "System", fi: "Järjestelmä" },
+
+  // Project Description
+  "project.description": { en: "Description", fi: "Kuvaus" },
+  "project.descriptionPlaceholder": { en: "Add a description...", fi: "Lisää kuvaus..." },
+
   // Sharing
   "share.share": { en: "Share", fi: "Jaa" },
   "share.shareTitle": { en: "Share", fi: "Jaa" },

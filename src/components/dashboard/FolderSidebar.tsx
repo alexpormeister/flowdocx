@@ -1,27 +1,26 @@
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import {
   Plus,
-  FolderPlus,
   FolderOpen,
   Trash2,
   ChevronRight,
   ChevronDown,
   LayoutTemplate,
+  Folder as FolderIcon,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
+import { CreateFolderDialog } from "./CreateFolderDialog";
 
 interface FolderSidebarProps {
   folders: Folder[];
   selectedFolderId: string | null;
   currentPath: Folder[];
   onSelectFolder: (folderId: string | null) => void;
-  onCreateFolder: (name: string, parentId: string | null) => void;
+  onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
@@ -49,7 +48,6 @@ export function FolderSidebar({
 }: FolderSidebarProps) {
   const { t } = useLanguage();
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   const rootFolders = folders.filter((f) => !f.parent_id);
@@ -85,12 +83,9 @@ export function FolderSidebar({
     });
   };
 
-  const handleCreateFolder = () => {
-    if (newFolderName.trim()) {
-      onCreateFolder(newFolderName.trim(), selectedFolderId);
-      setNewFolderDialogOpen(false);
-      setNewFolderName("");
-    }
+  const handleCreateFolder = (name: string, color: string) => {
+    onCreateFolder(name, selectedFolderId, color);
+    setNewFolderDialogOpen(false);
   };
 
   const renderFolder = (folder: Folder, depth = 0) => {
@@ -126,9 +121,10 @@ export function FolderSidebar({
                 : "text-foreground hover:bg-muted"
             }`}
           >
-            <div
-              className="w-3 h-3 rounded-sm flex-shrink-0"
-              style={{ backgroundColor: folder.color || "#0891b2" }}
+            <FolderIcon
+              className="w-4 h-4 flex-shrink-0"
+              style={{ color: folder.color || "#0891b2" }}
+              fill={folder.color || "#0891b2"}
             />
             <span className="truncate">{folder.name}</span>
             {(folder.system_tags?.length || 0) > 0 && (
@@ -198,39 +194,13 @@ export function FolderSidebar({
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t("dashboard.folders")}
           </span>
-          <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
-            <DialogTrigger asChild>
-              <button className="text-muted-foreground hover:text-foreground">
-                <FolderPlus className="w-4 h-4" />
-              </button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("dashboard.createFolder")}</DialogTitle>
-              </DialogHeader>
-              <Input
-                placeholder={t("dashboard.folderName")}
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateFolder();
-                }}
-              />
-              {selectedFolderId && currentPath.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {t("dashboard.creatingIn")}: {currentPath[currentPath.length - 1]?.name}
-                </p>
-              )}
-              <DialogFooter>
-                <Button
-                  onClick={handleCreateFolder}
-                  disabled={!newFolderName.trim() || isCreatingFolder}
-                >
-                  {t("common.create")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <CreateFolderDialog
+            open={newFolderDialogOpen}
+            onOpenChange={setNewFolderDialogOpen}
+            onCreateFolder={handleCreateFolder}
+            isCreating={isCreatingFolder}
+            parentFolderName={selectedFolderId && currentPath.length > 0 ? currentPath[currentPath.length - 1]?.name : null}
+          />
         </div>
 
         <div className="space-y-1">
