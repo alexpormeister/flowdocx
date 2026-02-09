@@ -13,6 +13,8 @@ import {
   LayoutTemplate,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
+import { FolderTagsManager } from "./FolderTagsManager";
+import { ShareDialog, type ShareEntry } from "./ShareDialog";
 
 interface FolderSidebarProps {
   folders: Folder[];
@@ -21,9 +23,13 @@ interface FolderSidebarProps {
   onSelectFolder: (folderId: string | null) => void;
   onCreateFolder: (name: string, parentId: string | null) => void;
   onDeleteFolder: (folderId: string) => void;
+  onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
   isCreatingFolder: boolean;
+  folderShares: ShareEntry[];
+  onShareFolder: (folderId: string, email: string, permission: "view" | "edit") => Promise<void>;
+  onRemoveFolderShare: (shareId: string) => Promise<void>;
 }
 
 export function FolderSidebar({
@@ -33,21 +39,38 @@ export function FolderSidebar({
   onSelectFolder,
   onCreateFolder,
   onDeleteFolder,
+  onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
   isCreatingFolder,
+  folderShares,
+  onShareFolder,
+  onRemoveFolderShare,
 }: FolderSidebarProps) {
   const { t } = useLanguage();
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  // Get root folders (no parent)
   const rootFolders = folders.filter((f) => !f.parent_id);
 
-  // Get child folders for a parent
   const getChildFolders = (parentId: string) =>
     folders.filter((f) => f.parent_id === parentId);
+
+  const getInheritedTags = (folderId: string): string[] => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder || !folder.parent_id) return [];
+    
+    const parentTags: string[] = [];
+    let current = folders.find(f => f.id === folder.parent_id);
+    while (current) {
+      parentTags.push(...(current.system_tags || []));
+      current = current.parent_id ? folders.find(f => f.id === current!.parent_id) : undefined;
+    }
+    return [...new Set(parentTags)];
+  };
+
+  const selectedFolder = selectedFolderId ? folders.find(f => f.id === selectedFolderId) : null;
 
   const toggleExpanded = (folderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,6 +131,11 @@ export function FolderSidebar({
               style={{ backgroundColor: folder.color || "#0891b2" }}
             />
             <span className="truncate">{folder.name}</span>
+            {(folder.system_tags?.length || 0) > 0 && (
+              <span className="text-[10px] bg-muted px-1 rounded">
+                {folder.system_tags?.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => onDeleteFolder(folder.id)}
@@ -141,6 +169,29 @@ export function FolderSidebar({
           {t("dashboard.newFromTemplate")}
         </Button>
       </div>
+
+      {/* Folder actions when a folder is selected */}
+      {selectedFolder && (
+        <div className="mb-4 p-3 rounded-lg border bg-muted/30 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground truncate">
+            {selectedFolder.name}
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <FolderTagsManager
+              tags={selectedFolder.system_tags || []}
+              onTagsChange={(tags) => onUpdateFolderTags(selectedFolder.id, tags)}
+              inheritedTags={getInheritedTags(selectedFolder.id)}
+            />
+            <ShareDialog
+              type="folder"
+              name={selectedFolder.name}
+              shares={folderShares}
+              onShare={(email, permission) => onShareFolder(selectedFolder.id, email, permission)}
+              onRemoveShare={onRemoveFolderShare}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">

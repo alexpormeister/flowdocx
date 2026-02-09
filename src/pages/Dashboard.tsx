@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, type Project, type Folder } from "@/lib/api";
+import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, updateFolder, type Project, type Folder } from "@/lib/api";
+import { getFolderShares, createFolderShare, deleteFolderShare, getProjectShares, createProjectShare, deleteProjectShare } from "@/lib/sharingApi";
 import { BPMN_TEMPLATES, type TemplateId } from "@/data/bpmnTemplates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,13 @@ export default function Dashboard() {
     queryKey: ["folders"],
     queryFn: getFolders,
     enabled: !!user,
+  });
+
+  // Folder shares for the selected folder
+  const { data: folderShares = [] } = useQuery({
+    queryKey: ["folder-shares", selectedFolder],
+    queryFn: () => selectedFolder ? getFolderShares(selectedFolder) : Promise.resolve([]),
+    enabled: !!user && !!selectedFolder,
   });
 
   // Build breadcrumb path from selected folder to root
@@ -111,6 +119,34 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success(t("dashboard.projectMoved"));
+    },
+  });
+
+  const updateFolderMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: { system_tags?: string[] } }) =>
+      updateFolder(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+    },
+  });
+
+  const shareFolderMutation = useMutation({
+    mutationFn: ({ folderId, email, permission }: { folderId: string; email: string; permission: "view" | "edit" }) =>
+      createFolderShare(folderId, email, permission),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folder-shares", selectedFolder] });
+      toast.success(t("share.shareCreated"));
+    },
+    onError: (error) => {
+      toast.error("Failed to share: " + (error as Error).message);
+    },
+  });
+
+  const removeFolderShareMutation = useMutation({
+    mutationFn: deleteFolderShare,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folder-shares", selectedFolder] });
+      toast.success(t("share.shareRemoved"));
     },
   });
 
@@ -235,9 +271,24 @@ export default function Dashboard() {
             createFolderMutation.mutate({ name, parentId })
           }
           onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+          onUpdateFolderTags={(folderId, tags) =>
+            updateFolderMutation.mutate({ id: folderId, updates: { system_tags: tags } })
+          }
           onNewProject={handleNewProject}
           onOpenTemplateGallery={() => setTemplateGalleryOpen(true)}
           isCreatingFolder={createFolderMutation.isPending}
+          folderShares={folderShares.map(s => ({
+            id: s.id,
+            email: s.shared_with_email,
+            permission: s.permission,
+            created_at: s.created_at,
+          }))}
+          onShareFolder={async (folderId, email, permission) => {
+            await shareFolderMutation.mutateAsync({ folderId, email, permission });
+          }}
+          onRemoveFolderShare={async (shareId) => {
+            await removeFolderShareMutation.mutateAsync(shareId);
+          }}
         />
 
         {/* Main Content */}

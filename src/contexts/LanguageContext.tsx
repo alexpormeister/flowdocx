@@ -98,6 +98,30 @@ const translations: Translations = {
   "template.systemOptimization": { en: "System Optimization Flow", fi: "Järjestelmien optimointi" },
   "template.complianceDoc": { en: "Compliance & Documentation", fi: "Dokumentointi ja vaatimustenmukaisuus" },
 
+  // Folder Tags
+  "folder.manageTags": { en: "Manage Tags", fi: "Hallitse tageja" },
+  "folder.systemTags": { en: "System Tags", fi: "Järjestelmätagit" },
+  "folder.addTagPlaceholder": { en: "Add new tag...", fi: "Lisää uusi tagi..." },
+  "folder.inheritedTags": { en: "Inherited from parent folders", fi: "Peritty yläkansioista" },
+  "folder.folderTags": { en: "This folder's tags", fi: "Tämän kansion tagit" },
+  "folder.noTags": { en: "No tags defined", fi: "Ei tageja määritetty" },
+  "folder.tagsHelp": { en: "Tags defined here will be available in all projects within this folder and its subfolders.", fi: "Täällä määritetyt tagit ovat käytettävissä kaikissa tämän kansion ja sen alikansioiden projekteissa." },
+
+  // Sharing
+  "share.share": { en: "Share", fi: "Jaa" },
+  "share.shareTitle": { en: "Share", fi: "Jaa" },
+  "share.inviteUser": { en: "Invite user by email", fi: "Kutsu käyttäjä sähköpostilla" },
+  "share.emailPlaceholder": { en: "user@example.com", fi: "kayttaja@esimerkki.fi" },
+  "share.view": { en: "View", fi: "Näytä" },
+  "share.edit": { en: "Edit", fi: "Muokkaa" },
+  "share.sendInvite": { en: "Send Invite", fi: "Lähetä kutsu" },
+  "share.currentAccess": { en: "Current access", fi: "Nykyinen pääsy" },
+  "share.noShares": { en: "Not shared with anyone yet", fi: "Ei vielä jaettu kenellekään" },
+  "share.folderShareHelp": { en: "Users with access to this folder can also access all projects within it.", fi: "Käyttäjät, joilla on pääsy tähän kansioon, voivat myös käyttää kaikkia sen projekteja." },
+  "share.projectShareHelp": { en: "Share this project with specific users.", fi: "Jaa tämä projekti tietyille käyttäjille." },
+  "share.shareCreated": { en: "Invitation sent", fi: "Kutsu lähetetty" },
+  "share.shareRemoved": { en: "Access removed", fi: "Pääsy poistettu" },
+
   // Landing Page
   "landing.heroTitle": { en: "Optimize Your Business Processes", fi: "Optimoi liiketoimintaprosessisi" },
   "landing.heroSubtitle": { en: "Professional BPMN modeling with automated SOP generation, system mapping, and strategic analysis tools.", fi: "Ammattimainen BPMN-mallinnus automaattisella SOP-generoinnilla, järjestelmäkartoituksella ja strategisilla analyysityökaluilla." },
