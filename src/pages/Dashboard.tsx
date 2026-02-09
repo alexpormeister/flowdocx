@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,8 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import LanguageToggle from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { FolderSidebar } from "@/components/dashboard/FolderSidebar";
 import { MobileFolderSheet } from "@/components/dashboard/MobileFolderSheet";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
@@ -41,7 +39,6 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import { BackgroundSettings } from "@/components/dashboard/BackgroundSettings";
 import {
   Workflow,
   Plus,
@@ -50,6 +47,7 @@ import {
   User,
   FileText,
   FolderOpen,
+  Folder as FolderIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,13 +55,25 @@ export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [showRootProjects, setShowRootProjects] = useState(false);
+
+  // Persist org selection via URL params
+  const selectedOrgId = searchParams.get("org") || null;
+  const setSelectedOrgId = (orgId: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    if (orgId) {
+      params.set("org", orgId);
+    } else {
+      params.delete("org");
+    }
+    setSearchParams(params, { replace: true });
+  };
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -124,29 +134,18 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  const updateBackgroundMutation = useMutation({
-    mutationFn: (backgroundUrl: string | null) => 
-      updateProfile({ dashboard_background_url: backgroundUrl }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-    },
-  });
   // Filter folders and projects by organization
   const filteredFolders = useMemo(() => {
     if (!selectedOrgId) {
-      // Personal workspace - show folders without organization
       return folders.filter(f => !f.organization_id);
     }
-    // Organization workspace - show only org folders
     return folders.filter(f => f.organization_id === selectedOrgId);
   }, [folders, selectedOrgId]);
 
   const filteredProjectsByOrg = useMemo(() => {
     if (!selectedOrgId) {
-      // Personal workspace - show projects without organization
       return projects.filter(p => !p.organization_id);
     }
-    // Organization workspace - show only org projects
     return projects.filter(p => p.organization_id === selectedOrgId);
   }, [projects, selectedOrgId]);
 
@@ -157,7 +156,7 @@ export default function Dashboard() {
     enabled: !!user && !!selectedFolder,
   });
 
-  // Build breadcrumb path from selected folder to root
+  // Build breadcrumb path
   const currentPath = useMemo(() => {
     if (!selectedFolder) return [];
     const path: Folder[] = [];
@@ -176,10 +175,15 @@ export default function Dashboard() {
     return filteredProjectsByOrg.filter(p => !p.folder_id);
   }, [filteredProjectsByOrg]);
 
-  // Projects in folders
-  const projectsInFolders = useMemo(() => {
-    return filteredProjectsByOrg.filter(p => p.folder_id);
-  }, [filteredProjectsByOrg]);
+  // Child folders of selected folder (or root folders)
+  const childFolders = useMemo(() => {
+    if (showRootProjects) return [];
+    if (selectedFolder) {
+      return filteredFolders.filter(f => f.parent_id === selectedFolder);
+    }
+    // Root-level folders
+    return filteredFolders.filter(f => !f.parent_id);
+  }, [filteredFolders, selectedFolder, showRootProjects]);
 
   const createFolderMutation = useMutation({
     mutationFn: ({ name, parentId, color }: { name: string; parentId: string | null; color: string }) =>
@@ -215,7 +219,8 @@ export default function Dashboard() {
     mutationFn: createProject,
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      navigate(`/editor/${project.id}`);
+      const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
+      navigate(`/editor/${project.id}${orgParam}`);
     },
   });
 
@@ -359,15 +364,12 @@ export default function Dashboard() {
   const displayedProjects = useMemo(() => {
     let projectsToShow = filteredProjectsByOrg;
 
-    // If showing root projects only
     if (showRootProjects) {
       projectsToShow = rootProjects;
     } else if (selectedFolder) {
-      // If a folder is selected, show only that folder's projects
       projectsToShow = projectsToShow.filter(p => p.folder_id === selectedFolder);
     }
 
-    // Apply search filter
     if (search) {
       projectsToShow = projectsToShow.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
@@ -457,12 +459,11 @@ export default function Dashboard() {
     setShowRootProjects(false);
   }, [selectedOrgId]);
 
-  // Background style - must be before early return
+  // Background style
   const backgroundStyle = useMemo(() => {
     const bgUrl = profile?.dashboard_background_url;
     if (!bgUrl) return {};
     
-    // Check if it's a gradient or an image URL
     if (bgUrl.startsWith("linear-gradient")) {
       return { background: bgUrl };
     }
@@ -514,13 +515,11 @@ export default function Dashboard() {
       {/* Header */}
       <header className="h-14 border-b bg-card flex items-center justify-between px-3 md:px-6">
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Mobile menu */}
           <MobileFolderSheet {...sidebarProps} />
           <Workflow className="w-5 h-5 md:w-6 md:h-6 text-accent" />
           <h1 className="text-base md:text-lg font-semibold hidden sm:block">BPMN Modeler</h1>
         </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          {/* Organization Selector */}
+        <div className="flex items-center gap-2 md:gap-3">
           <OrganizationSelector
             organizations={organizations}
             selectedOrgId={selectedOrgId}
@@ -569,20 +568,6 @@ export default function Dashboard() {
               }}
             />
           )}
-          {/* Background Settings */}
-          {user && (
-            <BackgroundSettings
-              currentBackground={profile?.dashboard_background_url || null}
-              onBackgroundChange={async (url) => {
-                await updateBackgroundMutation.mutateAsync(url);
-              }}
-              userId={user.id}
-            />
-          )}
-          <div className="hidden sm:flex items-center gap-2">
-            <LanguageToggle />
-            <ThemeToggle />
-          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
@@ -594,13 +579,6 @@ export default function Dashboard() {
                 <User className="w-4 h-4 mr-2" />
                 {t("nav.profile")}
               </DropdownMenuItem>
-              <div className="sm:hidden">
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5 flex items-center gap-2">
-                  <LanguageToggle />
-                  <ThemeToggle />
-                </div>
-              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -637,7 +615,7 @@ export default function Dashboard() {
               }
             />
 
-            {/* Quick Actions - Root projects toggle */}
+            {/* Quick Actions */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <Button
                 variant={showRootProjects ? "default" : "outline"}
@@ -672,32 +650,81 @@ export default function Dashboard() {
               <div className="text-center py-12 text-muted-foreground">
                 {t("common.loading")}
               </div>
-            ) : displayedProjects.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
-                <p className="text-muted-foreground mb-4">
-                  {search ? t("dashboard.noMatch") : t("dashboard.noProjects")}
-                </p>
-                <Button onClick={handleNewProject}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  {t("dashboard.createFirst")}
-                </Button>
-              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {displayedProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    folders={filteredFolders}
-                    onOpen={(id) => navigate(`/editor/${id}`)}
-                    onDelete={(id) => deleteProjectMutation.mutate(id)}
-                    onMoveToFolder={(projectId, folderId) =>
-                      moveProjectMutation.mutate({ projectId, folderId })
-                    }
-                  />
-                ))}
-              </div>
+              <>
+                {/* Folders - Windows style */}
+                {childFolders.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                      {t("dashboard.folders")}
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      {childFolders.map((folder) => (
+                        <button
+                          key={folder.id}
+                          onClick={() => handleSelectFolder(folder.id)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => handleFolderDrop(e, folder.id)}
+                          className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:border-accent hover:bg-accent/5 transition-all group cursor-pointer"
+                        >
+                          <FolderIcon
+                            className="w-10 h-10 sm:w-12 sm:h-12"
+                            style={{ color: folder.color || "#0891b2" }}
+                            fill={folder.color || "#0891b2"}
+                          />
+                          <span className="text-sm font-medium truncate w-full text-center">
+                            {folder.name}
+                          </span>
+                          {(folder.system_tags?.length || 0) > 0 && (
+                            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                              {folder.system_tags?.length} tags
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Projects */}
+                {displayedProjects.length === 0 && childFolders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
+                    <p className="text-muted-foreground mb-4">
+                      {search ? t("dashboard.noMatch") : t("dashboard.noProjects")}
+                    </p>
+                    <Button onClick={handleNewProject}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {t("dashboard.createFirst")}
+                    </Button>
+                  </div>
+                ) : displayedProjects.length > 0 && (
+                  <>
+                    {childFolders.length > 0 && (
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                        {t("dashboard.files")}
+                      </h3>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {displayedProjects.map((project) => (
+                        <ProjectCard
+                          key={project.id}
+                          project={project}
+                          folders={filteredFolders}
+                          onOpen={(id) => {
+                            const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
+                            navigate(`/editor/${id}${orgParam}`);
+                          }}
+                          onDelete={(id) => deleteProjectMutation.mutate(id)}
+                          onMoveToFolder={(projectId, folderId) =>
+                            moveProjectMutation.mutate({ projectId, folderId })
+                          }
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </main>

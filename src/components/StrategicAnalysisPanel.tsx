@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, TrendingUp, Table2, AlertTriangle } from "lucide-react";
+import { FileText, TrendingUp, Table2 } from "lucide-react";
 import { ProcessStep } from "@/components/ProcessDataPanel";
 
 interface SwotData {
@@ -54,20 +54,6 @@ export default function StrategicAnalysisPanel({
   const systemEntries = Object.entries(systemCounts).sort((a, b) => b[1] - a[1]);
   const maxCount = Math.max(...Object.values(systemCounts), 1);
 
-  // Detect high tool-switching (more than 2 different systems used between consecutive steps)
-  const toolSwitchingWarnings: string[] = [];
-  for (let i = 1; i < steps.length; i++) {
-    const prevSystems = new Set(steps[i - 1].system);
-    const currSystems = new Set(steps[i].system);
-    const allSystems = new Set([...prevSystems, ...currSystems]);
-    if (allSystems.size > 2 && prevSystems.size > 0 && currSystems.size > 0) {
-      const overlap = [...prevSystems].filter((s) => currSystems.has(s)).length;
-      if (overlap === 0) {
-        toolSwitchingWarnings.push(`${steps[i - 1].task || `Step ${i}`} → ${steps[i].task || `Step ${i + 1}`}`);
-      }
-    }
-  }
-
   const getHeatmapColor = (count: number) => {
     const intensity = count / maxCount;
     if (intensity > 0.7) return "bg-red-500";
@@ -113,24 +99,6 @@ export default function StrategicAnalysisPanel({
                   )}
                 </CardContent>
               </Card>
-
-              {toolSwitchingWarnings.length > 0 && (
-                <Card className="border-destructive/50">
-                  <CardHeader className="py-2 px-3">
-                    <CardTitle className="text-xs font-medium flex items-center gap-1.5 text-destructive">
-                      <AlertTriangle className="w-3 h-3" />
-                      {t("strategic.highToolSwitching")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-3 pb-3">
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {toolSwitchingWarnings.map((warning, i) => (
-                        <li key={i}>• {warning}</li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
 
               <Button onClick={onGenerateSOP} className="w-full text-xs h-8 gap-1.5">
                 <FileText className="w-3 h-3" />
@@ -188,51 +156,23 @@ export default function StrategicAnalysisPanel({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-3 pb-3 space-y-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("strategic.suppliers")}</label>
-                    <Textarea
-                      value={sipoc.suppliers}
-                      onChange={(e) => onSipocChange({ ...sipoc, suppliers: e.target.value })}
-                      className="h-14 text-xs resize-none"
-                      placeholder="Who provides inputs?"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("strategic.inputs")}</label>
-                    <Textarea
-                      value={sipoc.inputs}
-                      onChange={(e) => onSipocChange({ ...sipoc, inputs: e.target.value })}
-                      className="h-14 text-xs resize-none"
-                      placeholder="What inputs are needed?"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("strategic.process")}</label>
-                    <Textarea
-                      value={sipoc.process}
-                      onChange={(e) => onSipocChange({ ...sipoc, process: e.target.value })}
-                      className="h-14 text-xs resize-none"
-                      placeholder="High-level process steps"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("strategic.outputs")}</label>
-                    <Textarea
-                      value={sipoc.outputs}
-                      onChange={(e) => onSipocChange({ ...sipoc, outputs: e.target.value })}
-                      className="h-14 text-xs resize-none"
-                      placeholder="What outputs are produced?"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">{t("strategic.customers")}</label>
-                    <Textarea
-                      value={sipoc.customers}
-                      onChange={(e) => onSipocChange({ ...sipoc, customers: e.target.value })}
-                      className="h-14 text-xs resize-none"
-                      placeholder="Who receives outputs?"
-                    />
-                  </div>
+                  {[
+                    { key: "suppliers" as const, label: t("strategic.suppliers"), placeholder: "Who provides inputs?" },
+                    { key: "inputs" as const, label: t("strategic.inputs"), placeholder: "What inputs are needed?" },
+                    { key: "process" as const, label: t("strategic.process"), placeholder: "High-level process steps" },
+                    { key: "outputs" as const, label: t("strategic.outputs"), placeholder: "What outputs are produced?" },
+                    { key: "customers" as const, label: t("strategic.customers"), placeholder: "Who receives outputs?" },
+                  ].map(({ key, label, placeholder }) => (
+                    <div key={key} className="space-y-1">
+                      <label className="text-xs font-medium">{label}</label>
+                      <Textarea
+                        value={sipoc[key]}
+                        onChange={(e) => onSipocChange({ ...sipoc, [key]: e.target.value })}
+                        className="h-14 text-xs resize-none"
+                        placeholder={placeholder}
+                      />
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </TabsContent>

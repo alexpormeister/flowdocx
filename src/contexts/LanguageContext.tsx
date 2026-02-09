@@ -57,6 +57,7 @@ const translations: Translations = {
   "dashboard.projectMoved": { en: "Project moved", fi: "Projekti siirretty" },
   "dashboard.desktop": { en: "Desktop", fi: "Työpöytä" },
   "dashboard.sharedWithMe": { en: "Shared with me", fi: "Jaettu kanssani" },
+  "dashboard.files": { en: "Files", fi: "Tiedostot" },
   // Editor
   "editor.processSteps": { en: "Process Steps", fi: "Prosessin vaiheet" },
   "editor.addStep": { en: "Add Step", fi: "Lisää vaihe" },
@@ -92,6 +93,10 @@ const translations: Translations = {
   "profile.phoneNumber": { en: "Phone Number", fi: "Puhelinnumero" },
   "profile.address": { en: "Address", fi: "Osoite" },
   "profile.updated": { en: "Profile updated", fi: "Profiili päivitetty" },
+  "profile.appearance": { en: "Appearance", fi: "Ulkoasu" },
+  "profile.appearanceDesc": { en: "Customize theme, language and dashboard background", fi: "Muokkaa teemaa, kieltä ja dashboardin taustaa" },
+  "profile.theme": { en: "Theme", fi: "Teema" },
+  "profile.language": { en: "Language", fi: "Kieli" },
   
   // Templates
   "template.basicStarter": { en: "Basic BPMN Starter", fi: "BPMN-perusmalli" },

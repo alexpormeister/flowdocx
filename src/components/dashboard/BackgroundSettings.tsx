@@ -26,12 +26,14 @@ interface BackgroundSettingsProps {
   currentBackground: string | null;
   onBackgroundChange: (url: string | null) => Promise<void>;
   userId: string;
+  inline?: boolean;
 }
 
 export function BackgroundSettings({
   currentBackground,
   onBackgroundChange,
   userId,
+  inline = false,
 }: BackgroundSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -43,13 +45,11 @@ export function BackgroundSettings({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error(t("background.invalidType"));
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("background.tooLarge"));
       return;
@@ -87,17 +87,99 @@ export function BackgroundSettings({
   const handleSelectPreset = async (url: string | null) => {
     setSelectedBackground(url);
     await onBackgroundChange(url);
-    toast.success(t("background.changed"));
-  };
-
-  const handleRemoveBackground = async () => {
-    setSelectedBackground(null);
-    await onBackgroundChange(null);
-    toast.success(t("background.removed"));
+    toast.success(url ? t("background.changed") : t("background.removed"));
   };
 
   const isGradient = (url: string | null) => url?.startsWith("linear-gradient");
   const isCustomImage = currentBackground && !isGradient(currentBackground);
+
+  const content = (
+    <div className="space-y-4">
+      {/* Upload custom background */}
+      <div>
+        <p className="text-sm font-medium mb-2">{t("background.uploadCustom")}</p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+          id="background-upload"
+        />
+        <Button
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="w-full gap-2"
+        >
+          <Upload className="w-4 h-4" />
+          {isUploading ? t("common.loading") : t("background.uploadImage")}
+        </Button>
+      </div>
+
+      {/* Current custom background */}
+      {isCustomImage && (
+        <div className="relative">
+          <p className="text-sm font-medium mb-2">{t("background.current")}</p>
+          <div className="relative rounded-lg overflow-hidden border">
+            <img
+              src={currentBackground}
+              alt="Current background"
+              className="w-full h-24 object-cover"
+            />
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute top-2 right-2 h-6 w-6"
+              onClick={() => handleSelectPreset(null)}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Preset backgrounds */}
+      <div>
+        <p className="text-sm font-medium mb-2">{t("background.presets")}</p>
+        <div className="grid grid-cols-3 gap-2">
+          {DEFAULT_BACKGROUNDS.map((bg) => {
+            const isSelected = selectedBackground === bg.url;
+            return (
+              <button
+                key={bg.id}
+                onClick={() => handleSelectPreset(bg.url)}
+                className={`relative h-16 rounded-lg border-2 transition-all ${
+                  isSelected
+                    ? "border-accent ring-2 ring-accent/20"
+                    : "border-border hover:border-accent/50"
+                }`}
+                style={{
+                  background: bg.url || "hsl(var(--background))",
+                }}
+              >
+                {isSelected && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                {bg.id === "none" && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <X className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Inline mode: render content directly without dialog
+  if (inline) {
+    return content;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -106,94 +188,14 @@ export function BackgroundSettings({
           <Image className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md w-[95vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Image className="w-5 h-5" />
             {t("background.title")}
           </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-4 mt-4">
-          {/* Upload custom background */}
-          <div>
-            <p className="text-sm font-medium mb-2">{t("background.uploadCustom")}</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="background-upload"
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="w-full gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              {isUploading ? t("common.loading") : t("background.uploadImage")}
-            </Button>
-          </div>
-
-          {/* Current custom background */}
-          {isCustomImage && (
-            <div className="relative">
-              <p className="text-sm font-medium mb-2">{t("background.current")}</p>
-              <div className="relative rounded-lg overflow-hidden border">
-                <img
-                  src={currentBackground}
-                  alt="Current background"
-                  className="w-full h-24 object-cover"
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 h-6 w-6"
-                  onClick={handleRemoveBackground}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Preset backgrounds */}
-          <div>
-            <p className="text-sm font-medium mb-2">{t("background.presets")}</p>
-            <div className="grid grid-cols-3 gap-2">
-              {DEFAULT_BACKGROUNDS.map((bg) => {
-                const isSelected = selectedBackground === bg.url;
-                return (
-                  <button
-                    key={bg.id}
-                    onClick={() => handleSelectPreset(bg.url)}
-                    className={`relative h-16 rounded-lg border-2 transition-all ${
-                      isSelected
-                        ? "border-accent ring-2 ring-accent/20"
-                        : "border-border hover:border-accent/50"
-                    }`}
-                    style={{
-                      background: bg.url || "hsl(var(--background))",
-                    }}
-                  >
-                    {isSelected && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
-                        <Check className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-                    {bg.id === "none" && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <X className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <div className="mt-4">{content}</div>
       </DialogContent>
     </Dialog>
   );
