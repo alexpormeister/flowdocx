@@ -113,11 +113,13 @@ export async function inviteOrganizationMember(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Check if a user with this email already exists by looking up profiles
+  // We use the admin-safe approach: insert with email, then auto-accept via trigger if user exists
   const { data, error } = await supabase
     .from("organization_members")
     .insert({
       organization_id: organizationId,
-      user_id: null, // null for pending invites
+      user_id: null,
       email,
       role,
       invited_by: user.id,
