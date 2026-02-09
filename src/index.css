@@ -51,6 +51,9 @@
     --tag-text: 175 60% 28%;
     --panel-header: 220 55% 14%;
     --panel-header-text: 210 25% 90%;
+    
+    --tag: 175 50% 92%;
+    --tag-foreground: 175 60% 28%;
   }
 
   .dark {
@@ -87,6 +90,9 @@
     --tag-text: 175 60% 65%;
     --panel-header: 220 40% 12%;
     --panel-header-text: 210 20% 85%;
+    
+    --tag: 175 40% 15%;
+    --tag-foreground: 175 60% 65%;
   }
 }
 

@@ -23,6 +23,7 @@ export interface Folder {
   user_id: string;
   name: string;
   color: string;
+  parent_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -159,7 +160,7 @@ export async function getFolders(): Promise<Folder[]> {
   return data || [];
 }
 
-export async function createFolder(name: string, color?: string): Promise<Folder> {
+export async function createFolder(name: string, color?: string, parentId?: string | null): Promise<Folder> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
@@ -169,6 +170,7 @@ export async function createFolder(name: string, color?: string): Promise<Folder
       user_id: user.id,
       name,
       color: color || "#0891b2",
+      parent_id: parentId || null,
     })
     .select()
     .single();
