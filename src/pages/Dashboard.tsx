@@ -541,7 +541,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 md:gap-3">
           <MobileFolderSheet {...sidebarProps} />
           <Workflow className="w-5 h-5 md:w-6 md:h-6 text-accent" />
-          <h1 className="text-base md:text-lg font-semibold hidden sm:block">FlowDoc</h1>
+          <h1 className="text-base md:text-lg font-semibold hidden sm:block">FlowDocx</h1>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <OrganizationSelector
