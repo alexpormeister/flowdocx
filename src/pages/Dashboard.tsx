@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, type Project, type Folder } from "@/lib/api";
 import { BPMN_TEMPLATES, type TemplateId } from "@/data/bpmnTemplates";
@@ -8,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import LanguageToggle from "@/components/LanguageToggle";
 import {
   Workflow,
   Plus,
@@ -16,7 +18,6 @@ import {
   Search,
   MoreVertical,
   Trash2,
-  Edit,
   LogOut,
   User,
   FolderOpen,
@@ -27,14 +28,9 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 
-const DEFAULT_FOLDERS = [
-  { name: "Talous", color: "#10b981" },
-  { name: "Asiakaspalvelu", color: "#3b82f6" },
-  { name: "Laadunvalvonta", color: "#f59e0b" },
-];
-
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -56,7 +52,7 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  const { data: folders = [], isLoading: foldersLoading } = useQuery({
+  const { data: folders = [] } = useQuery({
     queryKey: ["folders"],
     queryFn: getFolders,
     enabled: !!user,
@@ -100,15 +96,6 @@ export default function Dashboard() {
       navigate(`/editor/${project.id}`);
     },
   });
-
-  // Auto-create default folders if none exist
-  useEffect(() => {
-    if (folders.length === 0 && !foldersLoading && user) {
-      DEFAULT_FOLDERS.forEach(({ name, color }) => {
-        createFolderMutation.mutate({ name, color });
-      });
-    }
-  }, [folders.length, foldersLoading, user]);
 
   const filteredProjects = projects.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -173,7 +160,7 @@ export default function Dashboard() {
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-pulse text-muted-foreground">{t("common.loading")}</div>
       </div>
     );
   }
@@ -187,6 +174,7 @@ export default function Dashboard() {
           <h1 className="text-lg font-semibold">BPMN Modeler</h1>
         </div>
         <div className="flex items-center gap-3">
+          <LanguageToggle />
           <span className="text-sm text-muted-foreground hidden sm:inline">
             {user.email}
           </span>
@@ -197,9 +185,14 @@ export default function Dashboard() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-popover z-50">
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                <User className="w-4 h-4 mr-2" />
+                {t("nav.profile")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
+                {t("nav.signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -212,20 +205,20 @@ export default function Dashboard() {
           <div className="space-y-2 mb-6">
             <Button onClick={handleNewProject} className="w-full justify-start gap-2">
               <Plus className="w-4 h-4" />
-              New Project
+              {t("dashboard.newProject")}
             </Button>
             <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full justify-start gap-2">
                   <LayoutTemplate className="w-4 h-4" />
-                  New from Template
+                  {t("dashboard.newFromTemplate")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl">
                 <DialogHeader>
-                  <DialogTitle>Choose a Template</DialogTitle>
+                  <DialogTitle>{t("dashboard.chooseTemplate")}</DialogTitle>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   {Object.entries(BPMN_TEMPLATES).map(([id, template]) => (
                     <Card
                       key={id}
@@ -240,16 +233,18 @@ export default function Dashboard() {
                       </CardHeader>
                       <CardContent className="text-xs text-muted-foreground">
                         <p className="line-clamp-2">{template.description}</p>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {template.systemTags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                        {template.systemTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {template.systemTags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-tag text-tag-foreground"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -261,7 +256,7 @@ export default function Dashboard() {
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Folders
+                {t("dashboard.folders")}
               </span>
               <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
                 <DialogTrigger asChild>
@@ -271,10 +266,10 @@ export default function Dashboard() {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create Folder</DialogTitle>
+                    <DialogTitle>{t("dashboard.createFolder")}</DialogTitle>
                   </DialogHeader>
                   <Input
-                    placeholder="Folder name..."
+                    placeholder={t("dashboard.folderName")}
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     onKeyDown={(e) => {
@@ -288,7 +283,7 @@ export default function Dashboard() {
                       onClick={() => createFolderMutation.mutate({ name: newFolderName.trim() })}
                       disabled={!newFolderName.trim()}
                     >
-                      Create
+                      {t("common.create")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -305,7 +300,7 @@ export default function Dashboard() {
                 }`}
               >
                 <FolderOpen className="w-4 h-4" />
-                All Projects
+                {t("dashboard.allProjects")}
               </button>
               {folders.map((folder) => (
                 <div key={folder.id} className="flex items-center group">
@@ -319,7 +314,7 @@ export default function Dashboard() {
                   >
                     <div
                       className="w-3 h-3 rounded-sm"
-                      style={{ backgroundColor: folder.color }}
+                      style={{ backgroundColor: folder.color || "#0891b2" }}
                     />
                     <span className="truncate">{folder.name}</span>
                   </button>
@@ -342,7 +337,7 @@ export default function Dashboard() {
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search projects..."
+                  placeholder={t("dashboard.searchProjects")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10"
@@ -352,17 +347,17 @@ export default function Dashboard() {
 
             {projectsLoading ? (
               <div className="text-center py-12 text-muted-foreground">
-                Loading projects...
+                {t("common.loading")}
               </div>
             ) : filteredProjects.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
                 <p className="text-muted-foreground mb-4">
-                  {search ? "No projects match your search" : "No projects yet"}
+                  {search ? t("dashboard.noMatch") : t("dashboard.noProjects")}
                 </p>
                 <Button onClick={handleNewProject}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create your first project
+                  {t("dashboard.createFirst")}
                 </Button>
               </div>
             ) : (
@@ -393,7 +388,7 @@ export default function Dashboard() {
                               className="text-destructive cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
+                              {t("common.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
