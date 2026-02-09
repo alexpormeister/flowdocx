@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getProjects, getFolders, createFolder, deleteFolder, deleteProject, createProject, updateProject, updateFolder, type Project, type Folder } from "@/lib/api";
 import { getFolderShares, createFolderShare, deleteFolderShare, getProjectShares, createProjectShare, deleteProjectShare } from "@/lib/sharingApi";
 import {
@@ -34,6 +35,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import LanguageToggle from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FolderSidebar } from "@/components/dashboard/FolderSidebar";
+import { MobileFolderSheet } from "@/components/dashboard/MobileFolderSheet";
 import { BreadcrumbNav } from "@/components/dashboard/BreadcrumbNav";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
@@ -46,6 +48,7 @@ import {
   LogOut,
   User,
   FileText,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,10 +57,12 @@ export default function Dashboard() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [showRootProjects, setShowRootProjects] = useState(false);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -111,6 +116,25 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
+  // Filter folders and projects by organization
+  const filteredFolders = useMemo(() => {
+    if (!selectedOrgId) {
+      // Personal workspace - show folders without organization
+      return folders.filter(f => !f.organization_id);
+    }
+    // Organization workspace - show only org folders
+    return folders.filter(f => f.organization_id === selectedOrgId);
+  }, [folders, selectedOrgId]);
+
+  const filteredProjectsByOrg = useMemo(() => {
+    if (!selectedOrgId) {
+      // Personal workspace - show projects without organization
+      return projects.filter(p => !p.organization_id);
+    }
+    // Organization workspace - show only org projects
+    return projects.filter(p => p.organization_id === selectedOrgId);
+  }, [projects, selectedOrgId]);
+
   // Folder shares for the selected folder
   const { data: folderShares = [] } = useQuery({
     queryKey: ["folder-shares", selectedFolder],
@@ -122,19 +146,29 @@ export default function Dashboard() {
   const currentPath = useMemo(() => {
     if (!selectedFolder) return [];
     const path: Folder[] = [];
-    let current = folders.find((f) => f.id === selectedFolder);
+    let current = filteredFolders.find((f) => f.id === selectedFolder);
     while (current) {
       path.unshift(current);
       current = current.parent_id
-        ? folders.find((f) => f.id === current!.parent_id)
+        ? filteredFolders.find((f) => f.id === current!.parent_id)
         : undefined;
     }
     return path;
-  }, [selectedFolder, folders]);
+  }, [selectedFolder, filteredFolders]);
+
+  // Projects not in any folder (root/desktop)
+  const rootProjects = useMemo(() => {
+    return filteredProjectsByOrg.filter(p => !p.folder_id);
+  }, [filteredProjectsByOrg]);
+
+  // Projects in folders
+  const projectsInFolders = useMemo(() => {
+    return filteredProjectsByOrg.filter(p => p.folder_id);
+  }, [filteredProjectsByOrg]);
 
   const createFolderMutation = useMutation({
     mutationFn: ({ name, parentId, color }: { name: string; parentId: string | null; color: string }) =>
-      createFolder(name, color, parentId),
+      createFolder(name, color, parentId, selectedOrgId || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
       toast.success("Folder created");
@@ -222,7 +256,7 @@ export default function Dashboard() {
   });
 
   const updateOrgMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string } }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string; notes?: string } }) =>
       updateOrganization(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
@@ -306,11 +340,27 @@ export default function Dashboard() {
     },
   });
 
-  const filteredProjects = projects.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchesFolder = selectedFolder ? p.folder_id === selectedFolder : true;
-    return matchesSearch && matchesFolder;
-  });
+  // Filter by search and folder
+  const displayedProjects = useMemo(() => {
+    let projectsToShow = filteredProjectsByOrg;
+
+    // If showing root projects only
+    if (showRootProjects) {
+      projectsToShow = rootProjects;
+    } else if (selectedFolder) {
+      // If a folder is selected, show only that folder's projects
+      projectsToShow = projectsToShow.filter(p => p.folder_id === selectedFolder);
+    }
+
+    // Apply search filter
+    if (search) {
+      projectsToShow = projectsToShow.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    return projectsToShow;
+  }, [filteredProjectsByOrg, rootProjects, showRootProjects, selectedFolder, search]);
 
   const handleNewProject = () => {
     const emptyBpmn = `<?xml version="1.0" encoding="UTF-8"?>
@@ -341,7 +391,8 @@ export default function Dashboard() {
     createProjectMutation.mutate({
       name: "Untitled Project",
       bpmn_xml: emptyBpmn,
-      folder_id: selectedFolder,
+      folder_id: showRootProjects ? null : selectedFolder,
+      organization_id: selectedOrgId || undefined,
     });
   };
 
@@ -355,8 +406,9 @@ export default function Dashboard() {
         ...s,
       })),
       system_tags: template.systemTags,
-      folder_id: selectedFolder,
+      folder_id: showRootProjects ? null : selectedFolder,
       description: template.description,
+      organization_id: selectedOrgId || undefined,
     });
     setTemplateGalleryOpen(false);
   };
@@ -374,6 +426,22 @@ export default function Dashboard() {
     }
   };
 
+  const handleSelectFolder = (folderId: string | null) => {
+    setSelectedFolder(folderId);
+    setShowRootProjects(false);
+  };
+
+  const handleShowRootProjects = () => {
+    setSelectedFolder(null);
+    setShowRootProjects(true);
+  };
+
+  // Reset folder selection when org changes
+  useEffect(() => {
+    setSelectedFolder(null);
+    setShowRootProjects(false);
+  }, [selectedOrgId]);
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -382,15 +450,44 @@ export default function Dashboard() {
     );
   }
 
+  const sidebarProps = {
+    folders: filteredFolders,
+    selectedFolderId: selectedFolder,
+    currentPath,
+    onSelectFolder: handleSelectFolder,
+    onCreateFolder: (name: string, parentId: string | null, color: string) =>
+      createFolderMutation.mutate({ name, parentId, color }),
+    onDeleteFolder: (id: string) => deleteFolderMutation.mutate(id),
+    onUpdateFolderTags: (folderId: string, tags: string[]) =>
+      updateFolderMutation.mutate({ id: folderId, updates: { system_tags: tags } }),
+    onNewProject: handleNewProject,
+    onOpenTemplateGallery: () => setTemplateGalleryOpen(true),
+    isCreatingFolder: createFolderMutation.isPending,
+    folderShares: folderShares.map(s => ({
+      id: s.id,
+      email: s.shared_with_email,
+      permission: s.permission,
+      created_at: s.created_at,
+    })),
+    onShareFolder: async (folderId: string, email: string, permission: "view" | "edit") => {
+      await shareFolderMutation.mutateAsync({ folderId, email, permission });
+    },
+    onRemoveFolderShare: async (shareId: string) => {
+      await removeFolderShareMutation.mutateAsync(shareId);
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="h-14 border-b bg-card flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <Workflow className="w-6 h-6 text-accent" />
-          <h1 className="text-lg font-semibold">BPMN Modeler</h1>
+      <header className="h-14 border-b bg-card flex items-center justify-between px-3 md:px-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Mobile menu */}
+          <MobileFolderSheet {...sidebarProps} />
+          <Workflow className="w-5 h-5 md:w-6 md:h-6 text-accent" />
+          <h1 className="text-base md:text-lg font-semibold hidden sm:block">BPMN Modeler</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           {/* Organization Selector */}
           <OrganizationSelector
             organizations={organizations}
@@ -440,8 +537,10 @@ export default function Dashboard() {
               }}
             />
           )}
-          <LanguageToggle />
-          <ThemeToggle />
+          <div className="hidden sm:flex items-center gap-2">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
@@ -453,6 +552,13 @@ export default function Dashboard() {
                 <User className="w-4 h-4 mr-2" />
                 {t("nav.profile")}
               </DropdownMenuItem>
+              <div className="sm:hidden">
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 flex items-center gap-2">
+                  <LanguageToggle />
+                  <ThemeToggle />
+                </div>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -464,51 +570,48 @@ export default function Dashboard() {
       </header>
 
       <div className="flex h-[calc(100vh-56px)]">
-        {/* Sidebar */}
-        <FolderSidebar
-          folders={folders}
-          selectedFolderId={selectedFolder}
-          currentPath={currentPath}
-          onSelectFolder={setSelectedFolder}
-          onCreateFolder={(name, parentId, color) =>
-            createFolderMutation.mutate({ name, parentId, color })
-          }
-          onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
-          onUpdateFolderTags={(folderId, tags) =>
-            updateFolderMutation.mutate({ id: folderId, updates: { system_tags: tags } })
-          }
-          onNewProject={handleNewProject}
-          onOpenTemplateGallery={() => setTemplateGalleryOpen(true)}
-          isCreatingFolder={createFolderMutation.isPending}
-          folderShares={folderShares.map(s => ({
-            id: s.id,
-            email: s.shared_with_email,
-            permission: s.permission,
-            created_at: s.created_at,
-          }))}
-          onShareFolder={async (folderId, email, permission) => {
-            await shareFolderMutation.mutateAsync({ folderId, email, permission });
-          }}
-          onRemoveFolderShare={async (shareId) => {
-            await removeFolderShareMutation.mutateAsync(shareId);
-          }}
-        />
+        {/* Sidebar - hidden on mobile */}
+        <div className="hidden md:block">
+          <FolderSidebar {...sidebarProps} />
+        </div>
 
         {/* Main Content */}
         <main
-          className="flex-1 p-6 overflow-auto"
+          className="flex-1 p-4 md:p-6 overflow-auto"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleFolderDrop(e, selectedFolder)}
         >
           <div className="max-w-5xl mx-auto">
             {/* Breadcrumb */}
-            <BreadcrumbNav currentPath={currentPath} onNavigate={setSelectedFolder} />
+            <BreadcrumbNav currentPath={currentPath} onNavigate={handleSelectFolder} />
 
             {/* Project Stats */}
             <ProjectStats
-              projects={filteredProjects}
-              currentFolderName={currentPath[currentPath.length - 1]?.name || null}
+              projects={displayedProjects}
+              currentFolderName={
+                showRootProjects 
+                  ? t("dashboard.desktop") 
+                  : currentPath[currentPath.length - 1]?.name || null
+              }
             />
+
+            {/* Quick Actions - Root projects toggle */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <Button
+                variant={showRootProjects ? "default" : "outline"}
+                size="sm"
+                onClick={handleShowRootProjects}
+                className="gap-2"
+              >
+                <FolderOpen className="w-4 h-4" />
+                {t("dashboard.desktop")} ({rootProjects.length})
+              </Button>
+              {!showRootProjects && !selectedFolder && (
+                <span className="text-sm text-muted-foreground">
+                  {t("dashboard.allProjects")}
+                </span>
+              )}
+            </div>
 
             {/* Search */}
             <div className="flex items-center gap-4 mb-6">
@@ -527,7 +630,7 @@ export default function Dashboard() {
               <div className="text-center py-12 text-muted-foreground">
                 {t("common.loading")}
               </div>
-            ) : filteredProjects.length === 0 ? (
+            ) : displayedProjects.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
                 <p className="text-muted-foreground mb-4">
@@ -540,11 +643,11 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProjects.map((project) => (
+                {displayedProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
-                    folders={folders}
+                    folders={filteredFolders}
                     onOpen={(id) => navigate(`/editor/${id}`)}
                     onDelete={(id) => deleteProjectMutation.mutate(id)}
                     onMoveToFolder={(projectId, folderId) =>
@@ -560,11 +663,11 @@ export default function Dashboard() {
 
       {/* Template Gallery Dialog */}
       <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-[95vw]">
           <DialogHeader>
             <DialogTitle>{t("dashboard.chooseTemplate")}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 max-h-[60vh] overflow-auto">
             {Object.entries(BPMN_TEMPLATES).map(([id, template]) => (
               <Card
                 key={id}
