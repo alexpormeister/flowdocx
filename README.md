@@ -1,73 +1,47 @@
-# Welcome to your Lovable project
+# FlowDocx - Prosessit eläväksi laatukäsikirjaksi
 
-## Project info
+FlowDocx on moderni SaaS-alusta, joka muuttaa monimutkaiset liiketoimintaprosessit automaattiseksi dokumentaatioksi, sertifioiduksi osaamiseksi ja jatkuvaksi laadunvarmistukseksi.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Ratkaisu
+Perinteiset prosessikaaviot ja PDF-ohjeet jäävät usein hyödyntämättä arjessa. FlowDocx ratkaisee tämän tekemällä prosessinhallinnasta dynaamista ja mitattavaa:
+* Automaatio: Piirrä kaavio - järjestelmä generoi SOP-ohjeistuksen, SWOT-analyysin ja SIPOC-mallin puolestasi.
+* Laadunvarmistus: Sertifioi työntekijöiden osaaminen ja varmista lakisääteinen raportointi, kuten Kela-raportointi.
+* Jatkuvuus: Hallitse vuoden kriittiset määräajat integroidun Vuosikellon avulla.
 
-## How can I edit this code?
+## Päätoiminnot
 
-There are several ways of editing your application.
+### 1. FlowDesigner (BPMN 2.0)
+Ammattimainen mallinnustyökalu, joka kytkee tehtävät suoraan yrityksen operatiivisiin järjestelmiin, kuten iCabbi, Movit ja Outlook.
 
-**Use Lovable**
+[Image of a professional BPMN 2.0 process model showing swimlanes and sequential tasks]
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 2. DocxGenerator (SOP ja Strategia)
+Luo sekunneissa täydelliset Standard Operating Procedure (SOP) -dokumentit, jotka sisältävät:
+* SWOT-analyysin: Tunnista prosessin vahvuudet, heikkoudet, mahdollisuudet ja uhat.
+* SIPOC-mallin: Kirkasta prosessin toimittajat, syötteet, prosessivaiheet, tuotokset ja asiakkaat.
 
-Changes made via Lovable will be committed automatically to this repo.
+### 3. FlowCert (Koulutus ja Sertifiointi)
+* Luo automaattisia kursseja ja monivalintatestejä suoraan kaavioiden pohjalta.
+* Testaa henkilöstön osaaminen ja myönnä digitaaliset sertifikaatit suorituksista.
 
-**Use your preferred IDE**
+### 4. Annual Cycle (Vuosikello)
+Varmista, että kriittiset tehtävät, kuten auditointi ja viranomaisraportointi, hoituvat ajallaan ympäri vuoden.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+[Image of an annual business cycle diagram showing monthly quality management tasks]
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Käyttöönotto
 
-Follow these steps:
+### Freemium-malli
+1. Free: Mallinna jopa 3 prosessia ja kokeile BPMN-perusteita.
+2. Pro: Rajaton dokumentaatio, automaattinen SOP-generointi ja FlowCert-ominaisuudet.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Asennus
+```bash
+# Kloonaa repositorio
+git clone [https://github.com/kayttaja/flowdocx.git](https://github.com/kayttaja/flowdocx.git)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Asenna riippuvuudet
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Käynnistä kehitysympäristö
 npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
