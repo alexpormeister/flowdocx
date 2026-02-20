@@ -46,7 +46,6 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
 
     const modeler = new BpmnModeler({
       container: containerRef.current,
-      keyboard: { bindTo: document },
     });
 
     modelerRef.current = modeler;
