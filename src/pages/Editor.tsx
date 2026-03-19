@@ -224,11 +224,14 @@ export default function Editor() {
     toast.success(t("strategic.sopGenerated"));
   };
 
-  const handleExport = useCallback(async (format: "png" | "svg") => {
+  const handleExport = useCallback(async (format: "png" | "svg" | "bpmn") => {
     if (!modeler) return;
 
     try {
-      if (format === "svg") {
+      if (format === "bpmn") {
+        const { xml } = await modeler.saveXML({ format: true });
+        downloadFile(xml, `${projectName}.bpmn`, "application/xml");
+      } else if (format === "svg") {
         const { svg } = await modeler.saveSVG();
         downloadFile(svg, `${projectName}.svg`, "image/svg+xml");
       } else {
