@@ -1,4 +1,4 @@
-import { Download, FileImage, FileText, Image } from "lucide-react";
+import { Download, FileImage, FileCode, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface ExportMenuProps {
-  onExport: (format: "png" | "svg") => void;
+  onExport: (format: "png" | "svg" | "bpmn") => void;
 }
 
 export default function ExportMenu({ onExport }: ExportMenuProps) {
@@ -28,6 +28,10 @@ export default function ExportMenu({ onExport }: ExportMenuProps) {
         <DropdownMenuItem onClick={() => onExport("svg")} className="text-xs gap-2 cursor-pointer">
           <Image className="w-3.5 h-3.5" />
           Export as SVG
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onExport("bpmn")} className="text-xs gap-2 cursor-pointer">
+          <FileCode className="w-3.5 h-3.5" />
+          Export as BPMN
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
