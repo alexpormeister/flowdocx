@@ -68,6 +68,7 @@ import { OrganizationSelector } from "@/components/dashboard/OrganizationSelecto
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
 import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon } from "lucide-react";
 import { toast } from "sonner";
+import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
 
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
