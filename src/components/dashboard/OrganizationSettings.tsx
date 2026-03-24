@@ -87,6 +87,8 @@ export function OrganizationSettings({
   members,
   tags,
   positions,
+  folders,
+  folderRestrictions,
   currentUserRole,
   onUpdateOrg,
   onInviteMember,
@@ -98,6 +100,8 @@ export function OrganizationSettings({
   onAddPosition,
   onUpdatePosition,
   onDeletePosition,
+  onAddFolderRestriction,
+  onRemoveFolderRestriction,
 }: OrganizationSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
