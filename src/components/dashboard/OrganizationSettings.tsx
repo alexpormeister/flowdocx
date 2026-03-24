@@ -33,7 +33,7 @@ interface OrganizationSettingsProps {
   folders: Folder[];
   folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
-  onUpdateOrg: (updates: { name?: string; notes?: string }) => Promise<void>;
+  onUpdateOrg: (updates: { name?: string; notes?: string; primary_color?: string; accent_color?: string }) => Promise<void>;
   onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
   onUpdateMemberRole: (memberId: string, role: OrgRole) => Promise<void>;
   onUpdateMemberDetails: (memberId: string, updates: { title?: string; position_id?: string | null }) => Promise<void>;
