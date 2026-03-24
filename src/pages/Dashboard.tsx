@@ -744,6 +744,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={handleShowRootProjects}
                 className="gap-2"
+                style={hasOrgTheme && showRootProjects ? { backgroundColor: "var(--org-accent)", borderColor: "var(--org-accent)", color: "#fff" } : undefined}
               >
                 <FolderOpen className="w-4 h-4" />
                 {t("dashboard.desktop")} ({rootProjects.length})
