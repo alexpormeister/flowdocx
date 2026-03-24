@@ -30,6 +30,8 @@ interface OrganizationSettingsProps {
   members: OrganizationMember[];
   tags: OrganizationSystemTag[];
   positions: OrganizationPosition[];
+  folders: Folder[];
+  folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
   onUpdateOrg: (updates: { name?: string; notes?: string }) => Promise<void>;
   onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
@@ -41,6 +43,8 @@ interface OrganizationSettingsProps {
   onAddPosition: (name: string, parentId?: string) => Promise<void>;
   onUpdatePosition: (positionId: string, updates: { name?: string; parent_position_id?: string | null }) => Promise<void>;
   onDeletePosition: (positionId: string) => Promise<void>;
+  onAddFolderRestriction: (memberId: string, folderId: string) => Promise<void>;
+  onRemoveFolderRestriction: (memberId: string, folderId: string) => Promise<void>;
 }
 
 const roleIcons: Record<OrgRole, typeof Crown> = {
