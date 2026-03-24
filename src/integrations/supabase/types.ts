@@ -467,6 +467,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_org_project: {
+        Args: { _permission?: string; _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_org_folder: {
+        Args: { _folder_id: string; _user_id: string }
+        Returns: boolean
+      }
       create_organization_with_owner: {
         Args: { org_business_id?: string; org_name: string }
         Returns: {
