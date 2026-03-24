@@ -700,6 +700,8 @@ export default function Dashboard() {
                 className="rounded-full"
                 style={hasOrgTheme ? { color: "#fff" } : undefined}
               >
+                <User className="w-5 h-5" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-popover z-50">
               <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
