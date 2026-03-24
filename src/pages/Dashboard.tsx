@@ -201,11 +201,18 @@ export default function Dashboard() {
   }, [folders, selectedOrgId, isAdminOrOwner, myRestrictedFolderIds, isFolderRestricted]);
 
   const filteredProjectsByOrg = useMemo(() => {
+    let result: Project[];
     if (!selectedOrgId) {
-      return projects.filter((p) => !p.organization_id);
+      result = projects.filter((p) => !p.organization_id);
+    } else {
+      result = projects.filter((p) => p.organization_id === selectedOrgId);
     }
-    return projects.filter((p) => p.organization_id === selectedOrgId);
-  }, [projects, selectedOrgId]);
+    // Hide projects inside restricted folders for non-admin users
+    if (selectedOrgId && !isAdminOrOwner && myRestrictedFolderIds.size > 0) {
+      result = result.filter((p) => !p.folder_id || !isFolderRestricted(p.folder_id, folders));
+    }
+    return result;
+  }, [projects, selectedOrgId, isAdminOrOwner, myRestrictedFolderIds, isFolderRestricted, folders]);
 
   // Folder shares for the selected folder
   const { data: folderShares = [] } = useQuery({
