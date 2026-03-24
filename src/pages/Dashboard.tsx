@@ -457,6 +457,8 @@ export default function Dashboard() {
       projectsToShow = rootProjects;
     } else if (selectedFolder) {
       projectsToShow = projectsToShow.filter((p) => p.folder_id === selectedFolder);
+    } else if (selectedOrgId) {
+      projectsToShow = [];
     }
 
     if (search) {
@@ -464,7 +466,7 @@ export default function Dashboard() {
     }
 
     return projectsToShow;
-  }, [filteredProjectsByOrg, rootProjects, showRootProjects, selectedFolder, search]);
+  }, [filteredProjectsByOrg, rootProjects, showRootProjects, selectedFolder, search, selectedOrgId]);
 
   const handleNewProject = () => {
     const emptyBpmn = `<?xml version="1.0" encoding="UTF-8"?>

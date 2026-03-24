@@ -81,30 +81,38 @@ export function MemberFolderAccessDialog({
         return (
           <div key={folder.id}>
             <div
-              className={`flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50 ${
+              className={`flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/50 ${
                 isInherited ? "opacity-50" : ""
               }`}
-              style={{ paddingLeft: `${depth * 20 + 8}px` }}
             >
-              {children.length > 0 && (
-                <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              )}
               <div
-                className="w-3 h-3 rounded-sm flex-shrink-0"
-                style={{ backgroundColor: folder.color || "#0891b2" }}
-              />
-              <span className="text-sm flex-1 truncate">{folder.name}</span>
-              <Checkbox
-                checked={isVisible}
-                disabled={isInherited || loading === folder.id || disabled}
-                onCheckedChange={() => handleToggle(folder.id, isDirectlyRestricted)}
-                className="flex-shrink-0"
-              />
-              {isVisible ? (
-                <Eye className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-              ) : (
-                <EyeOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-              )}
+                className="flex min-w-0 flex-1 items-center gap-2"
+                style={{ paddingLeft: `${depth * 16 + 4}px` }}
+              >
+                {children.length > 0 ? (
+                  <ChevronRight className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                ) : (
+                  <span className="h-3 w-3 flex-shrink-0" />
+                )}
+                <div
+                  className="h-3 w-3 flex-shrink-0 rounded-sm"
+                  style={{ backgroundColor: folder.color || "#0891b2" }}
+                />
+                <span className="truncate text-sm">{folder.name}</span>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2 pl-2">
+                <Checkbox
+                  checked={isVisible}
+                  disabled={isInherited || loading === folder.id || disabled}
+                  onCheckedChange={() => handleToggle(folder.id, isDirectlyRestricted)}
+                  className="flex-shrink-0"
+                />
+                {isVisible ? (
+                  <Eye className="h-3.5 w-3.5 flex-shrink-0 text-accent" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                )}
+              </div>
             </div>
             {children}
           </div>
@@ -120,7 +128,7 @@ export function MemberFolderAccessDialog({
           <span className="hidden sm:inline">Folders</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[80vh]">
+      <DialogContent className="max-h-[80vh] w-[min(92vw,42rem)] max-w-2xl overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <FolderOpen className="w-4 h-4" />
@@ -130,13 +138,15 @@ export function MemberFolderAccessDialog({
         <p className="text-xs text-muted-foreground">
           Uncheck folders to hide them from this member. Hiding a parent folder also hides all subfolders.
         </p>
-        <ScrollArea className="h-[400px] border rounded-md p-2">
-          {buildTree(null, 0)}
-          {folders.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No folders in this organization
-            </p>
-          )}
+        <ScrollArea className="h-[400px] w-full rounded-md border p-2">
+          <div className="min-w-0">
+            {buildTree(null, 0)}
+            {folders.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No folders in this organization
+              </p>
+            )}
+          </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
