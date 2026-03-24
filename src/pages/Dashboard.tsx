@@ -721,7 +721,7 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <main
-          className="flex-1 p-4 md:p-6 overflow-auto"
+          className="flex-1 p-4 md:p-6 overflow-auto org-main"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleFolderDrop(e, selectedFolder)}
         >
