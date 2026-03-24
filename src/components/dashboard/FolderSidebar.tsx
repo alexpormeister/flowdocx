@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   LayoutTemplate,
   Folder as FolderIcon,
   Share2,
+  Pencil,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
 import { FolderTagsManager } from "./FolderTagsManager";
@@ -24,6 +25,7 @@ interface FolderSidebarProps {
   onSelectFolder: (folderId: string | null) => void;
   onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  onRenameFolder: (folderId: string, newName: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
@@ -40,6 +42,7 @@ export function FolderSidebar({
   onSelectFolder,
   onCreateFolder,
   onDeleteFolder,
+  onRenameFolder,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
@@ -51,6 +54,9 @@ export function FolderSidebar({
   const { t } = useLanguage();
   const { user } = useAuth();
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   // Separate owned folders from shared folders
@@ -157,20 +163,59 @@ export function FolderSidebar({
               style={{ color: folder.color || "#0891b2" }}
               fill={folder.color || "#0891b2"}
             />
-            <span className="truncate">{folder.name}</span>
-            {(folder.system_tags?.length || 0) > 0 && (
+            {renamingFolderId === folder.id ? (
+              <input
+                ref={renameInputRef}
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => {
+                  if (renameValue.trim() && renameValue.trim() !== folder.name) {
+                    onRenameFolder(folder.id, renameValue.trim());
+                  }
+                  setRenamingFolderId(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (renameValue.trim() && renameValue.trim() !== folder.name) {
+                      onRenameFolder(folder.id, renameValue.trim());
+                    }
+                    setRenamingFolderId(null);
+                  } else if (e.key === "Escape") {
+                    setRenamingFolderId(null);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-transparent border-b border-accent outline-none text-sm w-full"
+                autoFocus
+              />
+            ) : (
+              <span className="truncate">{folder.name}</span>
+            )}
+            {renamingFolderId !== folder.id && (folder.system_tags?.length || 0) > 0 && (
               <span className="text-[10px] bg-muted px-1 rounded">
                 {folder.system_tags?.length}
               </span>
             )}
           </button>
-          {canDelete && (
-            <button
-              onClick={() => onDeleteFolder(folder.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+          {canDelete && renamingFolderId !== folder.id && (
+            <div className="opacity-0 group-hover:opacity-100 flex items-center transition-all">
+              <button
+                onClick={() => {
+                  setRenamingFolderId(folder.id);
+                  setRenameValue(folder.name);
+                }}
+                className="p-1 text-muted-foreground hover:text-foreground"
+                title="Rename"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => onDeleteFolder(folder.id)}
+                className="p-1 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
           )}
         </div>
         {hasChildren && isExpanded && (

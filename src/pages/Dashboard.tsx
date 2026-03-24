@@ -13,6 +13,7 @@ import {
   createProject,
   updateProject,
   updateFolder,
+  duplicateProject,
   getProfile,
   updateProfile,
   type Project,
@@ -297,9 +298,18 @@ export default function Dashboard() {
   });
 
   const updateFolderMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { system_tags?: string[] } }) => updateFolder(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; system_tags?: string[] } }) => updateFolder(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
+      toast.success(t("common.saved"));
+    },
+  });
+
+  const duplicateProjectMutation = useMutation({
+    mutationFn: duplicateProject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Project duplicated");
     },
   });
 
@@ -595,6 +605,8 @@ export default function Dashboard() {
     onCreateFolder: (name: string, parentId: string | null, color: string) =>
       createFolderMutation.mutate({ name, parentId, color }),
     onDeleteFolder: (id: string) => deleteFolderMutation.mutate(id),
+    onRenameFolder: (id: string, newName: string) =>
+      updateFolderMutation.mutate({ id, updates: { name: newName } }),
     onUpdateFolderTags: (folderId: string, tags: string[]) =>
       updateFolderMutation.mutate({ id: folderId, updates: { system_tags: tags } }),
     onNewProject: handleNewProject,
@@ -840,6 +852,7 @@ export default function Dashboard() {
                               navigate(`/editor/${id}${orgParam}`);
                             }}
                             onDelete={(id) => deleteProjectMutation.mutate(id)}
+                            onDuplicate={(id) => duplicateProjectMutation.mutate(id)}
                             onMoveToFolder={(projectId, folderId) =>
                               moveProjectMutation.mutate({ projectId, folderId })
                             }

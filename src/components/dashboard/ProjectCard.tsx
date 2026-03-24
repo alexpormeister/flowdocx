@@ -1,7 +1,7 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2, FolderInput, Clock } from "lucide-react";
+import { MoreVertical, Trash2, FolderInput, Clock, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { type Project, type Folder } from "@/lib/api";
 
@@ -10,6 +10,7 @@ interface ProjectCardProps {
   folders: Folder[];
   onOpen: (projectId: string) => void;
   onDelete: (projectId: string) => void;
+  onDuplicate: (projectId: string) => void;
   onMoveToFolder: (projectId: string, folderId: string | null) => void;
 }
 
@@ -18,6 +19,7 @@ export function ProjectCard({
   folders,
   onOpen,
   onDelete,
+  onDuplicate,
   onMoveToFolder,
 }: ProjectCardProps) {
   const { t } = useLanguage();
@@ -77,6 +79,16 @@ export function ProjectCard({
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(project.id);
+                }}
+                className="cursor-pointer"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
