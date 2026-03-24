@@ -490,6 +490,10 @@ export type Database = {
         Args: { _folder_id: string }
         Returns: string[]
       }
+      get_my_restricted_folders: {
+        Args: { _organization_id: string }
+        Returns: string[]
+      }
       has_folder_access: {
         Args: { _folder_id: string; _permission?: string; _user_id: string }
         Returns: boolean
