@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ interface OrganizationSettingsProps {
   folders: Folder[];
   folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
-  onUpdateOrg: (updates: { name?: string; notes?: string }) => Promise<void>;
+  onUpdateOrg: (updates: { name?: string; notes?: string; primary_color?: string; accent_color?: string }) => Promise<void>;
   onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
   onUpdateMemberRole: (memberId: string, role: OrgRole) => Promise<void>;
   onUpdateMemberDetails: (memberId: string, updates: { title?: string; position_id?: string | null }) => Promise<void>;
@@ -116,7 +116,15 @@ export function OrganizationSettings({
   const [newPositionName, setNewPositionName] = useState("");
   const [newPositionParentId, setNewPositionParentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState(organization.primary_color || "#0f172a");
+  const [accentColor, setAccentColor] = useState(organization.accent_color || "#0891b2");
 
+  useEffect(() => {
+    setPrimaryColor(organization.primary_color || "#0f172a");
+    setAccentColor(organization.accent_color || "#0891b2");
+    setOrgName(organization.name);
+    setOrgNotes(organization.notes || "");
+  }, [organization]);
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
 
   const handleSaveProfile = async () => {
@@ -225,10 +233,14 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
             <TabsTrigger value="profile" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Building2 className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.profile")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="branding" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <Palette className="w-4 h-4" />
+              <span className="hidden sm:inline">Branding</span>
             </TabsTrigger>
             <TabsTrigger value="members" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Users className="w-4 h-4" />
@@ -261,6 +273,91 @@ export function OrganizationSettings({
             {isAdmin && (
               <Button onClick={handleSaveProfile} disabled={isSubmitting}>
                 {t("common.save")}
+              </Button>
+            )}
+          </TabsContent>
+
+          {/* Branding Tab */}
+          <TabsContent value="branding" className="space-y-6">
+            <p className="text-sm text-muted-foreground">
+              Customize your organization's brand colors. These colors will be visible to all members when viewing the organization dashboard.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Primary Color</Label>
+                <p className="text-xs text-muted-foreground">Used for the sidebar, header accents, and headings</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    disabled={!isAdmin}
+                    className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent p-0.5"
+                  />
+                  <Input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    disabled={!isAdmin}
+                    className="w-28 font-mono text-sm"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Accent Color</Label>
+                <p className="text-xs text-muted-foreground">Used for buttons, links, and highlights</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    disabled={!isAdmin}
+                    className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent p-0.5"
+                  />
+                  <Input
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    disabled={!isAdmin}
+                    className="w-28 font-mono text-sm"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Live Preview */}
+            <div className="space-y-2">
+              <Label>Preview</Label>
+              <div
+                className="rounded-lg border p-4 flex items-center gap-4"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <div className="flex-1">
+                  <p className="text-sm font-semibold" style={{ color: "#fff" }}>{organization.name}</p>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>Organization Dashboard</p>
+                </div>
+                <div
+                  className="px-3 py-1.5 rounded text-xs font-medium"
+                  style={{ backgroundColor: accentColor, color: "#fff" }}
+                >
+                  Action
+                </div>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <Button
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    await onUpdateOrg({ primary_color: primaryColor, accent_color: accentColor });
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                Save Branding
               </Button>
             )}
           </TabsContent>

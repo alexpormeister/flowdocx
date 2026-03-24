@@ -8,6 +8,8 @@ export interface Organization {
   business_id: string | null;
   logo_url: string | null;
   notes: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -79,7 +81,7 @@ export async function createOrganization(name: string, businessId?: string): Pro
 
 export async function updateOrganization(
   id: string,
-  updates: { name?: string; business_id?: string; logo_url?: string }
+  updates: { name?: string; business_id?: string; logo_url?: string; primary_color?: string; accent_color?: string }
 ): Promise<Organization> {
   const { data, error } = await supabase
     .from("organizations")

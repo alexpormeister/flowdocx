@@ -337,7 +337,7 @@ export default function Dashboard() {
   });
 
   const updateOrgMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string; notes?: string } }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string; notes?: string; primary_color?: string; accent_color?: string } }) =>
       updateOrganization(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
@@ -564,6 +564,21 @@ export default function Dashboard() {
     };
   }, [profile?.dashboard_background_url]);
 
+  // Org brand theme as inline CSS custom properties
+  const orgThemeStyle = useMemo(() => {
+    if (!selectedOrg?.primary_color && !selectedOrg?.accent_color) return {};
+    const style: Record<string, string> = {};
+    if (selectedOrg.primary_color) {
+      style["--org-primary"] = selectedOrg.primary_color;
+    }
+    if (selectedOrg.accent_color) {
+      style["--org-accent"] = selectedOrg.accent_color;
+    }
+    return style;
+  }, [selectedOrg?.primary_color, selectedOrg?.accent_color]);
+
+  const hasOrgTheme = !!(selectedOrg?.primary_color || selectedOrg?.accent_color);
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -600,13 +615,21 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={backgroundStyle}>
+    <div className="min-h-screen bg-background" style={{ ...backgroundStyle, ...orgThemeStyle } as React.CSSProperties}>
       {/* Header */}
-      <header className="h-14 border-b bg-card flex items-center justify-between px-3 md:px-6">
+      <header
+        className="h-14 border-b flex items-center justify-between px-3 md:px-6"
+        style={hasOrgTheme ? { backgroundColor: "var(--org-primary)", color: "#fff" } : undefined}
+      >
         <div className="flex items-center gap-2 md:gap-3">
           <MobileFolderSheet {...sidebarProps} />
-          <Workflow className="w-5 h-5 md:w-6 md:h-6 text-accent" />
-          <h1 className="text-base md:text-lg font-semibold hidden sm:block">FlowDocx</h1>
+          <Workflow
+            className="w-5 h-5 md:w-6 md:h-6"
+            style={hasOrgTheme ? { color: "var(--org-accent)" } : undefined}
+          />
+          <h1 className="text-base md:text-lg font-semibold hidden sm:block" style={hasOrgTheme ? { color: "#fff" } : undefined}>
+            {selectedOrg ? selectedOrg.name : "FlowDocx"}
+          </h1>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <OrganizationSelector
