@@ -26,23 +26,24 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const authClient = createClient(supabaseUrl, publishableKey, {
+    const authClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: { user: caller }, error: callerError } = await authClient.auth.getUser(token);
-    if (callerError || !caller) {
-      console.error("Auth error:", callerError?.message);
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    const callerEmail = claimsData?.claims?.email;
+
+    if (claimsError || !claimsData?.claims?.sub || !callerEmail) {
+      console.error("Claims error:", claimsError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!ADMIN_EMAILS.includes(caller.email ?? "")) {
+    if (!ADMIN_EMAILS.includes(String(callerEmail))) {
       return new Response(JSON.stringify({ error: "Not an admin" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
