@@ -426,6 +426,22 @@ export default function Dashboard() {
     },
   });
 
+  const addFolderRestrictionMutation = useMutation({
+    mutationFn: ({ memberId, folderId }: { memberId: string; folderId: string }) =>
+      addFolderRestriction(selectedOrgId!, memberId, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folder-restrictions", selectedOrgId] });
+    },
+  });
+
+  const removeFolderRestrictionMutation = useMutation({
+    mutationFn: ({ memberId, folderId }: { memberId: string; folderId: string }) =>
+      removeFolderRestrictionByMemberAndFolder(memberId, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folder-restrictions", selectedOrgId] });
+    },
+  });
+
   // Filter by search and folder
   const displayedProjects = useMemo(() => {
     let projectsToShow = filteredProjectsByOrg;
