@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role to create user with auto-confirm
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    // Use service role to create user with auto-confirm (reuse adminClient without the user's auth header)
+    const createClient2 = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
