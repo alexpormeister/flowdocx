@@ -615,6 +615,8 @@ export default function Dashboard() {
               members={orgMembers}
               tags={orgTags}
               positions={orgPositions}
+              folders={filteredFolders}
+              folderRestrictions={folderRestrictions}
               currentUserRole={currentMembership?.role || null}
               onUpdateOrg={async (updates) => {
                 await updateOrgMutation.mutateAsync({ id: selectedOrg.id, updates });
@@ -645,6 +647,12 @@ export default function Dashboard() {
               }}
               onDeletePosition={async (positionId) => {
                 await deletePositionMutation.mutateAsync(positionId);
+              }}
+              onAddFolderRestriction={async (memberId, folderId) => {
+                await addFolderRestrictionMutation.mutateAsync({ memberId, folderId });
+              }}
+              onRemoveFolderRestriction={async (memberId, folderId) => {
+                await removeFolderRestrictionMutation.mutateAsync({ memberId, folderId });
               }}
             />
           )}
