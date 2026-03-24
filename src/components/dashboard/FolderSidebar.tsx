@@ -42,6 +42,7 @@ export function FolderSidebar({
   onSelectFolder,
   onCreateFolder,
   onDeleteFolder,
+  onRenameFolder,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
@@ -53,6 +54,9 @@ export function FolderSidebar({
   const { t } = useLanguage();
   const { user } = useAuth();
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   // Separate owned folders from shared folders
