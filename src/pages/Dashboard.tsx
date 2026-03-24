@@ -694,9 +694,12 @@ export default function Dashboard() {
           <AdminCreateUserDialog />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <User className="w-5 h-5" />
-              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                style={hasOrgTheme ? { color: "#fff" } : undefined}
+              >
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-popover z-50">
               <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
