@@ -19,6 +19,7 @@ export function ProjectCard({
   folders,
   onOpen,
   onDelete,
+  onDuplicate,
   onMoveToFolder,
 }: ProjectCardProps) {
   const { t } = useLanguage();
