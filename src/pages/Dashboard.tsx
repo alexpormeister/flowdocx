@@ -618,8 +618,8 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background" style={{ ...backgroundStyle, ...orgThemeStyle } as React.CSSProperties}>
       {/* Header */}
       <header
-        className="h-14 border-b flex items-center justify-between px-3 md:px-6"
-        style={hasOrgTheme ? { backgroundColor: "var(--org-primary)", color: "#fff" } : undefined}
+        className="h-14 border-b flex items-center justify-between px-3 md:px-6 bg-card"
+        style={hasOrgTheme ? { backgroundColor: "var(--org-primary)" } : undefined}
       >
         <div className="flex items-center gap-2 md:gap-3">
           <MobileFolderSheet {...sidebarProps} />
@@ -627,7 +627,10 @@ export default function Dashboard() {
             className="w-5 h-5 md:w-6 md:h-6"
             style={hasOrgTheme ? { color: "var(--org-accent)" } : undefined}
           />
-          <h1 className="text-base md:text-lg font-semibold hidden sm:block" style={hasOrgTheme ? { color: "#fff" } : undefined}>
+          <h1
+            className="text-base md:text-lg font-semibold hidden sm:block"
+            style={hasOrgTheme ? { color: "var(--org-accent)" } : undefined}
+          >
             {selectedOrg ? selectedOrg.name : "FlowDocx"}
           </h1>
         </div>
