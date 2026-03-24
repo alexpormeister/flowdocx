@@ -564,6 +564,21 @@ export default function Dashboard() {
     };
   }, [profile?.dashboard_background_url]);
 
+  // Org brand theme as inline CSS custom properties
+  const orgThemeStyle = useMemo(() => {
+    if (!selectedOrg?.primary_color && !selectedOrg?.accent_color) return {};
+    const style: Record<string, string> = {};
+    if (selectedOrg.primary_color) {
+      style["--org-primary"] = selectedOrg.primary_color;
+    }
+    if (selectedOrg.accent_color) {
+      style["--org-accent"] = selectedOrg.accent_color;
+    }
+    return style;
+  }, [selectedOrg?.primary_color, selectedOrg?.accent_color]);
+
+  const hasOrgTheme = !!(selectedOrg?.primary_color || selectedOrg?.accent_color);
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
