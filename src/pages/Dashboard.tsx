@@ -634,7 +634,7 @@ export default function Dashboard() {
             {selectedOrg ? selectedOrg.name : "FlowDocx"}
           </h1>
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3 org-header-actions">
           <OrganizationSelector
             organizations={organizations}
             selectedOrgId={selectedOrgId}
