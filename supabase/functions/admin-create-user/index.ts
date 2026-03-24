@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data, error } = await adminClient.auth.admin.createUser({
+    const { data, error } = await createClient2.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
