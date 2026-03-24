@@ -593,6 +593,7 @@ export default function Dashboard() {
               }}
             />
           )}
+          <AdminCreateUserDialog />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
