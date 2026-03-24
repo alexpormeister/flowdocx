@@ -43,6 +43,7 @@ export function OrganizationSelector({
   onSelectOrg,
   onCreateOrg,
   isCreating,
+  triggerStyle,
 }: OrganizationSelectorProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
