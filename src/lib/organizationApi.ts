@@ -8,6 +8,8 @@ export interface Organization {
   business_id: string | null;
   logo_url: string | null;
   notes: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
   created_at: string;
   updated_at: string;
 }
