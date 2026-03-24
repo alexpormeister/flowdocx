@@ -302,3 +302,98 @@ export async function updateOrganizationNotes(
   if (error) throw error;
   return data;
 }
+
+// Folder Restrictions
+export interface MemberFolderRestriction {
+  id: string;
+  organization_id: string;
+  member_id: string;
+  folder_id: string;
+  created_at: string;
+  created_by: string | null;
+}
+
+export async function getMemberFolderRestrictions(
+  organizationId: string
+): Promise<MemberFolderRestriction[]> {
+  const { data, error } = await supabase
+    .from("member_folder_restrictions")
+    .select("*")
+    .eq("organization_id", organizationId);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getMyFolderRestrictions(
+  organizationId: string
+): Promise<string[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Get current user's member record
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!member) return [];
+
+  const { data, error } = await supabase
+    .from("member_folder_restrictions")
+    .select("folder_id")
+    .eq("member_id", member.id);
+
+  if (error) {
+    // Non-admins can't read restrictions directly, use RPC
+    return [];
+  }
+  return (data || []).map(r => r.folder_id);
+}
+
+export async function addFolderRestriction(
+  organizationId: string,
+  memberId: string,
+  folderId: string
+): Promise<MemberFolderRestriction> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("member_folder_restrictions")
+    .insert({
+      organization_id: organizationId,
+      member_id: memberId,
+      folder_id: folderId,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function removeFolderRestriction(restrictionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("member_folder_restrictions")
+    .delete()
+    .eq("id", restrictionId);
+
+  if (error) throw error;
+}
+
+export async function removeFolderRestrictionByMemberAndFolder(
+  memberId: string,
+  folderId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("member_folder_restrictions")
+    .delete()
+    .eq("member_id", memberId)
+    .eq("folder_id", folderId);
+
+  if (error) throw error;
+}

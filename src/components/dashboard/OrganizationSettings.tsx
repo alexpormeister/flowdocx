@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition } from "@/lib/organizationApi";
+import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition, MemberFolderRestriction } from "@/lib/organizationApi";
+import type { Folder } from "@/lib/api";
+import { MemberFolderAccessDialog } from "./MemberFolderAccessDialog";
 
 interface OrganizationSettingsProps {
   organization: Organization;
   members: OrganizationMember[];
   tags: OrganizationSystemTag[];
   positions: OrganizationPosition[];
+  folders: Folder[];
+  folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
   onUpdateOrg: (updates: { name?: string; notes?: string }) => Promise<void>;
   onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
@@ -39,6 +43,8 @@ interface OrganizationSettingsProps {
   onAddPosition: (name: string, parentId?: string) => Promise<void>;
   onUpdatePosition: (positionId: string, updates: { name?: string; parent_position_id?: string | null }) => Promise<void>;
   onDeletePosition: (positionId: string) => Promise<void>;
+  onAddFolderRestriction: (memberId: string, folderId: string) => Promise<void>;
+  onRemoveFolderRestriction: (memberId: string, folderId: string) => Promise<void>;
 }
 
 const roleIcons: Record<OrgRole, typeof Crown> = {
@@ -81,6 +87,8 @@ export function OrganizationSettings({
   members,
   tags,
   positions,
+  folders,
+  folderRestrictions,
   currentUserRole,
   onUpdateOrg,
   onInviteMember,
@@ -92,6 +100,8 @@ export function OrganizationSettings({
   onAddPosition,
   onUpdatePosition,
   onDeletePosition,
+  onAddFolderRestriction,
+  onRemoveFolderRestriction,
 }: OrganizationSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -340,7 +350,14 @@ export function OrganizationSettings({
                       </div>
                     </div>
                     {isAdmin && member.role !== "owner" && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <MemberFolderAccessDialog
+                          member={member}
+                          folders={folders}
+                          restrictions={folderRestrictions}
+                          onAddRestriction={onAddFolderRestriction}
+                          onRemoveRestriction={onRemoveFolderRestriction}
+                        />
                         <Select
                           value={member.role}
                           onValueChange={(v: OrgRole) => onUpdateMemberRole(member.id, v)}

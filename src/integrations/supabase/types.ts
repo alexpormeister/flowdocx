@@ -106,6 +106,55 @@ export type Database = {
           },
         ]
       }
+      member_folder_restrictions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          folder_id: string
+          id: string
+          member_id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          folder_id: string
+          id?: string
+          member_id: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          folder_id?: string
+          id?: string
+          member_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_folder_restrictions_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_folder_restrictions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_folder_restrictions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           accepted_at: string | null
@@ -441,6 +490,10 @@ export type Database = {
         Args: { _folder_id: string }
         Returns: string[]
       }
+      get_my_restricted_folders: {
+        Args: { _organization_id: string }
+        Returns: string[]
+      }
       has_folder_access: {
         Args: { _folder_id: string; _permission?: string; _user_id: string }
         Returns: boolean
@@ -455,6 +508,10 @@ export type Database = {
       }
       has_project_access: {
         Args: { _permission?: string; _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_folder_restricted_for_user: {
+        Args: { _folder_id: string; _organization_id: string; _user_id: string }
         Returns: boolean
       }
     }

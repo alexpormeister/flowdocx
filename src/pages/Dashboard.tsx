@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -44,6 +44,9 @@ import {
   createOrganizationPosition,
   updateOrganizationPosition,
   deleteOrganizationPosition,
+  getMemberFolderRestrictions,
+  addFolderRestriction,
+  removeFolderRestrictionByMemberAndFolder,
   type Organization,
   type OrgRole,
 } from "@/lib/organizationApi";
@@ -134,6 +137,22 @@ export default function Dashboard() {
     enabled: !!user && !!selectedOrgId,
   });
 
+  const { data: folderRestrictions = [] } = useQuery({
+    queryKey: ["folder-restrictions", selectedOrgId],
+    queryFn: () => (selectedOrgId ? getMemberFolderRestrictions(selectedOrgId) : Promise.resolve([])),
+    enabled: !!user && !!selectedOrgId,
+  });
+
+  // Get current user's restricted folder IDs (from restrictions table)
+  const myRestrictedFolderIds = useMemo(() => {
+    if (!currentMembership || !folderRestrictions.length) return new Set<string>();
+    return new Set(
+      folderRestrictions
+        .filter((r) => r.member_id === currentMembership.id)
+        .map((r) => r.folder_id)
+    );
+  }, [folderRestrictions, currentMembership]);
+
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: getProjects,
@@ -153,13 +172,33 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // Filter folders and projects by organization
-  const filteredFolders = useMemo(() => {
-    if (!selectedOrgId) {
-      return folders.filter((f) => !f.organization_id);
+  // Check if a folder or any ancestor is restricted
+  const isFolderRestricted = useCallback((folderId: string, allFolders: Folder[]): boolean => {
+    let currentId: string | null = folderId;
+    while (currentId) {
+      if (myRestrictedFolderIds.has(currentId)) return true;
+      const folder = allFolders.find((f) => f.id === currentId);
+      currentId = folder?.parent_id || null;
     }
-    return folders.filter((f) => f.organization_id === selectedOrgId);
-  }, [folders, selectedOrgId]);
+    return false;
+  }, [myRestrictedFolderIds]);
+
+  // Filter folders and projects by organization (and restrictions for non-owner/admin)
+  const isAdminOrOwner = currentMembership?.role === "owner" || currentMembership?.role === "admin";
+
+  const filteredFolders = useMemo(() => {
+    let result: Folder[];
+    if (!selectedOrgId) {
+      result = folders.filter((f) => !f.organization_id);
+    } else {
+      result = folders.filter((f) => f.organization_id === selectedOrgId);
+    }
+    // Apply restrictions for non-admin users
+    if (selectedOrgId && !isAdminOrOwner && myRestrictedFolderIds.size > 0) {
+      result = result.filter((f) => !isFolderRestricted(f.id, folders));
+    }
+    return result;
+  }, [folders, selectedOrgId, isAdminOrOwner, myRestrictedFolderIds, isFolderRestricted]);
 
   const filteredProjectsByOrg = useMemo(() => {
     if (!selectedOrgId) {
@@ -387,6 +426,22 @@ export default function Dashboard() {
     },
   });
 
+  const addFolderRestrictionMutation = useMutation({
+    mutationFn: ({ memberId, folderId }: { memberId: string; folderId: string }) =>
+      addFolderRestriction(selectedOrgId!, memberId, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folder-restrictions", selectedOrgId] });
+    },
+  });
+
+  const removeFolderRestrictionMutation = useMutation({
+    mutationFn: ({ memberId, folderId }: { memberId: string; folderId: string }) =>
+      removeFolderRestrictionByMemberAndFolder(memberId, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folder-restrictions", selectedOrgId] });
+    },
+  });
+
   // Filter by search and folder
   const displayedProjects = useMemo(() => {
     let projectsToShow = filteredProjectsByOrg;
@@ -560,6 +615,8 @@ export default function Dashboard() {
               members={orgMembers}
               tags={orgTags}
               positions={orgPositions}
+              folders={filteredFolders}
+              folderRestrictions={folderRestrictions}
               currentUserRole={currentMembership?.role || null}
               onUpdateOrg={async (updates) => {
                 await updateOrgMutation.mutateAsync({ id: selectedOrg.id, updates });
@@ -590,6 +647,12 @@ export default function Dashboard() {
               }}
               onDeletePosition={async (positionId) => {
                 await deletePositionMutation.mutateAsync(positionId);
+              }}
+              onAddFolderRestriction={async (memberId, folderId) => {
+                await addFolderRestrictionMutation.mutateAsync({ memberId, folderId });
+              }}
+              onRemoveFolderRestriction={async (memberId, folderId) => {
+                await removeFolderRestrictionMutation.mutateAsync({ memberId, folderId });
               }}
             />
           )}
