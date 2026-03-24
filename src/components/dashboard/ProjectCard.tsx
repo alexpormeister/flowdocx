@@ -82,6 +82,16 @@ export function ProjectCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  onDuplicate(project.id);
+                }}
+                className="cursor-pointer"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
                   onDelete(project.id);
                 }}
                 className="text-destructive cursor-pointer"
