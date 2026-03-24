@@ -350,7 +350,14 @@ export function OrganizationSettings({
                       </div>
                     </div>
                     {isAdmin && member.role !== "owner" && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <MemberFolderAccessDialog
+                          member={member}
+                          folders={folders}
+                          restrictions={folderRestrictions}
+                          onAddRestriction={onAddFolderRestriction}
+                          onRemoveRestriction={onRemoveFolderRestriction}
+                        />
                         <Select
                           value={member.role}
                           onValueChange={(v: OrgRole) => onUpdateMemberRole(member.id, v)}
