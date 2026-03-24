@@ -81,7 +81,7 @@ export async function createOrganization(name: string, businessId?: string): Pro
 
 export async function updateOrganization(
   id: string,
-  updates: { name?: string; business_id?: string; logo_url?: string }
+  updates: { name?: string; business_id?: string; logo_url?: string; primary_color?: string; accent_color?: string }
 ): Promise<Organization> {
   const { data, error } = await supabase
     .from("organizations")
