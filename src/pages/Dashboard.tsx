@@ -44,6 +44,9 @@ import {
   createOrganizationPosition,
   updateOrganizationPosition,
   deleteOrganizationPosition,
+  getMemberFolderRestrictions,
+  addFolderRestriction,
+  removeFolderRestrictionByMemberAndFolder,
   type Organization,
   type OrgRole,
 } from "@/lib/organizationApi";
