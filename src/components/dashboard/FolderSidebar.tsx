@@ -11,6 +11,7 @@ import {
   LayoutTemplate,
   Folder as FolderIcon,
   Share2,
+  Pencil,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
 import { FolderTagsManager } from "./FolderTagsManager";
