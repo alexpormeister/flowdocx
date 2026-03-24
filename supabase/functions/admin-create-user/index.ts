@@ -17,17 +17,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify caller is admin
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Missing access token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Use service role client to verify the caller's JWT
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    const authClient = createClient(supabaseUrl, publishableKey, {
       auth: { autoRefreshToken: false, persistSession: false },
-      global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: caller }, error: callerError } = await adminClient.auth.getUser();
+    const { data: { user: caller }, error: callerError } = await authClient.auth.getUser(token);
     if (callerError || !caller) {
       console.error("Auth error:", callerError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -36,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!ADMIN_EMAILS.includes(caller.email!)) {
+    if (!ADMIN_EMAILS.includes(caller.email ?? "")) {
       return new Response(JSON.stringify({ error: "Not an admin" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -52,12 +58,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role to create user with auto-confirm (reuse adminClient without the user's auth header)
-    const createClient2 = createClient(supabaseUrl, serviceRoleKey, {
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data, error } = await createClient2.auth.admin.createUser({
+    const { data, error } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
