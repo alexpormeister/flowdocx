@@ -10,6 +10,7 @@ interface ProjectCardProps {
   folders: Folder[];
   onOpen: (projectId: string) => void;
   onDelete: (projectId: string) => void;
+  onDuplicate: (projectId: string) => void;
   onMoveToFolder: (projectId: string, folderId: string | null) => void;
 }
 
