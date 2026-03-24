@@ -337,7 +337,7 @@ export default function Dashboard() {
   });
 
   const updateOrgMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string; notes?: string } }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; business_id?: string; notes?: string; primary_color?: string; accent_color?: string } }) =>
       updateOrganization(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
