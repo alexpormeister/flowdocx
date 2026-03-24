@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition } from "@/lib/organizationApi";
+import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition, MemberFolderRestriction } from "@/lib/organizationApi";
+import type { Folder } from "@/lib/api";
+import { MemberFolderAccessDialog } from "./MemberFolderAccessDialog";
 
 interface OrganizationSettingsProps {
   organization: Organization;
