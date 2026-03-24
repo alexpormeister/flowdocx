@@ -643,6 +643,7 @@ export default function Dashboard() {
               await createOrgMutation.mutateAsync({ name, businessId });
             }}
             isCreating={createOrgMutation.isPending}
+            triggerStyle={hasOrgTheme ? { backgroundColor: "rgba(255,255,255,0.15)", color: "#fff", borderColor: "rgba(255,255,255,0.25)" } : undefined}
           />
           {selectedOrg && (
             <OrganizationSettings
