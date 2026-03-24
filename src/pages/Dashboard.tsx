@@ -850,6 +850,7 @@ export default function Dashboard() {
                               navigate(`/editor/${id}${orgParam}`);
                             }}
                             onDelete={(id) => deleteProjectMutation.mutate(id)}
+                            onDuplicate={(id) => duplicateProjectMutation.mutate(id)}
                             onMoveToFolder={(projectId, folderId) =>
                               moveProjectMutation.mutate({ projectId, folderId })
                             }
