@@ -605,6 +605,8 @@ export default function Dashboard() {
     onCreateFolder: (name: string, parentId: string | null, color: string) =>
       createFolderMutation.mutate({ name, parentId, color }),
     onDeleteFolder: (id: string) => deleteFolderMutation.mutate(id),
+    onRenameFolder: (id: string, newName: string) =>
+      updateFolderMutation.mutate({ id, updates: { name: newName } }),
     onUpdateFolderTags: (folderId: string, tags: string[]) =>
       updateFolderMutation.mutate({ id: folderId, updates: { system_tags: tags } }),
     onNewProject: handleNewProject,
