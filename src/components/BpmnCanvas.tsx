@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import BpmnModeler from "bpmn-js/lib/Modeler";
 import "bpmn-js/dist/assets/diagram-js.css";
 import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
+import { Button } from "@/components/ui/button";
+import { Plus, Minus, Maximize } from "lucide-react";
 
 const EMPTY_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -68,12 +70,61 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
     };
   }, []);
 
+  const handleZoomIn = () => {
+    if (!modelerRef.current) return;
+    const canvas = modelerRef.current.get("canvas") as any;
+    canvas.zoom(canvas.zoom() * 1.2);
+  };
+
+  const handleZoomOut = () => {
+    if (!modelerRef.current) return;
+    const canvas = modelerRef.current.get("canvas") as any;
+    canvas.zoom(canvas.zoom() / 1.2);
+  };
+
+  const handleFitViewport = () => {
+    if (!modelerRef.current) return;
+    const canvas = modelerRef.current.get("canvas") as any;
+    canvas.zoom("fit-viewport");
+  };
+
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full bg-canvas"
-      style={{ minHeight: "100%" }}
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={containerRef}
+        className="w-full h-full bg-canvas"
+        style={{ minHeight: "100%" }}
+      />
+      <div className="absolute bottom-4 right-4 flex flex-col gap-1 z-10">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-md"
+          onClick={handleZoomIn}
+          title="Zoom in"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-md"
+          onClick={handleZoomOut}
+          title="Zoom out"
+        >
+          <Minus className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 bg-background/90 backdrop-blur-sm shadow-md"
+          onClick={handleFitViewport}
+          title="Fit to viewport"
+        >
+          <Maximize className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
