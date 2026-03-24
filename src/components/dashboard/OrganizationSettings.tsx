@@ -116,7 +116,15 @@ export function OrganizationSettings({
   const [newPositionName, setNewPositionName] = useState("");
   const [newPositionParentId, setNewPositionParentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState(organization.primary_color || "#0f172a");
+  const [accentColor, setAccentColor] = useState(organization.accent_color || "#0891b2");
 
+  useEffect(() => {
+    setPrimaryColor(organization.primary_color || "#0f172a");
+    setAccentColor(organization.accent_color || "#0891b2");
+    setOrgName(organization.name);
+    setOrgNotes(organization.notes || "");
+  }, [organization]);
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
 
   const handleSaveProfile = async () => {
