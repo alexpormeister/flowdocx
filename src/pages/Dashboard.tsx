@@ -615,7 +615,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={{ ...backgroundStyle, ...orgThemeStyle } as React.CSSProperties}>
+    <div className="min-h-screen bg-background" style={{ ...backgroundStyle, ...orgThemeStyle } as React.CSSProperties} {...(hasOrgTheme ? { "data-org-theme": "" } : {})}>
       {/* Header */}
       <header
         className="h-14 border-b flex items-center justify-between px-3 md:px-6 bg-card"
