@@ -137,6 +137,22 @@ export default function Dashboard() {
     enabled: !!user && !!selectedOrgId,
   });
 
+  const { data: folderRestrictions = [] } = useQuery({
+    queryKey: ["folder-restrictions", selectedOrgId],
+    queryFn: () => (selectedOrgId ? getMemberFolderRestrictions(selectedOrgId) : Promise.resolve([])),
+    enabled: !!user && !!selectedOrgId,
+  });
+
+  // Get current user's restricted folder IDs (from restrictions table)
+  const myRestrictedFolderIds = useMemo(() => {
+    if (!currentMembership || !folderRestrictions.length) return new Set<string>();
+    return new Set(
+      folderRestrictions
+        .filter((r) => r.member_id === currentMembership.id)
+        .map((r) => r.folder_id)
+    );
+  }, [folderRestrictions, currentMembership]);
+
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: getProjects,
@@ -156,13 +172,33 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // Filter folders and projects by organization
-  const filteredFolders = useMemo(() => {
-    if (!selectedOrgId) {
-      return folders.filter((f) => !f.organization_id);
+  // Check if a folder or any ancestor is restricted
+  const isFolderRestricted = useCallback((folderId: string, allFolders: Folder[]): boolean => {
+    let currentId: string | null = folderId;
+    while (currentId) {
+      if (myRestrictedFolderIds.has(currentId)) return true;
+      const folder = allFolders.find((f) => f.id === currentId);
+      currentId = folder?.parent_id || null;
     }
-    return folders.filter((f) => f.organization_id === selectedOrgId);
-  }, [folders, selectedOrgId]);
+    return false;
+  }, [myRestrictedFolderIds]);
+
+  // Filter folders and projects by organization (and restrictions for non-owner/admin)
+  const isAdminOrOwner = currentMembership?.role === "owner" || currentMembership?.role === "admin";
+
+  const filteredFolders = useMemo(() => {
+    let result: Folder[];
+    if (!selectedOrgId) {
+      result = folders.filter((f) => !f.organization_id);
+    } else {
+      result = folders.filter((f) => f.organization_id === selectedOrgId);
+    }
+    // Apply restrictions for non-admin users
+    if (selectedOrgId && !isAdminOrOwner && myRestrictedFolderIds.size > 0) {
+      result = result.filter((f) => !isFolderRestricted(f.id, folders));
+    }
+    return result;
+  }, [folders, selectedOrgId, isAdminOrOwner, myRestrictedFolderIds, isFolderRestricted]);
 
   const filteredProjectsByOrg = useMemo(() => {
     if (!selectedOrgId) {
