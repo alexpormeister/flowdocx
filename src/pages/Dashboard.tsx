@@ -615,11 +615,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background" style={{ ...backgroundStyle, ...orgThemeStyle } as React.CSSProperties}>
+    <div className="min-h-screen bg-background" style={{ ...backgroundStyle, ...orgThemeStyle } as React.CSSProperties} {...(hasOrgTheme ? { "data-org-theme": "" } : {})}>
       {/* Header */}
       <header
-        className="h-14 border-b flex items-center justify-between px-3 md:px-6"
-        style={hasOrgTheme ? { backgroundColor: "var(--org-primary)", color: "#fff" } : undefined}
+        className="h-14 border-b flex items-center justify-between px-3 md:px-6 bg-card"
+        style={hasOrgTheme ? { backgroundColor: "var(--org-primary)" } : undefined}
       >
         <div className="flex items-center gap-2 md:gap-3">
           <MobileFolderSheet {...sidebarProps} />
@@ -627,11 +627,14 @@ export default function Dashboard() {
             className="w-5 h-5 md:w-6 md:h-6"
             style={hasOrgTheme ? { color: "var(--org-accent)" } : undefined}
           />
-          <h1 className="text-base md:text-lg font-semibold hidden sm:block" style={hasOrgTheme ? { color: "#fff" } : undefined}>
+          <h1
+            className="text-base md:text-lg font-semibold hidden sm:block"
+            style={hasOrgTheme ? { color: "var(--org-accent)" } : undefined}
+          >
             {selectedOrg ? selectedOrg.name : "FlowDocx"}
           </h1>
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3 org-header-actions">
           <OrganizationSelector
             organizations={organizations}
             selectedOrgId={selectedOrgId}
@@ -640,6 +643,7 @@ export default function Dashboard() {
               await createOrgMutation.mutateAsync({ name, businessId });
             }}
             isCreating={createOrgMutation.isPending}
+            triggerStyle={hasOrgTheme ? { backgroundColor: "rgba(255,255,255,0.15)", color: "#fff", borderColor: "rgba(255,255,255,0.25)" } : undefined}
           />
           {selectedOrg && (
             <OrganizationSettings
@@ -691,7 +695,12 @@ export default function Dashboard() {
           <AdminCreateUserDialog />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                style={hasOrgTheme ? { color: "#fff" } : undefined}
+              >
                 <User className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -718,7 +727,7 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <main
-          className="flex-1 p-4 md:p-6 overflow-auto"
+          className="flex-1 p-4 md:p-6 overflow-auto org-main"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleFolderDrop(e, selectedFolder)}
         >
@@ -741,6 +750,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={handleShowRootProjects}
                 className="gap-2"
+                style={hasOrgTheme && showRootProjects ? { backgroundColor: "var(--org-accent)", borderColor: "var(--org-accent)", color: "#fff" } : undefined}
               >
                 <FolderOpen className="w-4 h-4" />
                 {t("dashboard.desktop")} ({rootProjects.length})
@@ -806,7 +816,7 @@ export default function Dashboard() {
                     <p className="text-muted-foreground mb-4">
                       {search ? t("dashboard.noMatch") : t("dashboard.noProjects")}
                     </p>
-                    <Button onClick={handleNewProject}>
+                    <Button onClick={handleNewProject} style={hasOrgTheme ? { backgroundColor: "var(--org-accent)", color: "#fff" } : undefined}>
                       <Plus className="w-4 h-4 mr-2" />
                       {t("dashboard.createFirst")}
                     </Button>

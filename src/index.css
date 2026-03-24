@@ -111,6 +111,14 @@
   }
 }
 
+/* Org-branded header: buttons get proper contrast on dark bg */
+[data-org-theme] .org-header-actions button {
+  color: #fff;
+}
+[data-org-theme] .org-header-actions button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
 /* BPMN.js overrides for clean look */
 .bjs-container {
   background: hsl(var(--canvas-bg)) !important;

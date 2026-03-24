@@ -34,6 +34,7 @@ interface OrganizationSelectorProps {
   onSelectOrg: (orgId: string | null) => void;
   onCreateOrg: (name: string, businessId?: string) => Promise<void>;
   isCreating?: boolean;
+  triggerStyle?: React.CSSProperties;
 }
 
 export function OrganizationSelector({
@@ -42,6 +43,7 @@ export function OrganizationSelector({
   onSelectOrg,
   onCreateOrg,
   isCreating,
+  triggerStyle,
 }: OrganizationSelectorProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -66,6 +68,7 @@ export function OrganizationSelector({
             role="combobox"
             aria-expanded={open}
             className="w-[200px] justify-between"
+            style={triggerStyle}
           >
             <div className="flex items-center gap-2 truncate">
               <Building2 className="w-4 h-4 flex-shrink-0" />
