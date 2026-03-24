@@ -1,7 +1,7 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2, FolderInput, Clock } from "lucide-react";
+import { MoreVertical, Trash2, FolderInput, Clock, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { type Project, type Folder } from "@/lib/api";
 
