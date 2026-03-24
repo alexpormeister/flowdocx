@@ -115,8 +115,9 @@ export function MemberFolderAccessDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7" disabled={disabled} title="Manage folder access">
+        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" disabled={disabled} title="Manage folder access">
           <FolderOpen className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Folders</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[80vh]">
