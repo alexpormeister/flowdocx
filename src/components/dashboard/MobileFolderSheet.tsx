@@ -49,6 +49,7 @@ export function MobileFolderSheet({
   onSelectFolder,
   onCreateFolder,
   onDeleteFolder,
+  onRenameFolder,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
