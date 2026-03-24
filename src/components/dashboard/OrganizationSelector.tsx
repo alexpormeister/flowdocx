@@ -68,6 +68,7 @@ export function OrganizationSelector({
             role="combobox"
             aria-expanded={open}
             className="w-[200px] justify-between"
+            style={triggerStyle}
           >
             <div className="flex items-center gap-2 truncate">
               <Building2 className="w-4 h-4 flex-shrink-0" />
