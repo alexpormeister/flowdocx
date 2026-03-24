@@ -157,6 +157,21 @@ export async function deleteProject(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function duplicateProject(projectId: string): Promise<Project> {
+  const original = await getProject(projectId);
+  if (!original) throw new Error("Project not found");
+
+  return createProject({
+    name: `${original.name} (Copy)`,
+    bpmn_xml: original.bpmn_xml,
+    process_steps: original.process_steps,
+    system_tags: original.system_tags,
+    folder_id: original.folder_id,
+    description: original.description || undefined,
+    organization_id: original.organization_id,
+  });
+}
+
 // Folders
 export async function getFolders(): Promise<Folder[]> {
   const { data, error } = await supabase
