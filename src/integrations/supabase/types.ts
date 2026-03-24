@@ -291,30 +291,36 @@ export type Database = {
       }
       organizations: {
         Row: {
+          accent_color: string | null
           business_id: string | null
           created_at: string
           id: string
           logo_url: string | null
           name: string
           notes: string | null
+          primary_color: string | null
           updated_at: string
         }
         Insert: {
+          accent_color?: string | null
           business_id?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name: string
           notes?: string | null
+          primary_color?: string | null
           updated_at?: string
         }
         Update: {
+          accent_color?: string | null
           business_id?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name?: string
           notes?: string | null
+          primary_color?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -478,12 +484,14 @@ export type Database = {
       create_organization_with_owner: {
         Args: { org_business_id?: string; org_name: string }
         Returns: {
+          accent_color: string | null
           business_id: string | null
           created_at: string
           id: string
           logo_url: string | null
           name: string
           notes: string | null
+          primary_color: string | null
           updated_at: string
         }
         SetofOptions: {
