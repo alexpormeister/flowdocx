@@ -13,6 +13,7 @@ import {
   createProject,
   updateProject,
   updateFolder,
+  duplicateProject,
   getProfile,
   updateProfile,
   type Project,
