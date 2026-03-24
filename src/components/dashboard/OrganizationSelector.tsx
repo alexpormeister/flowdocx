@@ -34,6 +34,7 @@ interface OrganizationSelectorProps {
   onSelectOrg: (orgId: string | null) => void;
   onCreateOrg: (name: string, businessId?: string) => Promise<void>;
   isCreating?: boolean;
+  triggerStyle?: React.CSSProperties;
 }
 
 export function OrganizationSelector({
