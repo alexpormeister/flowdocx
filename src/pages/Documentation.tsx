@@ -5,6 +5,7 @@ import { getProject } from "@/lib/api";
 import { ArrowLeft, Printer, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
+import { useEffect, useRef, useState } from "react";
 
 export default function Documentation() {
   const { id } = useParams<{ id: string }>();
@@ -180,11 +181,61 @@ export default function Documentation() {
           </section>
         )}
 
+        {/* BPMN Diagram */}
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-3 border-b pb-1">Process Diagram</h2>
+          <BpmnDiagramPreview bpmnXml={project.bpmn_xml} />
+        </section>
+
         {/* Footer */}
         <footer className="mt-12 pt-4 border-t text-xs text-muted-foreground">
           <p>Document generated on {new Date().toLocaleDateString("fi-FI")} — {project.name}</p>
         </footer>
       </main>
     </div>
+  );
+}
+
+function BpmnDiagramPreview({ bpmnXml }: { bpmnXml: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current || !bpmnXml) return;
+
+    let viewer: any = null;
+
+    const render = async () => {
+      try {
+        const { default: NavigatedViewer } = await import("bpmn-js/lib/NavigatedViewer");
+        viewer = new NavigatedViewer({ container: containerRef.current! });
+        await viewer.importXML(bpmnXml);
+        const canvas = viewer.get("canvas") as any;
+        canvas.zoom("fit-viewport");
+      } catch (e) {
+        console.error("Failed to render BPMN in docs:", e);
+        setError(true);
+      }
+    };
+
+    render();
+
+    return () => {
+      if (viewer) {
+        try { viewer.destroy(); } catch (_) {}
+      }
+    };
+  }, [bpmnXml]);
+
+  if (error) {
+    return <p className="text-sm text-muted-foreground">Failed to render diagram.</p>;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full border rounded-lg bg-white overflow-hidden"
+      style={{ height: "400px" }}
+    />
   );
 }
