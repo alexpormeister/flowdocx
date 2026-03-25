@@ -862,7 +862,7 @@ export default function Dashboard() {
                     <p className="text-muted-foreground mb-4">
                       {search ? t("dashboard.noMatch") : t("dashboard.noProjects")}
                     </p>
-                    <Button onClick={handleNewProject} style={hasOrgTheme ? { backgroundColor: "var(--org-accent)", color: "#fff" } : undefined}>
+                    <Button onClick={handleNewProject} style={selectedOrg?.primary_color ? { backgroundColor: selectedOrg.primary_color, color: getContrastTextColor(selectedOrg.primary_color) } : undefined}>
                       <Plus className="w-4 h-4 mr-2" />
                       {t("dashboard.createFirst")}
                     </Button>
