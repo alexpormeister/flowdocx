@@ -4,12 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getProject, updateProject, getFolders, type Folder } from "@/lib/api";
-import { generateSOPDocument, downloadSOP } from "@/lib/sopGenerator";
-import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, TrendingUp, Presentation } from "lucide-react";
+import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
+import { getOrganizationTags, addOrganizationTag } from "@/lib/organizationApi";
+import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
+import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -17,25 +17,9 @@ import {
 } from "@/components/ui/sheet";
 import BpmnCanvas from "@/components/BpmnCanvas";
 import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
-import StrategicAnalysisPanel from "@/components/StrategicAnalysisPanel";
 import ExportMenu from "@/components/ExportMenu";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "sonner";
-
-interface SwotData {
-  strengths: string;
-  weaknesses: string;
-  opportunities: string;
-  threats: string;
-}
-
-interface SipocData {
-  suppliers: string;
-  inputs: string;
-  process: string;
-  outputs: string;
-  customers: string;
-}
 
 export default function Editor() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +32,6 @@ export default function Editor() {
 
   const [modeler, setModeler] = useState<any>(null);
   const [panelOpen, setPanelOpen] = useState(!isMobile);
-  const [activePanel, setActivePanel] = useState<"steps" | "analysis">("steps");
   const [steps, setSteps] = useState<ProcessStep[]>([]);
   const [selectedElement, setSelectedElement] = useState<any>(null);
   const [projectName, setProjectName] = useState("Untitled Project");
@@ -60,21 +43,7 @@ export default function Editor() {
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedRef = useRef<string>("");
-
-  // Strategic analysis data
-  const [swot, setSwot] = useState<SwotData>({
-    strengths: "",
-    weaknesses: "",
-    opportunities: "",
-    threats: "",
-  });
-  const [sipoc, setSipoc] = useState<SipocData>({
-    suppliers: "",
-    inputs: "",
-    process: "",
-    outputs: "",
-    customers: "",
-  });
+  const [linkingElement, setLinkingElement] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -88,25 +57,37 @@ export default function Editor() {
     enabled: !!id && !!user,
   });
 
-  const { data: folders = [] } = useQuery({
-    queryKey: ["folders"],
-    queryFn: getFolders,
+  // Org tags for system tag suggestions
+  const { data: orgTags = [] } = useQuery({
+    queryKey: ["org-tags", project?.organization_id],
+    queryFn: () => getOrganizationTags(project!.organization_id!),
+    enabled: !!project?.organization_id,
+  });
+
+  // Element links
+  const { data: elementLinks = [] } = useQuery({
+    queryKey: ["element-links", id],
+    queryFn: () => getElementLinks(id!),
+    enabled: !!id && !!user,
+  });
+
+  // Org projects for linking
+  const { data: allProjects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: getProjects,
     enabled: !!user,
   });
 
+  const orgProjects = useMemo(() => {
+    if (!project?.organization_id) return [];
+    return allProjects.filter(
+      (p) => p.organization_id === project.organization_id && p.id !== id
+    );
+  }, [allProjects, project?.organization_id, id]);
+
   const availableTags = useMemo(() => {
-    if (!project?.folder_id || folders.length === 0) return [];
-    
-    const collectTags = (folderId: string | null): string[] => {
-      if (!folderId) return [];
-      const folder = folders.find(f => f.id === folderId);
-      if (!folder) return [];
-      const parentTags = collectTags(folder.parent_id);
-      return [...new Set([...parentTags, ...(folder.system_tags || [])])];
-    };
-    
-    return collectTags(project.folder_id);
-  }, [project?.folder_id, folders]);
+    return orgTags.map((t) => t.tag_name);
+  }, [orgTags]);
 
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof updateProject>[1]) => updateProject(id!, updates),
@@ -116,6 +97,31 @@ export default function Editor() {
     },
     onError: (error) => {
       toast.error("Failed to save: " + (error as Error).message);
+    },
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: ({ elementId, linkedProjectId }: { elementId: string; linkedProjectId: string }) =>
+      createElementLink(id!, elementId, linkedProjectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["element-links", id] });
+      setLinkingElement(null);
+      toast.success("Element linked");
+    },
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: deleteElementLink,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["element-links", id] });
+      toast.success("Link removed");
+    },
+  });
+
+  const addOrgTagMutation = useMutation({
+    mutationFn: (tagName: string) => addOrganizationTag(project!.organization_id!, tagName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-tags", project?.organization_id] });
     },
   });
 
@@ -145,7 +151,7 @@ export default function Editor() {
 
     try {
       const { xml } = await modeler.saveXML({ format: true });
-      
+
       if (xml !== lastSavedRef.current || hasUnsavedChanges) {
         setIsSaving(true);
         await updateMutation.mutateAsync({
@@ -153,7 +159,7 @@ export default function Editor() {
           description: projectDescription,
           bpmn_xml: xml,
           process_steps: steps,
-          system_tags: [...new Set(steps.flatMap(s => s.system))],
+          system_tags: [...new Set(steps.flatMap((s) => s.system))],
           owner_name: ownerName,
           owner_email: ownerEmail,
           status,
@@ -165,37 +171,22 @@ export default function Editor() {
       console.error("Auto-save failed:", err);
       setIsSaving(false);
     }
-  }, [modeler, id, projectName, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
+  }, [modeler, id, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
 
   useEffect(() => {
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     if (hasUnsavedChanges) {
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        triggerAutoSave();
-      }, 2000);
+      autoSaveTimeoutRef.current = setTimeout(() => triggerAutoSave(), 2000);
     }
-
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
+    return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
   }, [hasUnsavedChanges, triggerAutoSave]);
 
   useEffect(() => {
     if (!modeler) return;
-
     const eventBus = modeler.get("eventBus") as any;
-    const handleChange = () => {
-      setHasUnsavedChanges(true);
-    };
-
+    const handleChange = () => setHasUnsavedChanges(true);
     eventBus.on("commandStack.changed", handleChange);
     eventBus.on("element.changed", handleChange);
-
     return () => {
       eventBus.off("commandStack.changed", handleChange);
       eventBus.off("element.changed", handleChange);
@@ -217,26 +208,61 @@ export default function Editor() {
     setHasUnsavedChanges(true);
   };
 
-  const handleSwotChange = (newSwot: SwotData) => {
-    setSwot(newSwot);
-    setHasUnsavedChanges(true);
-  };
+  const handleAddOrgTag = useCallback((tagName: string) => {
+    if (!project?.organization_id) return;
+    // Only add if not already in org tags
+    if (!orgTags.some((t) => t.tag_name === tagName)) {
+      addOrgTagMutation.mutate(tagName);
+    }
+  }, [project?.organization_id, orgTags, addOrgTagMutation]);
 
-  const handleSipocChange = (newSipoc: SipocData) => {
-    setSipoc(newSipoc);
-    setHasUnsavedChanges(true);
-  };
+  // Sync process steps from BPMN diagram
+  const syncStepsFromBpmn = useCallback(() => {
+    if (!modeler) return;
+    const elementRegistry = modeler.get("elementRegistry") as any;
+    const elements = elementRegistry.getAll();
 
-  const handleGenerateSOP = () => {
-    const systemTags = [...new Set(steps.flatMap(s => s.system))];
-    const sopContent = generateSOPDocument(projectName, steps, swot, sipoc, systemTags);
-    downloadSOP(sopContent, projectName);
-    toast.success(t("strategic.sopGenerated"));
-  };
+    const flowNodeTypes = new Set([
+      "bpmn:Task", "bpmn:UserTask", "bpmn:ServiceTask", "bpmn:ManualTask",
+      "bpmn:BusinessRuleTask", "bpmn:ScriptTask", "bpmn:SendTask", "bpmn:ReceiveTask",
+      "bpmn:SubProcess", "bpmn:CallActivity",
+      "bpmn:StartEvent", "bpmn:EndEvent", "bpmn:IntermediateCatchEvent",
+      "bpmn:IntermediateThrowEvent", "bpmn:BoundaryEvent",
+      "bpmn:ExclusiveGateway", "bpmn:ParallelGateway", "bpmn:InclusiveGateway",
+    ]);
+
+    const flowNodes = elements.filter((el: any) => flowNodeTypes.has(el.type));
+
+    // Sort by position (left to right, top to bottom)
+    flowNodes.sort((a: any, b: any) => {
+      const ax = a.x || 0, ay = a.y || 0;
+      const bx = b.x || 0, by = b.y || 0;
+      return ax - bx || ay - by;
+    });
+
+    // Preserve existing data for elements that already have steps
+    const existingMap = new Map(steps.map((s) => [s.id, s]));
+
+    const newSteps: ProcessStep[] = flowNodes.map((el: any, i: number) => {
+      const existing = existingMap.get(el.id);
+      const bo = el.businessObject;
+      return {
+        id: el.id,
+        step: i + 1,
+        task: bo?.name || el.type?.replace("bpmn:", "") || el.id,
+        performer: existing?.performer || "",
+        system: existing?.system || [],
+        decision: existing?.decision || "",
+      };
+    });
+
+    setSteps(newSteps);
+    setHasUnsavedChanges(true);
+    toast.success(`Synced ${newSteps.length} elements from diagram`);
+  }, [modeler, steps]);
 
   const handleExport = useCallback(async (format: "png" | "svg" | "bpmn") => {
     if (!modeler) return;
-
     try {
       if (format === "bpmn") {
         const { xml } = await modeler.saveXML({ format: true });
@@ -251,14 +277,12 @@ export default function Editor() {
         const img = new window.Image();
         const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
         const url = URL.createObjectURL(svgBlob);
-
         img.onload = () => {
           canvas.width = img.width * 2;
           canvas.height = img.height * 2;
           ctx!.scale(2, 2);
           ctx!.drawImage(img, 0, 0);
           URL.revokeObjectURL(url);
-
           canvas.toBlob((blob) => {
             if (blob) {
               const a = document.createElement("a");
@@ -282,15 +306,22 @@ export default function Editor() {
     toast.success(t("common.saved"));
   };
 
-  // Navigate back preserving org context
   const handleBack = () => {
     const orgId = searchParams.get("org") || project?.organization_id;
-    if (orgId) {
-      navigate(`/dashboard?org=${orgId}`);
-    } else {
-      navigate("/dashboard");
-    }
+    if (orgId) navigate(`/dashboard?org=${orgId}`);
+    else navigate("/dashboard");
   };
+
+  // Get link for selected element
+  const selectedElementLink = useMemo(() => {
+    if (!selectedElement) return null;
+    return elementLinks.find((l) => l.element_id === selectedElement.id) || null;
+  }, [selectedElement, elementLinks]);
+
+  const linkedProject = useMemo(() => {
+    if (!selectedElementLink) return null;
+    return allProjects.find((p) => p.id === selectedElementLink.linked_project_id) || null;
+  }, [selectedElementLink, allProjects]);
 
   if (authLoading || !user) {
     return (
@@ -320,38 +351,95 @@ export default function Editor() {
   }
 
   const panelContent = (
-    <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as "steps" | "analysis")} className="flex flex-col h-full">
-      <TabsList className="mx-3 mt-3 grid grid-cols-2 h-8">
-        <TabsTrigger value="steps" className="text-xs">
-          {t("editor.processSteps")}
-        </TabsTrigger>
-        <TabsTrigger value="analysis" className="text-xs flex items-center gap-1">
-          <TrendingUp className="w-3 h-3" />
-          {t("strategic.analysis")}
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="steps" className="flex-1 m-0 overflow-hidden">
-        <ProcessDataPanel
-          steps={steps}
-          onStepsChange={handleStepsChange}
-          selectedElementId={selectedElement?.id}
-          availableTags={availableTags}
-          description={projectDescription}
-          onDescriptionChange={handleDescriptionChange}
-        />
-      </TabsContent>
-      <TabsContent value="analysis" className="flex-1 m-0 overflow-hidden">
-        <StrategicAnalysisPanel
-          steps={steps}
-          swot={swot}
-          sipoc={sipoc}
-          onSwotChange={handleSwotChange}
-          onSipocChange={handleSipocChange}
-          onGenerateSOP={handleGenerateSOP}
-        />
-      </TabsContent>
+    <div className="flex flex-col h-full">
+      {/* Process Steps with Sync button */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="bg-panel-header px-4 py-2 flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-panel-header-foreground tracking-wide uppercase">
+            {t("editor.processSteps")}
+          </h2>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={syncStepsFromBpmn}
+            className="h-6 text-[10px] gap-1 px-2"
+            title="Sync steps from BPMN diagram"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Sync
+          </Button>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <ProcessDataPanel
+            steps={steps}
+            onStepsChange={handleStepsChange}
+            selectedElementId={selectedElement?.id}
+            availableTags={availableTags}
+            description={projectDescription}
+            onDescriptionChange={handleDescriptionChange}
+            onAddOrgTag={project.organization_id ? handleAddOrgTag : undefined}
+          />
+        </div>
+      </div>
 
-      {/* Process Settings Section */}
+      {/* Element Link Section */}
+      {selectedElement && project.organization_id && (
+        <div className="border-t px-3 py-3 space-y-2">
+          <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
+            <Link2 className="w-3 h-3" />
+            Element Link
+          </h3>
+          <p className="text-[10px] text-muted-foreground truncate">
+            Selected: {selectedElement.businessObject?.name || selectedElement.id}
+          </p>
+
+          {selectedElementLink ? (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 p-2 rounded bg-muted text-xs">
+                <Link2 className="w-3 h-3 text-accent shrink-0" />
+                <span className="truncate flex-1">{linkedProject?.name || "Unknown"}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0"
+                  onClick={() => unlinkMutation.mutate(selectedElementLink.id)}
+                >
+                  <Unlink className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          ) : linkingElement === selectedElement.id ? (
+            <Select
+              onValueChange={(projectId) => {
+                linkMutation.mutate({ elementId: selectedElement.id, linkedProjectId: projectId });
+              }}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="Select process..." />
+              </SelectTrigger>
+              <SelectContent>
+                {orgProjects.map((p) => (
+                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-7 text-xs gap-1"
+              onClick={() => setLinkingElement(selectedElement.id)}
+            >
+              <Link2 className="w-3 h-3" />
+              Link to Process
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Process Settings */}
       <div className="border-t px-3 py-3 space-y-3">
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Process Settings</h3>
         <div className="space-y-2">
@@ -388,7 +476,7 @@ export default function Editor() {
           </div>
         </div>
       </div>
-    </Tabs>
+    </div>
   );
 
   return (
@@ -396,12 +484,7 @@ export default function Editor() {
       {/* Header */}
       <header className="h-12 border-b flex items-center justify-between px-2 sm:px-4 bg-card shrink-0">
         <div className="flex items-center gap-1 sm:gap-3 min-w-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBack}
-            className="h-8 w-8 shrink-0"
-          >
+          <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <Workflow className="w-5 h-5 text-accent shrink-0 hidden sm:block" />
@@ -413,25 +496,31 @@ export default function Editor() {
           <StatusBadge status={status} />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
             {isSaving ? (
-              <>
-                <Cloud className="w-3 h-3 animate-pulse" />
-                {t("common.saving")}
-              </>
+              <><Cloud className="w-3 h-3 animate-pulse" />{t("common.saving")}</>
             ) : hasUnsavedChanges ? (
-              <>
-                <CloudOff className="w-3 h-3" />
-                {t("common.unsaved")}
-              </>
+              <><CloudOff className="w-3 h-3" />{t("common.unsaved")}</>
             ) : (
-              <>
-                <Cloud className="w-3 h-3 text-accent" />
-                {t("common.saved")}
-              </>
+              <><Cloud className="w-3 h-3 text-accent" />{t("common.saved")}</>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Documentation */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const orgId = searchParams.get("org") || project.organization_id;
+              navigate(`/documentation/${id}${orgId ? `?org=${orgId}` : ""}`);
+            }}
+            className="h-8 text-xs gap-1.5"
+            title="Generate Documentation"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Docs</span>
+          </Button>
+          {/* Presentation */}
           {project.organization_id && (
             <Button
               variant="outline"
@@ -458,33 +547,23 @@ export default function Editor() {
             onClick={() => setPanelOpen(!panelOpen)}
             className="h-8 w-8 p-0"
           >
-            {panelOpen ? (
-              <PanelRightClose className="w-4 h-4" />
-            ) : (
-              <PanelRightOpen className="w-4 h-4" />
-            )}
+            {panelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
           </Button>
         </div>
       </header>
 
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Canvas */}
         <div className="flex-1 relative">
-          <BpmnCanvas
-            onModelerReady={setModeler}
-            onSelectionChange={setSelectedElement}
-          />
+          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} />
         </div>
 
-        {/* Side Panel - Desktop */}
         {!isMobile && panelOpen && (
           <div className="w-80 border-l bg-card flex flex-col shrink-0">
             {panelContent}
           </div>
         )}
 
-        {/* Side Panel - Mobile Sheet */}
         {isMobile && panelOpen && (
           <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
             <SheetContent side="right" className="w-[85vw] sm:w-80 p-0">
@@ -499,9 +578,12 @@ export default function Editor() {
 
 function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

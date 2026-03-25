@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      element_links: {
+        Row: {
+          created_at: string
+          element_id: string
+          id: string
+          linked_project_id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          element_id: string
+          id?: string
+          linked_project_id: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          element_id?: string
+          id?: string
+          linked_project_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "element_links_linked_project_id_fkey"
+            columns: ["linked_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "element_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folder_shares: {
         Row: {
           created_at: string
