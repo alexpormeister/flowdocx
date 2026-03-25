@@ -10,18 +10,14 @@ import {
   AppWindow,
   Server,
   Users,
-  BarChart3,
 } from "lucide-react";
 import ITInventory from "@/components/applications/ITInventory";
 import RoleInventory from "@/components/applications/RoleInventory";
-import CostDashboard from "@/components/applications/CostDashboard";
-
-type ToolTab = "it-inventory" | "role-inventory" | "cost-dashboard";
+type ToolTab = "it-inventory" | "role-inventory";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "it-inventory", label: "IT Inventory", icon: Server, description: "Manage systems & impact analysis" },
   { id: "role-inventory", label: "Role Inventory", icon: Users, description: "RACI & role coverage" },
-  { id: "cost-dashboard", label: "Cost & Performance", icon: BarChart3, description: "Costs, durations & efficiency" },
 ];
 
 export default function Applications() {
@@ -86,7 +82,7 @@ export default function Applications() {
       <div className="flex-1 overflow-auto">
         {activeTab === "it-inventory" && <ITInventory orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
-        {activeTab === "cost-dashboard" && <CostDashboard orgId={orgId} />}
+        
       </div>
     </div>
   );
