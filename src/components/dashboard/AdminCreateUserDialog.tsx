@@ -58,7 +58,7 @@ export default function AdminCreateUserDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button size="sm" className="gap-2">
           <UserPlus className="w-4 h-4" />
           Create User
         </Button>

@@ -866,7 +866,8 @@ export default function Dashboard() {
                             folders={filteredFolders}
                             onOpen={(id) => {
                               const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
-                              navigate(`/editor/${id}${orgParam}`);
+                              const folderParam = selectedFolder ? `&folder=${selectedFolder}` : "";
+                              navigate(`/editor/${id}${orgParam}${folderParam}`);
                             }}
                             onDelete={(id) => deleteProjectMutation.mutate(id)}
                             onDuplicate={(id) => duplicateProjectMutation.mutate(id)}

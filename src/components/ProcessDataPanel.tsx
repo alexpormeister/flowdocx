@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SystemTagBadge from "./SystemTagBadge";
 
+export type BpmnElementType = "task" | "event" | "gateway" | "subprocess" | "other";
+
 export interface ProcessStep {
   id: string;
   step: number;
@@ -11,6 +13,7 @@ export interface ProcessStep {
   performer: string;
   system: string[];
   decision: string;
+  elementType?: BpmnElementType;
 }
 
 interface ProcessDataPanelProps {
@@ -116,19 +119,26 @@ export default function ProcessDataPanel({
           </div>
         )}
 
-        {steps.map((step) => (
+        {steps.map((step) => {
+          const typeStyles = getElementTypeStyles(step.elementType);
+          return (
           <div
             key={step.id}
-            className={`rounded-lg border p-3 space-y-2 transition-colors ${
+            className={`rounded-lg border p-3 space-y-2 transition-colors ${typeStyles.border} ${
               selectedElementId === step.id
                 ? "border-accent bg-accent/5"
-                : "border-border bg-card hover:border-muted-foreground/30"
+                : `${typeStyles.bg} hover:border-muted-foreground/30`
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-semibold text-muted-foreground">
-                #{step.step}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ${typeStyles.badge}`}>
+                  {typeStyles.label}
+                </span>
+                <span className="text-xs font-mono font-semibold text-muted-foreground">
+                  #{step.step}
+                </span>
+              </div>
               <button
                 onClick={() => removeStep(step.id)}
                 className="text-muted-foreground hover:text-destructive transition-colors"
@@ -231,8 +241,49 @@ export default function ProcessDataPanel({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
+}
+
+function getElementTypeStyles(type?: BpmnElementType) {
+  switch (type) {
+    case "event":
+      return {
+        label: "Event",
+        bg: "bg-emerald-500/5 border-emerald-500/20",
+        border: "border-emerald-500/30",
+        badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+      };
+    case "gateway":
+      return {
+        label: "Gateway",
+        bg: "bg-amber-500/5 border-amber-500/20",
+        border: "border-amber-500/30",
+        badge: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+      };
+    case "subprocess":
+      return {
+        label: "Sub-process",
+        bg: "bg-purple-500/5 border-purple-500/20",
+        border: "border-purple-500/30",
+        badge: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
+      };
+    case "task":
+      return {
+        label: "Task",
+        bg: "bg-sky-500/5 border-sky-500/20",
+        border: "border-sky-500/30",
+        badge: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+      };
+    default:
+      return {
+        label: "Element",
+        bg: "bg-card border-border",
+        border: "border-border",
+        badge: "bg-muted text-muted-foreground",
+      };
+  }
 }
