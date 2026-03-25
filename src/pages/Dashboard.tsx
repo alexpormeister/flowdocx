@@ -792,19 +792,9 @@ export default function Dashboard() {
               }
             />
 
-            {/* Quick Actions */}
+            {/* Info label */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <Button
-                variant={showRootProjects ? "default" : "outline"}
-                size="sm"
-                onClick={handleShowRootProjects}
-                className="gap-2"
-                style={hasOrgTheme && showRootProjects ? { backgroundColor: "var(--org-accent)", borderColor: "var(--org-accent)", color: "#fff" } : undefined}
-              >
-                <FolderOpen className="w-4 h-4" />
-                {t("dashboard.desktop")} ({rootProjects.length})
-              </Button>
-              {!showRootProjects && !selectedFolder && (
+              {!selectedFolder && (
                 <span className="text-sm text-muted-foreground">{t("dashboard.allProjects")}</span>
               )}
             </div>
