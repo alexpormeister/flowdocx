@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical, Trash2, FolderInput, Clock, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { type Project, type Folder } from "@/lib/api";
+import StatusBadge from "@/components/StatusBadge";
 
 interface ProjectCardProps {
   project: Project;
@@ -36,9 +37,12 @@ export function ProjectCard({
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <CardTitle className="text-sm font-medium truncate pr-2">
-            {project.name}
-          </CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-sm font-medium truncate pr-2">
+              {project.name}
+            </CardTitle>
+            <StatusBadge status={project.status || "draft"} />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <button className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-all">
