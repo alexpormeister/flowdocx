@@ -157,11 +157,10 @@ export default function ProcessDataPanel({
             />
 
             <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Performer"
+              <PerformerCombobox
                 value={step.performer}
-                onChange={(e) => updateStep(step.id, "performer", e.target.value)}
-                className="h-8 text-xs bg-background"
+                onChange={(val) => updateStep(step.id, "performer", val)}
+                positions={availablePositions}
               />
               <Input
                 placeholder="Decision"
