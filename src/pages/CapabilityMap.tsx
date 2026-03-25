@@ -121,7 +121,7 @@ function CapabilityAreaCard({
 
       {/* Process boxes */}
       {area.projects.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-4">
           {area.projects.map((project) => (
             <ProcessBox
               key={project.id}
@@ -251,7 +251,7 @@ export default function CapabilityMap() {
                 {rootProjects.length}
               </Badge>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {rootProjects.map((project) => (
                 <ProcessBox
                   key={project.id}
