@@ -350,6 +350,44 @@ export default function Editor() {
           onGenerateSOP={handleGenerateSOP}
         />
       </TabsContent>
+
+      {/* Process Settings Section */}
+      <div className="border-t px-3 py-3 space-y-3">
+        <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Process Settings</h3>
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs text-muted-foreground">Status</label>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setHasUnsavedChanges(true); }}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft (Luonnos)</SelectItem>
+                <SelectItem value="review">Under Review (Tarkastuksessa)</SelectItem>
+                <SelectItem value="published">Published (Julkaistu)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Owner Name</label>
+            <Input
+              placeholder="Process owner name..."
+              value={ownerName}
+              onChange={(e) => { setOwnerName(e.target.value); setHasUnsavedChanges(true); }}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Owner Email</label>
+            <Input
+              placeholder="owner@example.com"
+              value={ownerEmail}
+              onChange={(e) => { setOwnerEmail(e.target.value); setHasUnsavedChanges(true); }}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+      </div>
     </Tabs>
   );
 
@@ -372,6 +410,8 @@ export default function Editor() {
             onChange={(e) => handleNameChange(e.target.value)}
             className="h-8 w-32 sm:w-48 text-sm font-medium border-none bg-transparent focus-visible:bg-background"
           />
+          <StatusBadge status={status} />
+          />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
             {isSaving ? (
               <>
@@ -393,6 +433,21 @@ export default function Editor() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {project.organization_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const orgId = searchParams.get("org") || project.organization_id;
+                navigate(`/presentation/${id}${orgId ? `?org=${orgId}` : ""}`);
+              }}
+              className="h-8 text-xs gap-1.5"
+              title="Presentation Mode"
+            >
+              <Presentation className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Present</span>
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
             <Save className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t("common.save")}</span>
