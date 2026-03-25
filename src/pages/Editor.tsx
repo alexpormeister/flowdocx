@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
-import { getOrganizationTags, addOrganizationTag } from "@/lib/organizationApi";
+import { getOrganizationTags, addOrganizationTag, getOrganizationPositions } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,13 @@ export default function Editor() {
   const { data: orgTags = [] } = useQuery({
     queryKey: ["org-tags", project?.organization_id],
     queryFn: () => getOrganizationTags(project!.organization_id!),
+    enabled: !!project?.organization_id,
+  });
+
+  // Org positions for performer dropdown
+  const { data: orgPositions = [] } = useQuery({
+    queryKey: ["org-positions", project?.organization_id],
+    queryFn: () => getOrganizationPositions(project!.organization_id!),
     enabled: !!project?.organization_id,
   });
 
@@ -423,6 +430,7 @@ export default function Editor() {
             onStepsChange={handleStepsChange}
             selectedElementId={selectedElement?.id}
             availableTags={availableTags}
+            availablePositions={orgPositions.map(p => p.name)}
             description={projectDescription}
             onDescriptionChange={handleDescriptionChange}
             onAddOrgTag={project.organization_id ? handleAddOrgTag : undefined}
