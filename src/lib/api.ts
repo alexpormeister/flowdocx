@@ -16,6 +16,9 @@ export interface Project {
   thumbnail_url: string | null;
   is_template: boolean;
   template_category: string | null;
+  owner_name: string | null;
+  owner_email: string | null;
+  status: string;
   created_at: string;
   updated_at: string;
 }
@@ -125,6 +128,9 @@ export async function updateProject(id: string, updates: {
   system_tags?: string[];
   folder_id?: string | null;
   description?: string;
+  owner_name?: string;
+  owner_email?: string;
+  status?: string;
 }): Promise<Project> {
   const updatePayload: Record<string, unknown> = {};
   if (updates.name !== undefined) updatePayload.name = updates.name;
@@ -133,6 +139,9 @@ export async function updateProject(id: string, updates: {
   if (updates.system_tags !== undefined) updatePayload.system_tags = updates.system_tags;
   if (updates.folder_id !== undefined) updatePayload.folder_id = updates.folder_id;
   if (updates.description !== undefined) updatePayload.description = updates.description;
+  if (updates.owner_name !== undefined) updatePayload.owner_name = updates.owner_name;
+  if (updates.owner_email !== undefined) updatePayload.owner_email = updates.owner_email;
+  if (updates.status !== undefined) updatePayload.status = updates.status;
 
   const { data, error } = await supabase
     .from("projects")
