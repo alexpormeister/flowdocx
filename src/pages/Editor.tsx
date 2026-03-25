@@ -222,14 +222,20 @@ export default function Editor() {
     const elementRegistry = modeler.get("elementRegistry") as any;
     const elements = elementRegistry.getAll();
 
-    const flowNodeTypes = new Set([
+    const taskTypes = new Set([
       "bpmn:Task", "bpmn:UserTask", "bpmn:ServiceTask", "bpmn:ManualTask",
       "bpmn:BusinessRuleTask", "bpmn:ScriptTask", "bpmn:SendTask", "bpmn:ReceiveTask",
-      "bpmn:SubProcess", "bpmn:CallActivity",
+    ]);
+    const eventTypes = new Set([
       "bpmn:StartEvent", "bpmn:EndEvent", "bpmn:IntermediateCatchEvent",
       "bpmn:IntermediateThrowEvent", "bpmn:BoundaryEvent",
+    ]);
+    const gatewayTypes = new Set([
       "bpmn:ExclusiveGateway", "bpmn:ParallelGateway", "bpmn:InclusiveGateway",
     ]);
+    const subprocessTypes = new Set(["bpmn:SubProcess", "bpmn:CallActivity"]);
+
+    const flowNodeTypes = new Set([...taskTypes, ...eventTypes, ...gatewayTypes, ...subprocessTypes]);
 
     const flowNodes = elements.filter((el: any) => flowNodeTypes.has(el.type));
 
@@ -240,19 +246,65 @@ export default function Editor() {
       return ax - bx || ay - by;
     });
 
+    // Helper: find the lane/participant an element belongs to
+    const getPerformerFromLane = (el: any): string => {
+      try {
+        let bo = el.businessObject;
+        // Walk up to find lane
+        const allElements = elementRegistry.getAll();
+        for (const candidate of allElements) {
+          if (candidate.type === "bpmn:Lane") {
+            const laneBo = candidate.businessObject;
+            if (laneBo?.flowNodeRef) {
+              const refs = Array.isArray(laneBo.flowNodeRef) ? laneBo.flowNodeRef : [laneBo.flowNodeRef];
+              if (refs.some((ref: any) => ref?.id === bo?.id || ref === bo?.id)) {
+                return laneBo.name || "";
+              }
+            }
+          }
+          // Also check participant
+          if (candidate.type === "bpmn:Participant" && candidate.children) {
+            if (candidate.children.length === 0 || !allElements.some((e: any) => e.type === "bpmn:Lane" && e.parent?.id === candidate.id)) {
+              // No lanes inside participant, check if element is direct child
+              if (el.parent?.id === candidate.id) {
+                return candidate.businessObject?.name || "";
+              }
+            }
+          }
+        }
+        // Check direct parent
+        if (el.parent?.type === "bpmn:Participant") {
+          return el.parent.businessObject?.name || "";
+        }
+      } catch (e) {
+        // ignore
+      }
+      return "";
+    };
+
+    const getElementType = (type: string) => {
+      if (taskTypes.has(type)) return "task" as const;
+      if (eventTypes.has(type)) return "event" as const;
+      if (gatewayTypes.has(type)) return "gateway" as const;
+      if (subprocessTypes.has(type)) return "subprocess" as const;
+      return "other" as const;
+    };
+
     // Preserve existing data for elements that already have steps
     const existingMap = new Map(steps.map((s) => [s.id, s]));
 
     const newSteps: ProcessStep[] = flowNodes.map((el: any, i: number) => {
       const existing = existingMap.get(el.id);
       const bo = el.businessObject;
+      const lanePerformer = getPerformerFromLane(el);
       return {
         id: el.id,
         step: i + 1,
         task: bo?.name || el.type?.replace("bpmn:", "") || el.id,
-        performer: existing?.performer || "",
+        performer: existing?.performer || lanePerformer || "",
         system: existing?.system || [],
         decision: existing?.decision || "",
+        elementType: getElementType(el.type),
       };
     });
 
@@ -308,8 +360,12 @@ export default function Editor() {
 
   const handleBack = () => {
     const orgId = searchParams.get("org") || project?.organization_id;
-    if (orgId) navigate(`/dashboard?org=${orgId}`);
-    else navigate("/dashboard");
+    const folderId = searchParams.get("folder");
+    const params = new URLSearchParams();
+    if (orgId) params.set("org", orgId);
+    if (folderId) params.set("folder", folderId);
+    const qs = params.toString();
+    navigate(`/dashboard${qs ? `?${qs}` : ""}`);
   };
 
   // Get link for selected element

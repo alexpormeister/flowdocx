@@ -38,7 +38,7 @@ export function ProjectCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="text-sm font-medium truncate pr-2">
+            <CardTitle className="text-sm font-medium truncate max-w-[180px] pr-2" title={project.name}>
               {project.name}
             </CardTitle>
             <StatusBadge status={project.status || "draft"} />

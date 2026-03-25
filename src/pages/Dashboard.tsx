@@ -82,7 +82,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(searchParams.get("folder") || null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [showRootProjects, setShowRootProjects] = useState(false);
 
@@ -284,7 +284,8 @@ export default function Dashboard() {
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
-      navigate(`/editor/${project.id}${orgParam}`);
+      const folderParam = selectedFolder ? `&folder=${selectedFolder}` : "";
+      navigate(`/editor/${project.id}${orgParam}${folderParam}`);
     },
   });
 
@@ -866,7 +867,8 @@ export default function Dashboard() {
                             folders={filteredFolders}
                             onOpen={(id) => {
                               const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
-                              navigate(`/editor/${id}${orgParam}`);
+                              const folderParam = selectedFolder ? `&folder=${selectedFolder}` : "";
+                              navigate(`/editor/${id}${orgParam}${folderParam}`);
                             }}
                             onDelete={(id) => deleteProjectMutation.mutate(id)}
                             onDuplicate={(id) => duplicateProjectMutation.mutate(id)}
