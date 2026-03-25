@@ -13,11 +13,15 @@ import {
 } from "lucide-react";
 import ITInventory from "@/components/applications/ITInventory";
 import RoleInventory from "@/components/applications/RoleInventory";
-type ToolTab = "it-inventory" | "role-inventory";
+import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
+import { GitBranch } from "lucide-react";
+
+type ToolTab = "it-inventory" | "role-inventory" | "dependency-graph";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "it-inventory", label: "IT Inventory", icon: Server, description: "Manage systems & impact analysis" },
   { id: "role-inventory", label: "Role Inventory", icon: Users, description: "RACI & role coverage" },
+  { id: "dependency-graph", label: "Dependency Graph", icon: GitBranch, description: "System dependency visualization" },
 ];
 
 export default function Applications() {
