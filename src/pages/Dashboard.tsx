@@ -72,6 +72,7 @@ import { OrganizationSelector } from "@/components/dashboard/OrganizationSelecto
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
 import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
+import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
 
 export default function Dashboard() {
@@ -637,6 +638,7 @@ export default function Dashboard() {
     onRemoveFolderShare: async (shareId: string) => {
       await removeFolderShareMutation.mutateAsync(shareId);
     },
+    orgPrimaryColor: selectedOrg?.primary_color || null,
   };
 
   return (
