@@ -118,6 +118,10 @@ export function OrganizationSettings({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [primaryColor, setPrimaryColor] = useState(organization.primary_color || "#0f172a");
   const [accentColor, setAccentColor] = useState(organization.accent_color || "#0891b2");
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [editingPositionName, setEditingPositionName] = useState("");
+  const [draggedPositionId, setDraggedPositionId] = useState<string | null>(null);
+  const [dragOverPositionId, setDragOverPositionId] = useState<string | null>(null);
 
   useEffect(() => {
     setPrimaryColor(organization.primary_color || "#0f172a");
