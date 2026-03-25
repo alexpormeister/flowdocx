@@ -250,6 +250,81 @@ export default function ProcessDataPanel({
   );
 }
 
+// Performer combobox: dropdown of org positions + custom text input
+function PerformerCombobox({
+  value,
+  onChange,
+  positions,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  positions: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = positions.filter(
+    (p) => p.toLowerCase().includes(inputValue.toLowerCase()) && p !== value
+  );
+
+  const hasPositions = positions.length > 0;
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          placeholder="Performer"
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            onChange(e.target.value);
+            if (hasPositions) setOpen(true);
+          }}
+          onFocus={() => { if (hasPositions) setOpen(true); }}
+          onBlur={() => { setTimeout(() => setOpen(false), 150); }}
+          className="h-8 text-xs bg-background pr-6"
+        />
+        {hasPositions && (
+          <button
+            type="button"
+            tabIndex={-1}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setOpen(!open);
+              inputRef.current?.focus();
+            }}
+          >
+            <ChevronDown className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-36 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          {filtered.map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setInputValue(pos);
+                onChange(pos);
+                setOpen(false);
+              }}
+            >
+              {pos}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function getElementTypeStyles(type?: BpmnElementType) {
   switch (type) {
     case "event":
