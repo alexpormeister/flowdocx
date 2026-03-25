@@ -20,6 +20,7 @@ interface ProcessDataPanelProps {
   availableTags?: string[];
   description?: string;
   onDescriptionChange?: (description: string) => void;
+  onAddOrgTag?: (tag: string) => void;
 }
 
 export default function ProcessDataPanel({ 
@@ -29,6 +30,7 @@ export default function ProcessDataPanel({
   availableTags = [],
   description = "",
   onDescriptionChange,
+  onAddOrgTag,
 }: ProcessDataPanelProps) {
   const [newSystemTag, setNewSystemTag] = useState<{ stepId: string; value: string } | null>(null);
   const [customTagInput, setCustomTagInput] = useState("");
@@ -57,6 +59,10 @@ export default function ProcessDataPanel({
     const step = steps.find(s => s.id === stepId);
     if (step && !step.system.includes(tag)) {
       updateStep(stepId, "system", [...step.system, tag]);
+      // Auto-add to org global tags
+      if (onAddOrgTag) {
+        onAddOrgTag(tag);
+      }
     }
     setNewSystemTag(null);
   };
@@ -77,10 +83,7 @@ export default function ProcessDataPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-panel-header px-4 py-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-panel-header-foreground tracking-wide uppercase">
-          Process Steps
-        </h2>
+      <div className="px-3 py-2 flex items-center justify-end">
         <Button
           size="sm"
           onClick={addStep}

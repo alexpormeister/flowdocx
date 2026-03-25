@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProject } from "@/lib/api";
+import { getProject, getProjects } from "@/lib/api";
+import { getElementLinks } from "@/lib/elementLinksApi";
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer";
 import "bpmn-js/dist/assets/diagram-js.css";
 import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
-import { ArrowLeft, Mail, User, X } from "lucide-react";
+import { ArrowLeft, Mail, User, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
 
@@ -28,6 +29,35 @@ export default function Presentation() {
     queryFn: () => getProject(id!),
     enabled: !!id && !!user,
   });
+
+  const { data: elementLinks = [] } = useQuery({
+    queryKey: ["element-links", id],
+    queryFn: () => getElementLinks(id!),
+    enabled: !!id && !!user,
+  });
+
+  const { data: allProjects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: getProjects,
+    enabled: !!user,
+  });
+
+  // Find process step for selected element
+  const selectedStep = useMemo(() => {
+    if (!selectedElement || !project) return null;
+    return project.process_steps.find((s) => s.id === selectedElement.id) || null;
+  }, [selectedElement, project]);
+
+  // Find link for selected element
+  const selectedLink = useMemo(() => {
+    if (!selectedElement) return null;
+    return elementLinks.find((l) => l.element_id === selectedElement.id) || null;
+  }, [selectedElement, elementLinks]);
+
+  const linkedProject = useMemo(() => {
+    if (!selectedLink) return null;
+    return allProjects.find((p) => p.id === selectedLink.linked_project_id) || null;
+  }, [selectedLink, allProjects]);
 
   useEffect(() => {
     if (!containerRef.current || !project) return;
@@ -131,19 +161,65 @@ export default function Presentation() {
                 <X className="w-3.5 h-3.5" />
               </Button>
             </div>
-            <div className="p-3 space-y-2">
+            <div className="p-3 space-y-3">
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Type</span>
                 <p className="text-xs mt-0.5">{selectedElement.type.replace("bpmn:", "")}</p>
               </div>
+
+              {/* Process step data */}
+              {selectedStep && (
+                <>
+                  {selectedStep.performer && (
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Performer</span>
+                      <p className="text-xs mt-0.5">{selectedStep.performer}</p>
+                    </div>
+                  )}
+                  {selectedStep.system.length > 0 && (
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Systems</span>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {selectedStep.system.map((s) => (
+                          <span key={s} className="px-1.5 py-0.5 bg-accent/10 text-accent rounded text-[10px]">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedStep.decision && (
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Decision</span>
+                      <p className="text-xs mt-0.5">{selectedStep.decision}</p>
+                    </div>
+                  )}
+                </>
+              )}
+
               {selectedElement.documentation && (
                 <div>
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Documentation</span>
                   <p className="text-xs mt-0.5 whitespace-pre-wrap">{selectedElement.documentation}</p>
                 </div>
               )}
-              {!selectedElement.documentation && (
+
+              {!selectedElement.documentation && !selectedStep && (
                 <p className="text-xs text-muted-foreground italic">No documentation available for this element.</p>
+              )}
+
+              {/* Linked Process Button */}
+              {linkedProject && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 text-xs"
+                  onClick={() => {
+                    const orgId = searchParams.get("org") || project.organization_id;
+                    navigate(`/presentation/${linkedProject.id}${orgId ? `?org=${orgId}` : ""}`);
+                  }}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Open: {linkedProject.name}
+                </Button>
               )}
             </div>
           </div>
