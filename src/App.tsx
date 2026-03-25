@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import Presentation from "./pages/Presentation";
 import Documentation from "./pages/Documentation";
+import Applications from "./pages/Applications";
+import CapabilityMap from "./pages/CapabilityMap";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +32,8 @@ const App = () => (
               <Route path="/editor/:id" element={<Editor />} />
               <Route path="/presentation/:id" element={<Presentation />} />
               <Route path="/documentation/:id" element={<Documentation />} />
+              <Route path="/applications" element={<Applications />} />
+              <Route path="/capability-map" element={<CapabilityMap />} />
               <Route path="/profile" element={<Profile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

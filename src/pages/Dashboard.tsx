@@ -70,7 +70,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon } from "lucide-react";
+import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
 
@@ -716,6 +716,30 @@ export default function Dashboard() {
                 await removeFolderRestrictionMutation.mutateAsync({ memberId, folderId });
               }}
             />
+          )}
+          {selectedOrgId && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Applications"
+                onClick={() => navigate(`/applications?org=${selectedOrgId}`)}
+                style={hasOrgTheme ? { color: "#fff" } : undefined}
+              >
+                <AppWindow className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="Capability Map"
+                onClick={() => navigate(`/capability-map?org=${selectedOrgId}`)}
+                style={hasOrgTheme ? { color: "#fff" } : undefined}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </>
           )}
           <AdminCreateUserDialog />
           <DropdownMenu>
