@@ -86,6 +86,7 @@ export default function Applications() {
       <div className="flex-1 overflow-auto">
         {activeTab === "it-inventory" && <ITInventory orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
+        {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         
       </div>
     </div>
