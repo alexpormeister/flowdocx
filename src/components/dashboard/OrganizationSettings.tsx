@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +118,10 @@ export function OrganizationSettings({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [primaryColor, setPrimaryColor] = useState(organization.primary_color || "#0f172a");
   const [accentColor, setAccentColor] = useState(organization.accent_color || "#0891b2");
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [editingPositionName, setEditingPositionName] = useState("");
+  const [draggedPositionId, setDraggedPositionId] = useState<string | null>(null);
+  const [dragOverPositionId, setDragOverPositionId] = useState<string | null>(null);
 
   useEffect(() => {
     setPrimaryColor(organization.primary_color || "#0f172a");
@@ -184,9 +188,59 @@ export function OrganizationSettings({
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
   };
 
+  const handleStartEditPosition = (position: OrganizationPosition) => {
+    setEditingPositionId(position.id);
+    setEditingPositionName(position.name);
+  };
+
+  const handleSavePositionName = async (positionId: string) => {
+    if (!editingPositionName.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onUpdatePosition(positionId, { name: editingPositionName.trim() });
+      setEditingPositionId(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isDescendant = (positionId: string, potentialAncestorId: string): boolean => {
+    let current = positions.find(p => p.id === positionId);
+    while (current) {
+      if (current.parent_position_id === potentialAncestorId) return true;
+      current = positions.find(p => p.id === current!.parent_position_id);
+    }
+    return false;
+  };
+
+  const handleDrop = async (targetPositionId: string | null) => {
+    if (!draggedPositionId || draggedPositionId === targetPositionId) {
+      setDraggedPositionId(null);
+      setDragOverPositionId(null);
+      return;
+    }
+    // Prevent dropping onto a descendant
+    if (targetPositionId && isDescendant(targetPositionId, draggedPositionId)) {
+      setDraggedPositionId(null);
+      setDragOverPositionId(null);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onUpdatePosition(draggedPositionId, { parent_position_id: targetPositionId });
+    } finally {
+      setIsSubmitting(false);
+      setDraggedPositionId(null);
+      setDragOverPositionId(null);
+    }
+  };
+
   const renderVisualPositionNode = (position: OrganizationPosition, depth: number = 0, isLast: boolean = false) => {
     const children = buildPositionTree(position.id);
     const membersInPosition = (members || []).filter(m => m.position_id === position.id);
+    const isDragging = draggedPositionId === position.id;
+    const isDragOver = dragOverPositionId === position.id;
+    const isEditing = editingPositionId === position.id;
     
     return (
       <div key={position.id} className="relative">
@@ -206,21 +260,87 @@ export function OrganizationSettings({
           )}
           
           {/* Node card */}
-          <div className="bg-card border-2 border-border rounded-lg p-3 my-1 min-w-[220px] shadow-sm hover:shadow-md transition-shadow relative">
+          <div
+            draggable={isAdmin && !isEditing}
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move";
+              setDraggedPositionId(position.id);
+            }}
+            onDragEnd={() => {
+              setDraggedPositionId(null);
+              setDragOverPositionId(null);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              if (draggedPositionId && draggedPositionId !== position.id) {
+                setDragOverPositionId(position.id);
+              }
+            }}
+            onDragLeave={() => setDragOverPositionId(null)}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDrop(position.id);
+            }}
+            className={`bg-card border-2 rounded-lg p-3 my-1 min-w-[220px] shadow-sm transition-all relative ${
+              isDragging ? "opacity-40 scale-95" : "hover:shadow-md"
+            } ${isDragOver ? "border-primary ring-2 ring-primary/30" : "border-border"} ${
+              isAdmin && !isEditing ? "cursor-grab active:cursor-grabbing" : ""
+            }`}
+          >
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {isAdmin && !isEditing && (
+                  <GripVertical className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                )}
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
                   <Network className="w-4 h-4 text-accent" />
                 </div>
-                <span className="text-sm font-semibold">{position.name}</span>
+                {isEditing ? (
+                  <div className="flex items-center gap-1 flex-1">
+                    <Input
+                      value={editingPositionName}
+                      onChange={(e) => setEditingPositionName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSavePositionName(position.id);
+                        if (e.key === "Escape") setEditingPositionId(null);
+                      }}
+                      className="h-7 text-sm"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => handleSavePositionName(position.id)}
+                      className="text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setEditingPositionId(null)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-sm font-semibold truncate">{position.name}</span>
+                )}
               </div>
-              {isAdmin && (
-                <button
-                  onClick={() => onDeletePosition(position.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+              {isAdmin && !isEditing && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleStartEditPosition(position)}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onDeletePosition(position.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               )}
             </div>
             {membersInPosition.length > 0 && (
@@ -552,6 +672,20 @@ export function OrganizationSettings({
                 <Button onClick={handleAddPosition} disabled={!newPositionName.trim() || isSubmitting}>
                   <Plus className="w-4 h-4" />
                 </Button>
+              </div>
+            )}
+
+            {/* Root-level drop zone */}
+            {draggedPositionId && (
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverPositionId("root"); }}
+                onDragLeave={() => setDragOverPositionId(null)}
+                onDrop={(e) => { e.preventDefault(); handleDrop(null); }}
+                className={`border-2 border-dashed rounded-lg p-3 text-center text-xs text-muted-foreground transition-colors ${
+                  dragOverPositionId === "root" ? "border-primary bg-primary/5" : "border-border"
+                }`}
+              >
+                Drop here to make root-level
               </div>
             )}
 
