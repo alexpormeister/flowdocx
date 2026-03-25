@@ -411,7 +411,6 @@ export default function Editor() {
             className="h-8 w-32 sm:w-48 text-sm font-medium border-none bg-transparent focus-visible:bg-background"
           />
           <StatusBadge status={status} />
-          />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
             {isSaving ? (
               <>
