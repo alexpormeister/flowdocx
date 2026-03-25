@@ -82,7 +82,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(searchParams.get("folder") || null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [showRootProjects, setShowRootProjects] = useState(false);
 
