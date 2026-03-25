@@ -21,18 +21,6 @@ import StrategicAnalysisPanel from "@/components/StrategicAnalysisPanel";
 import ExportMenu from "@/components/ExportMenu";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import BpmnCanvas from "@/components/BpmnCanvas";
-import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
-import StrategicAnalysisPanel from "@/components/StrategicAnalysisPanel";
-import ExportMenu from "@/components/ExportMenu";
-import { toast } from "sonner";
 
 interface SwotData {
   strengths: string;
