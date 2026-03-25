@@ -197,26 +197,26 @@ export default function CapabilityMap() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6 bg-card shrink-0">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+      <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-card shrink-0">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <LayoutGrid className="w-5 h-5 text-primary" />
-        <h1 className="text-lg font-semibold">{selectedOrg.name} — Capability Map</h1>
+        <LayoutGrid className="w-5 h-5 text-primary shrink-0 hidden sm:block" />
+        <h1 className="text-sm sm:text-lg font-semibold truncate">{selectedOrg.name} — Capability Map</h1>
 
         {/* Zoom controls */}
-        <div className="ml-auto flex items-center gap-2">
-          <ZoomOut className="w-4 h-4 text-muted-foreground" />
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          <ZoomOut className="w-4 h-4 text-muted-foreground hidden sm:block" />
           <Slider
             value={[zoom]}
             onValueChange={(v) => setZoom(v[0])}
             min={40}
             max={150}
             step={10}
-            className="w-28"
+            className="w-20 sm:w-28"
           />
-          <ZoomIn className="w-4 h-4 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground w-10 text-right">{zoom}%</span>
+          <ZoomIn className="w-4 h-4 text-muted-foreground hidden sm:block" />
+          <span className="text-xs text-muted-foreground w-10 text-right hidden sm:inline">{zoom}%</span>
         </div>
       </header>
 

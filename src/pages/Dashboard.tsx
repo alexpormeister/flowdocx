@@ -72,6 +72,7 @@ import { OrganizationSelector } from "@/components/dashboard/OrganizationSelecto
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
 import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
+import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
 
 export default function Dashboard() {
@@ -637,6 +638,7 @@ export default function Dashboard() {
     onRemoveFolderShare: async (shareId: string) => {
       await removeFolderShareMutation.mutateAsync(shareId);
     },
+    orgPrimaryColor: selectedOrg?.primary_color || null,
   };
 
   return (
@@ -860,7 +862,7 @@ export default function Dashboard() {
                     <p className="text-muted-foreground mb-4">
                       {search ? t("dashboard.noMatch") : t("dashboard.noProjects")}
                     </p>
-                    <Button onClick={handleNewProject} style={hasOrgTheme ? { backgroundColor: "var(--org-accent)", color: "#fff" } : undefined}>
+                    <Button onClick={handleNewProject} style={selectedOrg?.primary_color ? { backgroundColor: selectedOrg.primary_color, color: getContrastTextColor(selectedOrg.primary_color) } : undefined}>
                       <Plus className="w-4 h-4 mr-2" />
                       {t("dashboard.createFirst")}
                     </Button>

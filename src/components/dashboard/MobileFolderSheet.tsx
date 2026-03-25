@@ -21,6 +21,7 @@ import {
   Menu,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
+import { getContrastTextColor } from "@/lib/utils";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
@@ -40,6 +41,7 @@ interface MobileFolderSheetProps {
   folderShares: ShareEntry[];
   onShareFolder: (folderId: string, email: string, permission: "view" | "edit") => Promise<void>;
   onRemoveFolderShare: (shareId: string) => Promise<void>;
+  orgPrimaryColor?: string | null;
 }
 
 export function MobileFolderSheet({
@@ -57,6 +59,7 @@ export function MobileFolderSheet({
   folderShares,
   onShareFolder,
   onRemoveFolderShare,
+  orgPrimaryColor,
 }: MobileFolderSheetProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -206,7 +209,11 @@ export function MobileFolderSheet({
         </SheetHeader>
         <div className="p-4 flex flex-col h-[calc(100%-60px)] overflow-auto">
           <div className="space-y-2 mb-6">
-            <Button onClick={() => { onNewProject(); setIsOpen(false); }} className="w-full justify-start gap-2">
+            <Button
+              onClick={() => { onNewProject(); setIsOpen(false); }}
+              className="w-full justify-start gap-2"
+              style={orgPrimaryColor ? { backgroundColor: orgPrimaryColor, color: getContrastTextColor(orgPrimaryColor) } : undefined}
+            >
               <Plus className="w-4 h-4" />
               {t("dashboard.newProject")}
             </Button>
