@@ -658,7 +658,7 @@ export default function Dashboard() {
             className="text-base md:text-lg font-semibold hidden sm:block"
             style={hasOrgTheme ? { color: "var(--org-accent)" } : undefined}
           >
-            {selectedOrg ? selectedOrg.name : "FlowDocx"}
+            {selectedOrg ? selectedOrg.name : "Nexus OS"}
           </h1>
         </div>
         <div className="flex items-center gap-2 md:gap-3 org-header-actions">

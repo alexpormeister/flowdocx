@@ -117,7 +117,7 @@ export default function Auth() {
               <Workflow className="w-6 h-6 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-xl">FlowDocx</CardTitle>
+          <CardTitle className="text-xl">Nexus OS</CardTitle>
           <CardDescription>{t("auth.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
