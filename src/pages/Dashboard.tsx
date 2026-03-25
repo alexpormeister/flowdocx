@@ -284,7 +284,8 @@ export default function Dashboard() {
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       const orgParam = selectedOrgId ? `?org=${selectedOrgId}` : "";
-      navigate(`/editor/${project.id}${orgParam}`);
+      const folderParam = selectedFolder ? `&folder=${selectedFolder}` : "";
+      navigate(`/editor/${project.id}${orgParam}${folderParam}`);
     },
   });
 
