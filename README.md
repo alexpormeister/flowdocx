@@ -1,9 +1,9 @@
-# FlowDocx - Prosessit eläväksi laatukäsikirjaksi
+# Nexus OS - Prosessit eläväksi laatukäsikirjaksi
 
-FlowDocx on moderni SaaS-alusta, joka muuttaa monimutkaiset liiketoimintaprosessit automaattiseksi dokumentaatioksi, sertifioiduksi osaamiseksi ja jatkuvaksi laadunvarmistukseksi.
+Nexus OS on moderni SaaS-alusta, joka muuttaa monimutkaiset liiketoimintaprosessit automaattiseksi dokumentaatioksi, sertifioiduksi osaamiseksi ja jatkuvaksi laadunvarmistukseksi.
 
 ## Ratkaisu
-Perinteiset prosessikaaviot ja PDF-ohjeet jäävät usein hyödyntämättä arjessa. FlowDocx ratkaisee tämän tekemällä prosessinhallinnasta dynaamista ja mitattavaa:
+Perinteiset prosessikaaviot ja PDF-ohjeet jäävät usein hyödyntämättä arjessa. Nexus OS ratkaisee tämän tekemällä prosessinhallinnasta dynaamista ja mitattavaa:
 * Automaatio: Piirrä kaavio - järjestelmä generoi SOP-ohjeistuksen, SWOT-analyysin ja SIPOC-mallin puolestasi.
 * Laadunvarmistus: Sertifioi työntekijöiden osaaminen ja varmista lakisääteinen raportointi, kuten Kela-raportointi.
 * Jatkuvuus: Hallitse vuoden kriittiset määräajat integroidun Vuosikellon avulla.
