@@ -461,6 +461,18 @@ export default function Dashboard() {
 
   // Filter by search and folder
   const displayedProjects = useMemo(() => {
+    // Global search across all org projects when searching in org mode
+    if (search && selectedOrgId) {
+      const lowerSearch = search.toLowerCase();
+      return filteredProjectsByOrg.filter((p) =>
+        p.name.toLowerCase().includes(lowerSearch) ||
+        (p.description || "").toLowerCase().includes(lowerSearch) ||
+        p.process_steps?.some((s) => s.task?.toLowerCase().includes(lowerSearch)) ||
+        p.process_steps?.some((s) => s.performer?.toLowerCase().includes(lowerSearch)) ||
+        p.system_tags?.some((t) => t.toLowerCase().includes(lowerSearch))
+      );
+    }
+
     let projectsToShow = filteredProjectsByOrg;
 
     if (showRootProjects) {
@@ -777,12 +789,17 @@ export default function Dashboard() {
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder={t("dashboard.searchProjects")}
+                  placeholder={selectedOrgId ? "Search all processes (name, description, steps, systems)..." : t("dashboard.searchProjects")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10"
                 />
               </div>
+              {search && selectedOrgId && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {displayedProjects.length} results
+                </span>
+              )}
             </div>
 
             {projectsLoading ? (

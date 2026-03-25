@@ -184,35 +184,64 @@ export function OrganizationSettings({
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
   };
 
-  const renderPositionNode = (position: OrganizationPosition, depth: number = 0) => {
+  const renderVisualPositionNode = (position: OrganizationPosition, depth: number = 0, isLast: boolean = false) => {
     const children = buildPositionTree(position.id);
     const membersInPosition = (members || []).filter(m => m.position_id === position.id);
     
     return (
-      <div key={position.id} className="space-y-1">
-        <div 
-          className="flex items-center justify-between p-2 rounded-md bg-muted hover:bg-muted/80"
-          style={{ marginLeft: `${depth * 16}px` }}
-        >
-          <div className="flex items-center gap-2">
-            <Network className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">{position.name}</span>
+      <div key={position.id} className="relative">
+        <div className="flex items-start" style={{ paddingLeft: `${depth * 40}px` }}>
+          {/* Connecting lines */}
+          {depth > 0 && (
+            <>
+              <div
+                className="absolute border-l-2 border-border"
+                style={{ left: `${(depth - 1) * 40 + 18}px`, top: 0, height: isLast ? '24px' : '100%' }}
+              />
+              <div
+                className="absolute border-t-2 border-border"
+                style={{ left: `${(depth - 1) * 40 + 18}px`, top: '24px', width: '22px' }}
+              />
+            </>
+          )}
+          
+          {/* Node card */}
+          <div className="bg-card border-2 border-border rounded-lg p-3 my-1 min-w-[220px] shadow-sm hover:shadow-md transition-shadow relative">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                  <Network className="w-4 h-4 text-accent" />
+                </div>
+                <span className="text-sm font-semibold">{position.name}</span>
+              </div>
+              {isAdmin && (
+                <button
+                  onClick={() => onDeletePosition(position.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
             {membersInPosition.length > 0 && (
-              <span className="text-xs text-muted-foreground">
-                ({membersInPosition.map(m => m.email).join(", ")})
-              </span>
+              <div className="mt-2 space-y-1 border-t pt-2">
+                {membersInPosition.map(m => (
+                  <div key={m.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Users className="w-3 h-3 shrink-0" />
+                    <span className="truncate">
+                      {m.email}
+                      {m.title && <span className="text-accent ml-1">• {m.title}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {membersInPosition.length === 0 && (
+              <p className="text-[10px] text-muted-foreground mt-1 italic">No members assigned</p>
             )}
           </div>
-          {isAdmin && (
-            <button
-              onClick={() => onDeletePosition(position.id)}
-              className="text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
         </div>
-        {children.map(child => renderPositionNode(child, depth + 1))}
+        {children.map((child, i) => renderVisualPositionNode(child, depth + 1, i === children.length - 1))}
       </div>
     );
   };
@@ -526,8 +555,8 @@ export function OrganizationSettings({
               </div>
             )}
 
-            <div className="space-y-2">
-              {buildPositionTree(null).map(position => renderPositionNode(position))}
+            <div className="space-y-1 overflow-x-auto pb-4">
+              {buildPositionTree(null).map((position, i, arr) => renderVisualPositionNode(position, 0, i === arr.length - 1))}
               {(!positions || positions.length === 0) && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t("folder.noTags")}
