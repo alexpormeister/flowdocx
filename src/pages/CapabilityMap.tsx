@@ -66,11 +66,11 @@ function ProcessBox({
   return (
     <button
       onClick={onClick}
-      className={`group relative rounded-lg border px-3 py-2.5 text-left transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] ${config.bg} ${config.border}`}
+      className={`rounded-lg border px-3 py-2.5 text-left transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] w-full min-h-[44px] ${config.bg} ${config.border}`}
     >
       <div className="flex items-start gap-2">
         <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${config.dot}`} />
-        <p className={`text-xs font-medium leading-snug break-words ${config.text}`}>
+        <p className={`text-xs font-medium leading-snug break-words hyphens-auto ${config.text}`}>
           {project.name}
         </p>
       </div>
@@ -121,7 +121,7 @@ function CapabilityAreaCard({
 
       {/* Process boxes */}
       {area.projects.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-4">
           {area.projects.map((project) => (
             <ProcessBox
               key={project.id}
@@ -251,7 +251,7 @@ export default function CapabilityMap() {
                 {rootProjects.length}
               </Badge>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {rootProjects.map((project) => (
                 <ProcessBox
                   key={project.id}
