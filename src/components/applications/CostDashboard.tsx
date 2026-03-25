@@ -5,7 +5,7 @@ import { getProjects, getFolders, type Project, type Folder } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Clock, DollarSign, TrendingUp, Zap } from "lucide-react";
+import { Clock, Euro, TrendingUp, Zap } from "lucide-react";
 
 interface ProcessSummary {
   project: Project;
@@ -32,7 +32,7 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
 
   const orgProjects = useMemo(
     () => projects.filter((p) => p.organization_id === orgId && !p.is_template),
-    [projects, orgId]
+    [projects, orgId],
   );
 
   const folderMap = useMemo(() => {
@@ -149,8 +149,7 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
 
       {!hasData && (
         <div className="text-center py-12 text-muted-foreground border rounded-xl bg-card">
-          <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No cost or duration data yet</p>
+          <Euro className="w-5 h-5 text-primary" /> <p className="font-medium">No cost or duration data yet</p>
           <p className="text-xs mt-1">Add cost and duration values to process steps in the editor.</p>
         </div>
       )}
@@ -165,7 +164,11 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topCostProcesses.map((s) => ({ name: s.project.name.slice(0, 20), value: s.totalCost }))} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <BarChart
+                    data={topCostProcesses.map((s) => ({ name: s.project.name.slice(0, 20), value: s.totalCost }))}
+                    layout="vertical"
+                    margin={{ left: 10, right: 20 }}
+                  >
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v: number) => `${v.toFixed(2)} €`} />
@@ -188,7 +191,14 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topDurationProcesses.map((s) => ({ name: s.project.name.slice(0, 20), value: s.totalDuration }))} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <BarChart
+                    data={topDurationProcesses.map((s) => ({
+                      name: s.project.name.slice(0, 20),
+                      value: s.totalDuration,
+                    }))}
+                    layout="vertical"
+                    margin={{ left: 10, right: 20 }}
+                  >
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v: number) => `${v.toFixed(0)} min`} />
@@ -222,7 +232,8 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
                   </thead>
                   <tbody>
                     {folderSummaries.map((fs) => {
-                      const efficiency = fs.totalDuration > 0 && fs.totalCost > 0 ? (fs.totalCost / fs.totalDuration).toFixed(2) : "—";
+                      const efficiency =
+                        fs.totalDuration > 0 && fs.totalCost > 0 ? (fs.totalCost / fs.totalDuration).toFixed(2) : "—";
                       return (
                         <tr key={fs.name} className="border-b last:border-0 hover:bg-muted/50">
                           <td className="py-2.5 font-medium">{fs.name}</td>
@@ -230,7 +241,9 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
                           <td className="py-2.5 text-right">{fs.totalCost.toFixed(0)} €</td>
                           <td className="py-2.5 text-right">{fs.totalDuration.toFixed(0)} min</td>
                           <td className="py-2.5 text-right">
-                            <Badge variant="outline" className="text-xs">{efficiency} €/min</Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {efficiency} €/min
+                            </Badge>
                           </td>
                         </tr>
                       );
