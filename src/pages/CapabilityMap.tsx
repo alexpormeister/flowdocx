@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -6,7 +6,8 @@ import { getProjects, getFolders, type Project, type Folder } from "@/lib/api";
 import { getOrganizations } from "@/lib/organizationApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, LayoutGrid } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ArrowLeft, LayoutGrid, ZoomIn, ZoomOut } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { bg: string; border: string; text: string; label: string; dot: string }> = {
   published: {
@@ -53,90 +54,74 @@ function buildCapabilityTree(
     .filter((area) => area.projects.length > 0 || area.children.length > 0);
 }
 
-function ProcessBox({
-  project,
-  onClick,
-}: {
-  project: Project;
-  onClick: () => void;
-}) {
-  const statusKey = project.status || "draft";
-  const config = STATUS_CONFIG[statusKey] || STATUS_CONFIG.draft;
+function ProcessBox({ project, onClick }: { project: Project; onClick: () => void }) {
+  const config = STATUS_CONFIG[project.status || "draft"] || STATUS_CONFIG.draft;
 
   return (
     <button
       onClick={onClick}
-      className={`rounded-lg border px-3 py-2.5 text-left transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] w-full min-h-[44px] ${config.bg} ${config.border}`}
+      title={project.name}
+      className={`rounded-lg border-2 p-3 text-left transition-all duration-150 hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] w-full ${config.bg} ${config.border}`}
+      style={{ minHeight: 56, wordBreak: "break-word", overflowWrap: "anywhere" }}
     >
       <div className="flex items-start gap-2">
-        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${config.dot}`} />
-        <p className={`text-xs font-medium leading-snug break-words hyphens-auto ${config.text}`}>
+        <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${config.dot}`} />
+        <span className={`text-[13px] font-medium leading-tight ${config.text}`}>
           {project.name}
-        </p>
+        </span>
       </div>
     </button>
   );
 }
 
-function CapabilityAreaCard({
+function AreaCard({
   area,
   depth,
   onProjectClick,
 }: {
   area: CapabilityArea;
   depth: number;
-  onProjectClick: (projectId: string) => void;
+  onProjectClick: (id: string) => void;
 }) {
   const isTop = depth === 0;
-  const totalProcesses = area.projects.length + area.children.reduce((sum, c) => sum + c.projects.length, 0);
 
   return (
     <div
-      className={`rounded-xl border transition-all ${
-        isTop
-          ? "border-primary/20 bg-card shadow-sm"
-          : "border-border bg-muted/20"
-      } p-4 sm:p-5`}
+      className={`rounded-xl border-2 ${
+        isTop ? "border-primary/30 bg-card shadow-sm" : "border-border bg-background"
+      }`}
+      style={{ padding: isTop ? 20 : 16 }}
     >
-      {/* Area header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-1 h-6 rounded-full ${
-              isTop ? "bg-primary" : "bg-muted-foreground/30"
-            }`}
-          />
-          <h3
-            className={`font-bold ${
-              isTop ? "text-base text-primary" : "text-sm text-foreground"
-            }`}
-          >
-            {area.folder.name}
-          </h3>
-        </div>
-        <Badge variant="outline" className="text-[10px]">
-          {totalProcesses}
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className={`w-1.5 rounded-full ${isTop ? "bg-primary h-7" : "bg-muted-foreground/30 h-5"}`} />
+        <h3 className={`font-bold ${isTop ? "text-base text-primary" : "text-sm text-foreground"}`}>
+          {area.folder.name}
+        </h3>
+        <Badge variant="outline" className="ml-auto text-[10px] shrink-0">
+          {area.projects.length + area.children.reduce((s, c) => s + c.projects.length, 0)}
         </Badge>
       </div>
 
-      {/* Process boxes */}
+      {/* Process boxes — use flex-wrap so each box sizes to its content */}
       {area.projects.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-4">
-          {area.projects.map((project) => (
-            <ProcessBox
-              key={project.id}
-              project={project}
-              onClick={() => onProjectClick(project.id)}
-            />
+        <div
+          className="flex flex-wrap gap-3 mb-4"
+          style={{ alignItems: "stretch" }}
+        >
+          {area.projects.map((p) => (
+            <div key={p.id} style={{ flex: "1 1 200px", maxWidth: 280 }}>
+              <ProcessBox project={p} onClick={() => onProjectClick(p.id)} />
+            </div>
           ))}
         </div>
       )}
 
       {/* Sub-areas */}
       {area.children.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-3">
           {area.children.map((child) => (
-            <CapabilityAreaCard
+            <AreaCard
               key={child.folder.id}
               area={child}
               depth={depth + 1}
@@ -154,6 +139,7 @@ export default function CapabilityMap() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orgId = searchParams.get("org");
+  const [zoom, setZoom] = useState(100);
 
   const { data: organizations = [] } = useQuery({
     queryKey: ["organizations"],
@@ -207,19 +193,36 @@ export default function CapabilityMap() {
     );
   }
 
+  const scale = zoom / 100;
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6 bg-card">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6 bg-card shrink-0">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <LayoutGrid className="w-5 h-5 text-primary" />
         <h1 className="text-lg font-semibold">{selectedOrg.name} — Capability Map</h1>
+
+        {/* Zoom controls */}
+        <div className="ml-auto flex items-center gap-2">
+          <ZoomOut className="w-4 h-4 text-muted-foreground" />
+          <Slider
+            value={[zoom]}
+            onValueChange={(v) => setZoom(v[0])}
+            min={40}
+            max={150}
+            step={10}
+            className="w-28"
+          />
+          <ZoomIn className="w-4 h-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground w-10 text-right">{zoom}%</span>
+        </div>
       </header>
 
-      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-5 text-xs bg-card border rounded-lg px-4 py-3">
+      {/* Legend */}
+      <div className="border-b bg-card/50 px-4 md:px-6 py-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-5 text-xs max-w-7xl mx-auto">
           <span className="font-medium text-muted-foreground">Status:</span>
           {Object.entries(STATUS_CONFIG).map(([key, config]) => (
             <span key={key} className="flex items-center gap-1.5">
@@ -228,48 +231,56 @@ export default function CapabilityMap() {
             </span>
           ))}
         </div>
+      </div>
 
-        {/* Capability areas */}
-        <div className="space-y-5">
-          {capabilityTree.map((area) => (
-            <CapabilityAreaCard
-              key={area.folder.id}
-              area={area}
-              depth={0}
-              onProjectClick={handleProjectClick}
-            />
-          ))}
+      {/* Zoomable content */}
+      <div className="flex-1 overflow-auto">
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            width: `${100 / scale}%`,
+          }}
+          className="p-4 md:p-8"
+        >
+          <div className="max-w-7xl mx-auto space-y-5">
+            {capabilityTree.map((area) => (
+              <AreaCard
+                key={area.folder.id}
+                area={area}
+                depth={0}
+                onProjectClick={handleProjectClick}
+              />
+            ))}
+
+            {rootProjects.length > 0 && (
+              <div className="rounded-xl border-2 border-primary/30 bg-card shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1.5 h-7 rounded-full bg-primary" />
+                  <h3 className="font-bold text-base text-primary">Uncategorized</h3>
+                  <Badge variant="outline" className="text-[10px] ml-auto">
+                    {rootProjects.length}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {rootProjects.map((project) => (
+                    <div key={project.id} style={{ flex: "1 1 200px", maxWidth: 280 }}>
+                      <ProcessBox project={project} onClick={() => handleProjectClick(project.id)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {capabilityTree.length === 0 && rootProjects.length === 0 && (
+              <div className="text-center py-16 text-muted-foreground">
+                <LayoutGrid className="w-14 h-14 mx-auto mb-4 opacity-30" />
+                <p className="font-medium">No processes found</p>
+                <p className="text-xs mt-1">Create processes and organize them into folders.</p>
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Root projects */}
-        {rootProjects.length > 0 && (
-          <div className="rounded-xl border border-primary/20 bg-card shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-6 rounded-full bg-primary" />
-              <h3 className="font-bold text-base text-primary">Uncategorized</h3>
-              <Badge variant="outline" className="text-[10px] ml-auto">
-                {rootProjects.length}
-              </Badge>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {rootProjects.map((project) => (
-                <ProcessBox
-                  key={project.id}
-                  project={project}
-                  onClick={() => handleProjectClick(project.id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {capabilityTree.length === 0 && rootProjects.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <LayoutGrid className="w-14 h-14 mx-auto mb-4 opacity-30" />
-            <p className="font-medium">No processes found</p>
-            <p className="text-xs mt-1">Create processes and organize them into folders.</p>
-          </div>
-        )}
       </div>
     </div>
   );
