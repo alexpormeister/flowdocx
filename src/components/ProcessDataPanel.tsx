@@ -32,6 +32,7 @@ export default function ProcessDataPanel({
   onStepsChange, 
   selectedElementId, 
   availableTags = [],
+  availablePositions = [],
   description = "",
   onDescriptionChange,
   onAddOrgTag,
