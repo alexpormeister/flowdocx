@@ -14,6 +14,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
+import { getContrastTextColor } from "@/lib/utils";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
@@ -33,6 +34,7 @@ interface FolderSidebarProps {
   folderShares: ShareEntry[];
   onShareFolder: (folderId: string, email: string, permission: "view" | "edit") => Promise<void>;
   onRemoveFolderShare: (shareId: string) => Promise<void>;
+  orgPrimaryColor?: string | null;
 }
 
 export function FolderSidebar({
@@ -50,6 +52,7 @@ export function FolderSidebar({
   folderShares,
   onShareFolder,
   onRemoveFolderShare,
+  orgPrimaryColor,
 }: FolderSidebarProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -230,7 +233,11 @@ export function FolderSidebar({
   return (
     <aside className="w-64 border-r bg-card p-4 flex flex-col">
       <div className="space-y-2 mb-6">
-        <Button onClick={onNewProject} className="w-full justify-start gap-2">
+        <Button
+          onClick={onNewProject}
+          className="w-full justify-start gap-2"
+          style={orgPrimaryColor ? { backgroundColor: orgPrimaryColor, color: getContrastTextColor(orgPrimaryColor) } : undefined}
+        >
           <Plus className="w-4 h-4" />
           {t("dashboard.newProject")}
         </Button>
