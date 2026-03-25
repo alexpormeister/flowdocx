@@ -148,7 +148,6 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
 
       {!hasData && (
         <div className="text-center py-12 text-muted-foreground border rounded-xl bg-card">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"></div>{" "}
           <p className="font-medium">No cost or duration data yet</p>
           <p className="text-xs mt-1">Add cost and duration values to process steps in the editor.</p>
         </div>
