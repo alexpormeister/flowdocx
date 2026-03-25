@@ -5,23 +5,30 @@ import { useQuery } from "@tanstack/react-query";
 import { getProjects, getFolders, type Project, type Folder } from "@/lib/api";
 import { getOrganizations } from "@/lib/organizationApi";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, LayoutGrid } from "lucide-react";
 
-const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+const STATUS_CONFIG: Record<string, { bg: string; border: string; text: string; label: string; dot: string }> = {
   published: {
-    bg: "bg-green-100 dark:bg-green-900/30",
-    border: "border-green-400 dark:border-green-600",
+    bg: "bg-green-50 dark:bg-green-950/40",
+    border: "border-green-300 dark:border-green-700",
     text: "text-green-800 dark:text-green-300",
+    label: "Published",
+    dot: "bg-green-500",
   },
   review: {
-    bg: "bg-yellow-100 dark:bg-yellow-900/30",
-    border: "border-yellow-400 dark:border-yellow-600",
+    bg: "bg-yellow-50 dark:bg-yellow-950/40",
+    border: "border-yellow-300 dark:border-yellow-700",
     text: "text-yellow-800 dark:text-yellow-300",
+    label: "Under Review",
+    dot: "bg-yellow-500",
   },
   draft: {
-    bg: "bg-muted",
+    bg: "bg-muted/50",
     border: "border-border",
     text: "text-muted-foreground",
+    label: "Draft",
+    dot: "bg-muted-foreground/40",
   },
 };
 
@@ -46,50 +53,82 @@ function buildCapabilityTree(
     .filter((area) => area.projects.length > 0 || area.children.length > 0);
 }
 
+function ProcessBox({
+  project,
+  onClick,
+}: {
+  project: Project;
+  onClick: () => void;
+}) {
+  const statusKey = project.status || "draft";
+  const config = STATUS_CONFIG[statusKey] || STATUS_CONFIG.draft;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative rounded-lg border px-3 py-2.5 text-left transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] ${config.bg} ${config.border}`}
+    >
+      <div className="flex items-start gap-2">
+        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${config.dot}`} />
+        <p className={`text-xs font-medium leading-snug break-words ${config.text}`}>
+          {project.name}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 function CapabilityAreaCard({
   area,
   depth,
   onProjectClick,
-  orgId,
 }: {
   area: CapabilityArea;
   depth: number;
   onProjectClick: (projectId: string) => void;
-  orgId: string;
 }) {
   const isTop = depth === 0;
+  const totalProcesses = area.projects.length + area.children.reduce((sum, c) => sum + c.projects.length, 0);
+
   return (
     <div
-      className={`rounded-xl border-2 ${
-        isTop ? "border-primary/30 bg-card" : "border-border bg-muted/30"
-      } p-3 sm:p-4`}
+      className={`rounded-xl border transition-all ${
+        isTop
+          ? "border-primary/20 bg-card shadow-sm"
+          : "border-border bg-muted/20"
+      } p-4 sm:p-5`}
     >
-      <h3
-        className={`font-bold mb-3 ${
-          isTop ? "text-base text-primary" : "text-sm text-foreground"
-        }`}
-      >
-        {area.folder.name}
-      </h3>
+      {/* Area header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-1 h-6 rounded-full ${
+              isTop ? "bg-primary" : "bg-muted-foreground/30"
+            }`}
+          />
+          <h3
+            className={`font-bold ${
+              isTop ? "text-base text-primary" : "text-sm text-foreground"
+            }`}
+          >
+            {area.folder.name}
+          </h3>
+        </div>
+        <Badge variant="outline" className="text-[10px]">
+          {totalProcesses}
+        </Badge>
+      </div>
 
-      {/* Process capability boxes */}
+      {/* Process boxes */}
       {area.projects.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-3">
-          {area.projects.map((project) => {
-            const statusKey = project.status || "draft";
-            const colors = STATUS_COLORS[statusKey] || STATUS_COLORS.draft;
-            return (
-              <button
-                key={project.id}
-                onClick={() => onProjectClick(project.id)}
-                className={`rounded-lg border-2 px-3 py-2 text-left transition-all hover:shadow-md hover:scale-[1.02] ${colors.bg} ${colors.border}`}
-              >
-                <p className={`text-xs font-medium leading-tight line-clamp-2 ${colors.text}`}>
-                  {project.name}
-                </p>
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
+          {area.projects.map((project) => (
+            <ProcessBox
+              key={project.id}
+              project={project}
+              onClick={() => onProjectClick(project.id)}
+            />
+          ))}
         </div>
       )}
 
@@ -102,7 +141,6 @@ function CapabilityAreaCard({
               area={child}
               depth={depth + 1}
               onProjectClick={onProjectClick}
-              orgId={orgId}
             />
           ))}
         </div>
@@ -152,7 +190,6 @@ export default function CapabilityMap() {
     [orgFolders, orgProjects]
   );
 
-  // Projects without folder
   const rootProjects = useMemo(
     () => orgProjects.filter((p) => !p.folder_id),
     [orgProjects]
@@ -173,71 +210,64 @@ export default function CapabilityMap() {
   return (
     <div className="min-h-screen bg-background">
       <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6 bg-card">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/?org=${orgId}`)}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <LayoutGrid className="w-5 h-5 text-accent" />
-        <h1 className="text-lg font-semibold">{selectedOrg.name} — Business Capability Map</h1>
+        <LayoutGrid className="w-5 h-5 text-primary" />
+        <h1 className="text-lg font-semibold">{selectedOrg.name} — Capability Map</h1>
       </header>
 
-      <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 text-xs">
+        <div className="flex flex-wrap items-center gap-5 text-xs bg-card border rounded-lg px-4 py-3">
           <span className="font-medium text-muted-foreground">Status:</span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-green-400 dark:bg-green-600" />
-            Published
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-yellow-400 dark:bg-yellow-600" />
-            Under Review
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-muted border border-border" />
-            Draft
-          </span>
+          {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+            <span key={key} className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${config.dot}`} />
+              {config.label}
+            </span>
+          ))}
         </div>
 
         {/* Capability areas */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           {capabilityTree.map((area) => (
             <CapabilityAreaCard
               key={area.folder.id}
               area={area}
               depth={0}
               onProjectClick={handleProjectClick}
-              orgId={orgId!}
             />
           ))}
         </div>
 
-        {/* Root projects (no folder) */}
+        {/* Root projects */}
         {rootProjects.length > 0 && (
-          <div className="rounded-xl border-2 border-primary/30 bg-card p-4">
-            <h3 className="font-bold text-base text-primary mb-3">Uncategorized</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {rootProjects.map((project) => {
-                const colors = STATUS_COLORS[project.status] || STATUS_COLORS.draft;
-                return (
-                  <button
-                    key={project.id}
-                    onClick={() => handleProjectClick(project.id)}
-                    className={`rounded-lg border-2 px-3 py-2 text-left transition-all hover:shadow-md hover:scale-[1.02] ${colors.bg} ${colors.border}`}
-                  >
-                    <p className={`text-xs font-medium leading-tight line-clamp-2 ${colors.text}`}>
-                      {project.name}
-                    </p>
-                  </button>
-                );
-              })}
+          <div className="rounded-xl border border-primary/20 bg-card shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-6 rounded-full bg-primary" />
+              <h3 className="font-bold text-base text-primary">Uncategorized</h3>
+              <Badge variant="outline" className="text-[10px] ml-auto">
+                {rootProjects.length}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              {rootProjects.map((project) => (
+                <ProcessBox
+                  key={project.id}
+                  project={project}
+                  onClick={() => handleProjectClick(project.id)}
+                />
+              ))}
             </div>
           </div>
         )}
 
         {capabilityTree.length === 0 && rootProjects.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <LayoutGrid className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p>No processes found for this organization.</p>
+          <div className="text-center py-16 text-muted-foreground">
+            <LayoutGrid className="w-14 h-14 mx-auto mb-4 opacity-30" />
+            <p className="font-medium">No processes found</p>
+            <p className="text-xs mt-1">Create processes and organize them into folders.</p>
           </div>
         )}
       </div>

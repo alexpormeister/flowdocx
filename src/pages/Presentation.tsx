@@ -89,11 +89,7 @@ export default function Presentation() {
     return () => viewer.destroy();
   }, [project]);
 
-  const handleBack = () => {
-    const orgId = searchParams.get("org") || project?.organization_id;
-    if (orgId) navigate(`/dashboard?org=${orgId}`);
-    else navigate("/dashboard");
-  };
+  const handleBack = () => navigate(-1);
 
   if (authLoading || !user || isLoading) {
     return (

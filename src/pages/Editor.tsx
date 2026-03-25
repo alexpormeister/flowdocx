@@ -358,15 +358,7 @@ export default function Editor() {
     toast.success(t("common.saved"));
   };
 
-  const handleBack = () => {
-    const orgId = searchParams.get("org") || project?.organization_id;
-    const folderId = searchParams.get("folder");
-    const params = new URLSearchParams();
-    if (orgId) params.set("org", orgId);
-    if (folderId) params.set("folder", folderId);
-    const qs = params.toString();
-    navigate(`/dashboard${qs ? `?${qs}` : ""}`);
-  };
+  const handleBack = () => navigate(-1);
 
   // Get link for selected element
   const selectedElementLink = useMemo(() => {

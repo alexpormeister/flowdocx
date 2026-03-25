@@ -63,11 +63,7 @@ export default function Documentation() {
     URL.revokeObjectURL(a.href);
   };
 
-  const handleBack = () => {
-    const orgId = searchParams.get("org") || project?.organization_id;
-    if (orgId) navigate(`/editor/${id}?org=${orgId}`);
-    else navigate(`/editor/${id}`);
-  };
+  const handleBack = () => navigate(-1);
 
   if (authLoading || !user || isLoading || !project) {
     return (
