@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, Tag } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Trash2, Tag, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SystemTagBadge from "./SystemTagBadge";
@@ -21,6 +21,7 @@ interface ProcessDataPanelProps {
   onStepsChange: (steps: ProcessStep[]) => void;
   selectedElementId?: string | null;
   availableTags?: string[];
+  availablePositions?: string[];
   description?: string;
   onDescriptionChange?: (description: string) => void;
   onAddOrgTag?: (tag: string) => void;
