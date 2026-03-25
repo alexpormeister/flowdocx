@@ -14,6 +14,8 @@ export interface ProcessStep {
   system: string[];
   decision: string;
   elementType?: BpmnElementType;
+  duration_minutes?: number;
+  cost_per_execution?: number;
 }
 
 interface ProcessDataPanelProps {
