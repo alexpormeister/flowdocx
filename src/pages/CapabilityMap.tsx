@@ -173,7 +173,7 @@ export default function CapabilityMap() {
   return (
     <div className="min-h-screen bg-background">
       <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6 bg-card">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/?org=${orgId}`)}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <LayoutGrid className="w-5 h-5 text-accent" />

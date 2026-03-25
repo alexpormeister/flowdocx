@@ -114,7 +114,7 @@ export default function Applications() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate(`/?org=${orgId}`)}
+          onClick={() => navigate(-1)}
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
