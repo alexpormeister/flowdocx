@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import BpmnCanvas from "@/components/BpmnCanvas";
 import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
+import LaneNameEditor from "@/components/LaneNameEditor";
 import ExportMenu from "@/components/ExportMenu";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "sonner";
@@ -437,6 +438,15 @@ export default function Editor() {
           />
         </div>
       </div>
+
+      {/* Lane/Participant Name Editor */}
+      {selectedElement && modeler && project.organization_id && (
+        <LaneNameEditor
+          element={selectedElement}
+          modeler={modeler}
+          positions={orgPositions.map(p => p.name)}
+        />
+      )}
 
       {/* Element Link Section */}
       {selectedElement && project.organization_id && (
