@@ -171,6 +171,26 @@ export default function ProcessDataPanel({
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                type="number"
+                placeholder="Duration (min)"
+                value={step.duration_minutes ?? ""}
+                onChange={(e) => updateStep(step.id, "duration_minutes", e.target.value ? Number(e.target.value) : undefined)}
+                className="h-8 text-xs bg-background"
+                min={0}
+              />
+              <Input
+                type="number"
+                placeholder="Cost (€)"
+                value={step.cost_per_execution ?? ""}
+                onChange={(e) => updateStep(step.id, "cost_per_execution", e.target.value ? Number(e.target.value) : undefined)}
+                className="h-8 text-xs bg-background"
+                min={0}
+                step={0.01}
+              />
+            </div>
+
             {/* System Tags */}
             <div className="flex flex-wrap gap-1 items-center">
               {step.system.map((tag) => (
