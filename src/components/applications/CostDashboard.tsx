@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Clock, Euro, TrendingUp, Zap } from "lucide-react";
-
 interface ProcessSummary {
   project: Project;
   folderName: string;
@@ -149,7 +148,10 @@ export default function CostDashboard({ orgId }: { orgId: string }) {
 
       {!hasData && (
         <div className="text-center py-12 text-muted-foreground border rounded-xl bg-card">
-          <Euro className="w-5 h-5 text-primary" /> <p className="font-medium">No cost or duration data yet</p>
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Euro className="w-5 h-5 text-primary" />
+          </div>{" "}
+          <p className="font-medium">No cost or duration data yet</p>
           <p className="text-xs mt-1">Add cost and duration values to process steps in the editor.</p>
         </div>
       )}
