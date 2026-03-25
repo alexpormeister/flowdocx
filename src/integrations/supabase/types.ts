@@ -410,7 +410,10 @@ export type Database = {
           name: string
           notes: string | null
           organization_id: string | null
+          owner_email: string | null
+          owner_name: string | null
           process_steps: Json | null
+          status: string
           system_tags: string[] | null
           template_category: string | null
           thumbnail_url: string | null
@@ -427,7 +430,10 @@ export type Database = {
           name?: string
           notes?: string | null
           organization_id?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
           process_steps?: Json | null
+          status?: string
           system_tags?: string[] | null
           template_category?: string | null
           thumbnail_url?: string | null
@@ -444,7 +450,10 @@ export type Database = {
           name?: string
           notes?: string | null
           organization_id?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
           process_steps?: Json | null
+          status?: string
           system_tags?: string[] | null
           template_category?: string | null
           thumbnail_url?: string | null

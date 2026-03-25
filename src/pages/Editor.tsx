@@ -6,19 +6,20 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, updateProject, getFolders, type Folder } from "@/lib/api";
 import { generateSOPDocument, downloadSOP } from "@/lib/sopGenerator";
-import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, TrendingUp } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, TrendingUp, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import BpmnCanvas from "@/components/BpmnCanvas";
 import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
 import StrategicAnalysisPanel from "@/components/StrategicAnalysisPanel";
 import ExportMenu from "@/components/ExportMenu";
+import StatusBadge from "@/components/StatusBadge";
 import { toast } from "sonner";
 
 interface SwotData {
@@ -52,6 +53,9 @@ export default function Editor() {
   const [selectedElement, setSelectedElement] = useState<any>(null);
   const [projectName, setProjectName] = useState("Untitled Project");
   const [projectDescription, setProjectDescription] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [status, setStatus] = useState("draft");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -119,6 +123,9 @@ export default function Editor() {
     if (project) {
       setProjectName(project.name);
       setProjectDescription(project.description || "");
+      setOwnerName(project.owner_name || "");
+      setOwnerEmail(project.owner_email || "");
+      setStatus(project.status || "draft");
       setSteps(project.process_steps || []);
     }
   }, [project]);
@@ -147,6 +154,9 @@ export default function Editor() {
           bpmn_xml: xml,
           process_steps: steps,
           system_tags: [...new Set(steps.flatMap(s => s.system))],
+          owner_name: ownerName,
+          owner_email: ownerEmail,
+          status,
         });
         lastSavedRef.current = xml;
         setIsSaving(false);
@@ -155,7 +165,7 @@ export default function Editor() {
       console.error("Auto-save failed:", err);
       setIsSaving(false);
     }
-  }, [modeler, id, projectName, steps, hasUnsavedChanges, updateMutation]);
+  }, [modeler, id, projectName, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
 
   useEffect(() => {
     if (autoSaveTimeoutRef.current) {
@@ -340,6 +350,44 @@ export default function Editor() {
           onGenerateSOP={handleGenerateSOP}
         />
       </TabsContent>
+
+      {/* Process Settings Section */}
+      <div className="border-t px-3 py-3 space-y-3">
+        <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Process Settings</h3>
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs text-muted-foreground">Status</label>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setHasUnsavedChanges(true); }}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft (Luonnos)</SelectItem>
+                <SelectItem value="review">Under Review (Tarkastuksessa)</SelectItem>
+                <SelectItem value="published">Published (Julkaistu)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Owner Name</label>
+            <Input
+              placeholder="Process owner name..."
+              value={ownerName}
+              onChange={(e) => { setOwnerName(e.target.value); setHasUnsavedChanges(true); }}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Owner Email</label>
+            <Input
+              placeholder="owner@example.com"
+              value={ownerEmail}
+              onChange={(e) => { setOwnerEmail(e.target.value); setHasUnsavedChanges(true); }}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+      </div>
     </Tabs>
   );
 
@@ -362,6 +410,7 @@ export default function Editor() {
             onChange={(e) => handleNameChange(e.target.value)}
             className="h-8 w-32 sm:w-48 text-sm font-medium border-none bg-transparent focus-visible:bg-background"
           />
+          <StatusBadge status={status} />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
             {isSaving ? (
               <>
@@ -383,6 +432,21 @@ export default function Editor() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {project.organization_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const orgId = searchParams.get("org") || project.organization_id;
+                navigate(`/presentation/${id}${orgId ? `?org=${orgId}` : ""}`);
+              }}
+              className="h-8 text-xs gap-1.5"
+              title="Presentation Mode"
+            >
+              <Presentation className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Present</span>
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
             <Save className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t("common.save")}</span>
