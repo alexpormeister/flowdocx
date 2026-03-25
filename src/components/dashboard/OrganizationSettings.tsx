@@ -675,6 +675,20 @@ export function OrganizationSettings({
               </div>
             )}
 
+            {/* Root-level drop zone */}
+            {draggedPositionId && (
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverPositionId("root"); }}
+                onDragLeave={() => setDragOverPositionId(null)}
+                onDrop={(e) => { e.preventDefault(); handleDrop(null); }}
+                className={`border-2 border-dashed rounded-lg p-3 text-center text-xs text-muted-foreground transition-colors ${
+                  dragOverPositionId === "root" ? "border-primary bg-primary/5" : "border-border"
+                }`}
+              >
+                Drop here to make root-level
+              </div>
+            )}
+
             <div className="space-y-1 overflow-x-auto pb-4">
               {buildPositionTree(null).map((position, i, arr) => renderVisualPositionNode(position, 0, i === arr.length - 1))}
               {(!positions || positions.length === 0) && (
