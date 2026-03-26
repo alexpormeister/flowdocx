@@ -27,8 +27,7 @@ interface FolderSidebarProps {
   onSelectFolder: (folderId: string | null) => void;
   onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
-  onRenameFolder: (folderId: string, newName: string) => void;
-  onUpdateFolderColor: (folderId: string, color: string) => void;
+  onEditFolder: (folderId: string, name: string, color: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
@@ -46,8 +45,7 @@ export function FolderSidebar({
   onSelectFolder,
   onCreateFolder,
   onDeleteFolder,
-  onRenameFolder,
-  onUpdateFolderColor,
+  onEditFolder,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
@@ -306,8 +304,9 @@ export function FolderSidebar({
           folderName={editingFolder.name}
           folderColor={editingFolder.color || "#0891b2"}
           onSave={(name, color) => {
-            if (name !== editingFolder.name) onRenameFolder(editingFolder.id, name);
-            if (color !== (editingFolder.color || "#0891b2")) onUpdateFolderColor(editingFolder.id, color);
+            if (name !== editingFolder.name || color !== (editingFolder.color || "#0891b2")) {
+              onEditFolder(editingFolder.id, name, color);
+            }
             setEditingFolder(null);
           }}
         />
