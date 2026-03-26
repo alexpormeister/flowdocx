@@ -61,33 +61,7 @@ const roleIcons: Record<OrgRole, typeof Crown> = {
   viewer: Eye,
 };
 
-function downloadOrgStructure(orgName: string, positions: OrganizationPosition[], members: OrganizationMember[]) {
-  const buildTree = (parentId: string | null, indent: number): string[] => {
-    const children = positions
-      .filter(p => p.parent_position_id === parentId)
-      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    
-    const lines: string[] = [];
-    for (const pos of children) {
-      const prefix = "  ".repeat(indent);
-      const posMembers = members.filter(m => m.position_id === pos.id);
-      const memberStr = posMembers.length > 0
-        ? ` (${posMembers.map(m => `${m.email}${m.title ? ` - ${m.title}` : ""}`).join(", ")})`
-        : "";
-      lines.push(`${prefix}├── ${pos.name}${memberStr}`);
-      lines.push(...buildTree(pos.id, indent + 1));
-    }
-    return lines;
-  };
-
-  const content = [`${orgName} - Organization Structure`, "=".repeat(40), "", ...buildTree(null, 0)].join("\n");
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${orgName.replace(/\s+/g, "_")}_structure.txt`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+// Old text export removed - using PNG export from orgExportPng.ts
 
 export function OrganizationSettings({
   organization,
@@ -662,7 +636,7 @@ export function OrganizationSettings({
                   variant="outline"
                   size="sm"
                   className="gap-2 text-xs"
-                  onClick={() => downloadOrgStructure(organization.name, positions, members || [])}
+                  onClick={() => exportStructurePng(organization.name, positions, members || [], organization.primary_color || "#0f172a", organization.accent_color || "#0891b2")}
                 >
                   <Download className="w-3 h-3" />
                   {t("org.exportStructure")}
