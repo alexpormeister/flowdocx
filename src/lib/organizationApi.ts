@@ -202,6 +202,18 @@ export async function removeOrganizationTag(tagId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function updateOrganizationTag(
+  tagId: string,
+  updates: { tag_name?: string; description?: string | null; admin_position_id?: string | null; group_id?: string | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from("organization_system_tags")
+    .update(updates as any)
+    .eq("id", tagId);
+
+  if (error) throw error;
+}
+
 // Get user's current organization membership
 export async function getCurrentUserMembership(
   organizationId: string
