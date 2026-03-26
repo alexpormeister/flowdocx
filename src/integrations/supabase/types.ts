@@ -366,27 +366,50 @@ export type Database = {
       }
       organization_system_tags: {
         Row: {
+          admin_position_id: string | null
           created_at: string
           created_by: string | null
+          description: string | null
+          group_id: string | null
           id: string
           organization_id: string
           tag_name: string
         }
         Insert: {
+          admin_position_id?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          group_id?: string | null
           id?: string
           organization_id: string
           tag_name: string
         }
         Update: {
+          admin_position_id?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          group_id?: string | null
           id?: string
           organization_id?: string
           tag_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "organization_system_tags_admin_position_id_fkey"
+            columns: ["admin_position_id"]
+            isOneToOne: false
+            referencedRelation: "organization_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_system_tags_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "organization_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "organization_system_tags_organization_id_fkey"
             columns: ["organization_id"]
