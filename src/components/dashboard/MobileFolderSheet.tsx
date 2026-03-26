@@ -19,12 +19,14 @@ import {
   Folder as FolderIcon,
   Share2,
   Menu,
+  Pencil,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
 import { getContrastTextColor } from "@/lib/utils";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
+import { EditFolderDialog } from "./EditFolderDialog";
 
 interface MobileFolderSheetProps {
   folders: Folder[];
@@ -34,6 +36,7 @@ interface MobileFolderSheetProps {
   onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onRenameFolder: (folderId: string, newName: string) => void;
+  onUpdateFolderColor: (folderId: string, color: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
@@ -52,6 +55,7 @@ export function MobileFolderSheet({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onUpdateFolderColor,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
@@ -65,6 +69,7 @@ export function MobileFolderSheet({
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   const { ownedRootFolders, sharedRootFolders } = useMemo(() => {
@@ -179,12 +184,20 @@ export function MobileFolderSheet({
             )}
           </button>
           {canDelete && (
-            <button
-              onClick={() => onDeleteFolder(folder.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+            <div className="opacity-0 group-hover:opacity-100 flex items-center transition-all">
+              <button
+                onClick={() => setEditingFolder(folder)}
+                className="p-1 text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => onDeleteFolder(folder.id)}
+                className="p-1 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
           )}
         </div>
         {hasChildren && isExpanded && (
@@ -298,6 +311,20 @@ export function MobileFolderSheet({
           </div>
         </div>
       </SheetContent>
+
+      {editingFolder && (
+        <EditFolderDialog
+          open={!!editingFolder}
+          onOpenChange={(open) => { if (!open) setEditingFolder(null); }}
+          folderName={editingFolder.name}
+          folderColor={editingFolder.color || "#0891b2"}
+          onSave={(name, color) => {
+            if (name !== editingFolder.name) onRenameFolder(editingFolder.id, name);
+            if (color !== (editingFolder.color || "#0891b2")) onUpdateFolderColor(editingFolder.id, color);
+            setEditingFolder(null);
+          }}
+        />
+      )}
     </Sheet>
   );
 }

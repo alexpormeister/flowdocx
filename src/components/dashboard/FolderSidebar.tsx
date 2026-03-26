@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { getContrastTextColor } from "@/lib/utils";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
+import { EditFolderDialog } from "./EditFolderDialog";
 
 interface FolderSidebarProps {
   folders: Folder[];
@@ -27,6 +28,7 @@ interface FolderSidebarProps {
   onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onRenameFolder: (folderId: string, newName: string) => void;
+  onUpdateFolderColor: (folderId: string, color: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
@@ -45,6 +47,7 @@ export function FolderSidebar({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onUpdateFolderColor,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
@@ -57,9 +60,7 @@ export function FolderSidebar({
   const { t } = useLanguage();
   const { user } = useAuth();
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
-  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const renameInputRef = useRef<HTMLInputElement>(null);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   // Separate owned folders from shared folders
@@ -166,49 +167,19 @@ export function FolderSidebar({
               style={{ color: folder.color || "#0891b2" }}
               fill={folder.color || "#0891b2"}
             />
-            {renamingFolderId === folder.id ? (
-              <input
-                ref={renameInputRef}
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={() => {
-                  if (renameValue.trim() && renameValue.trim() !== folder.name) {
-                    onRenameFolder(folder.id, renameValue.trim());
-                  }
-                  setRenamingFolderId(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    if (renameValue.trim() && renameValue.trim() !== folder.name) {
-                      onRenameFolder(folder.id, renameValue.trim());
-                    }
-                    setRenamingFolderId(null);
-                  } else if (e.key === "Escape") {
-                    setRenamingFolderId(null);
-                  }
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-transparent border-b border-accent outline-none text-sm w-full"
-                autoFocus
-              />
-            ) : (
-              <span className="truncate">{folder.name}</span>
-            )}
-            {renamingFolderId !== folder.id && (folder.system_tags?.length || 0) > 0 && (
+            <span className="truncate">{folder.name}</span>
+            {(folder.system_tags?.length || 0) > 0 && (
               <span className="text-[10px] bg-muted px-1 rounded">
                 {folder.system_tags?.length}
               </span>
             )}
           </button>
-          {canDelete && renamingFolderId !== folder.id && (
+          {canDelete && (
             <div className="opacity-0 group-hover:opacity-100 flex items-center transition-all">
               <button
-                onClick={() => {
-                  setRenamingFolderId(folder.id);
-                  setRenameValue(folder.name);
-                }}
+                onClick={() => setEditingFolder(folder)}
                 className="p-1 text-muted-foreground hover:text-foreground"
-                title="Rename"
+                title="Edit"
               >
                 <Pencil className="w-3 h-3" />
               </button>
@@ -327,6 +298,20 @@ export function FolderSidebar({
           </div>
         )}
       </div>
+
+      {editingFolder && (
+        <EditFolderDialog
+          open={!!editingFolder}
+          onOpenChange={(open) => { if (!open) setEditingFolder(null); }}
+          folderName={editingFolder.name}
+          folderColor={editingFolder.color || "#0891b2"}
+          onSave={(name, color) => {
+            if (name !== editingFolder.name) onRenameFolder(editingFolder.id, name);
+            if (color !== (editingFolder.color || "#0891b2")) onUpdateFolderColor(editingFolder.id, color);
+            setEditingFolder(null);
+          }}
+        />
+      )}
     </aside>
   );
 }
