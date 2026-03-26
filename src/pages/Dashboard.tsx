@@ -70,10 +70,11 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid } from "lucide-react";
+import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid, LayoutTemplate, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
+import { CreateFolderDialog } from "@/components/dashboard/CreateFolderDialog";
 
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
