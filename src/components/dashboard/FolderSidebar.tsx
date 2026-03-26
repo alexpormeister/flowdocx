@@ -62,7 +62,6 @@ export function FolderSidebar({
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   // Separate owned folders from shared folders
   // For shared subfolders, show them at root level if parent is not accessible
