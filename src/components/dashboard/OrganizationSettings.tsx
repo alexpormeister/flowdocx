@@ -397,7 +397,7 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
             <TabsTrigger value="profile" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Building2 className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.profile")}</span>
@@ -413,6 +413,10 @@ export function OrganizationSettings({
             <TabsTrigger value="structure" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Network className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.structure")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+              <UsersRound className="w-4 h-4" />
+              <span className="hidden sm:inline">Ryhmät</span>
             </TabsTrigger>
             <TabsTrigger value="tags" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Tags className="w-4 h-4" />
