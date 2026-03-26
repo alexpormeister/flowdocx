@@ -399,3 +399,115 @@ export async function removeFolderRestrictionByMemberAndFolder(
 
   if (error) throw error;
 }
+
+// Organization Groups
+export interface OrganizationGroup {
+  id: string;
+  organization_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationGroupPosition {
+  id: string;
+  group_id: string;
+  position_id: string;
+  created_at: string;
+}
+
+export async function getOrganizationGroups(organizationId: string): Promise<OrganizationGroup[]> {
+  const { data, error } = await supabase
+    .from("organization_groups")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createOrganizationGroup(
+  organizationId: string,
+  name: string
+): Promise<OrganizationGroup> {
+  const { data, error } = await supabase
+    .from("organization_groups")
+    .insert({ organization_id: organizationId, name })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOrganizationGroup(
+  groupId: string,
+  updates: { name?: string }
+): Promise<OrganizationGroup> {
+  const { data, error } = await supabase
+    .from("organization_groups")
+    .update(updates)
+    .eq("id", groupId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteOrganizationGroup(groupId: string): Promise<void> {
+  const { error } = await supabase
+    .from("organization_groups")
+    .delete()
+    .eq("id", groupId);
+
+  if (error) throw error;
+}
+
+export async function getGroupPositions(groupId: string): Promise<OrganizationGroupPosition[]> {
+  const { data, error } = await supabase
+    .from("organization_group_positions")
+    .select("*")
+    .eq("group_id", groupId);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getOrganizationGroupsWithPositions(
+  organizationId: string
+): Promise<(OrganizationGroup & { position_ids: string[] })[]> {
+  const groups = await getOrganizationGroups(organizationId);
+  if (groups.length === 0) return [];
+
+  const { data: allGroupPositions, error } = await supabase
+    .from("organization_group_positions")
+    .select("*")
+    .in("group_id", groups.map(g => g.id));
+
+  if (error) throw error;
+
+  return groups.map(g => ({
+    ...g,
+    position_ids: (allGroupPositions || []).filter(gp => gp.group_id === g.id).map(gp => gp.position_id),
+  }));
+}
+
+export async function addPositionToGroup(groupId: string, positionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("organization_group_positions")
+    .insert({ group_id: groupId, position_id: positionId });
+
+  if (error) throw error;
+}
+
+export async function removePositionFromGroup(groupId: string, positionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("organization_group_positions")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("position_id", positionId);
+
+  if (error) throw error;
+}
