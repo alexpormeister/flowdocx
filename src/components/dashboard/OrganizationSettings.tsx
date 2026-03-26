@@ -695,9 +695,30 @@ export function OrganizationSettings({
 
           {/* Groups Tab */}
           <TabsContent value="groups" className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Luo ryhmiä, jotka kokoavat yhteen organisaation positioita. Ryhmiä voi käyttää BPMN-kaavioissa uimaratojen ja tehtävien suorittajina.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Luo ryhmiä, jotka kokoavat yhteen organisaation positioita. Ryhmiä voi käyttää BPMN-kaavioissa uimaratojen ja tehtävien suorittajina.
+              </p>
+              {groups.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs ml-4 shrink-0"
+                  onClick={() => {
+                    const groupData = groups.map(g => ({
+                      name: g.name,
+                      positionNames: g.position_ids
+                        .map(pid => positions.find(p => p.id === pid)?.name)
+                        .filter(Boolean) as string[],
+                    }));
+                    exportGroupsPng(organization.name, groupData, organization.primary_color || "#0f172a", organization.accent_color || "#0891b2");
+                  }}
+                >
+                  <Download className="w-3 h-3" />
+                  Export PNG
+                </Button>
+              )}
+            </div>
 
             {isAdmin && (
               <div className="flex gap-2 p-3 rounded-lg border bg-muted/30">
