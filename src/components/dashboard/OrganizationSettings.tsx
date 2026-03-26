@@ -65,6 +65,117 @@ const roleIcons: Record<OrgRole, typeof Crown> = {
 
 // Old text export removed - using PNG export from orgExportPng.ts
 
+function ShareLinksSection({ organizationId }: { organizationId: string }) {
+  const queryClient = useQueryClient();
+  const [newLinkName, setNewLinkName] = useState("");
+
+  const { data: tokens = [], isLoading } = useQuery({
+    queryKey: ["presentation-tokens", organizationId],
+    queryFn: () => getPresentationTokens(organizationId),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => createPresentationToken(organizationId, newLinkName.trim() || "Share Link"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] });
+      setNewLinkName("");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deletePresentationToken,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => togglePresentationToken(id, active),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] }),
+  });
+
+  const getShareUrl = (token: string) => `${window.location.origin}/present/${token}`;
+
+  const copyLink = (token: string) => {
+    navigator.clipboard.writeText(getShareUrl(token));
+    const { toast } = require("sonner");
+    toast.success("Link copied!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Create shareable presentation links. Anyone with the link can view your organization's processes in read-only mode without logging in.
+      </p>
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Link name (e.g. Board Review)..."
+          value={newLinkName}
+          onChange={(e) => setNewLinkName(e.target.value)}
+          className="flex-1"
+        />
+        <Button
+          onClick={() => createMutation.mutate()}
+          disabled={createMutation.isPending}
+          size="sm"
+          className="gap-1.5"
+        >
+          <Plus className="w-4 h-4" />
+          Create Link
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Loading...</div>
+      ) : tokens.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground text-sm">
+          No share links created yet
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {tokens.map((t: any) => (
+            <div key={t.id} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{t.name}</span>
+                  {!t.is_active && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-destructive/10 text-destructive rounded">Disabled</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground truncate mt-0.5">{getShareUrl(t.token)}</p>
+              </div>
+              <button
+                onClick={() => copyLink(t.token)}
+                className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0"
+                title="Copy link"
+              >
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => toggleMutation.mutate({ id: t.id, active: !t.is_active })}
+                className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0"
+                title={t.is_active ? "Disable" : "Enable"}
+              >
+                {t.is_active ? (
+                  <ToggleRight className="w-4 h-4 text-primary" />
+                ) : (
+                  <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(t.id)}
+                className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors shrink-0"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OrganizationSettings({
   organization,
   members,
