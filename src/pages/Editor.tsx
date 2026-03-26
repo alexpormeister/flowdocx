@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
-import { getOrganizationTags, addOrganizationTag, getOrganizationPositions } from "@/lib/organizationApi";
+import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,13 @@ export default function Editor() {
     enabled: !!project?.organization_id,
   });
 
+  // Org groups for performer dropdown
+  const { data: orgGroups = [] } = useQuery({
+    queryKey: ["org-groups", project?.organization_id],
+    queryFn: () => getOrganizationGroupsWithPositions(project!.organization_id!),
+    enabled: !!project?.organization_id,
+  });
+
   // Element links
   const { data: elementLinks = [] } = useQuery({
     queryKey: ["element-links", id],
@@ -96,6 +103,13 @@ export default function Editor() {
   const availableTags = useMemo(() => {
     return orgTags.map((t) => t.tag_name);
   }, [orgTags]);
+
+  // Combine position names and group names for performer dropdowns
+  const availablePerformers = useMemo(() => {
+    const positionNames = orgPositions.map(p => p.name);
+    const groupNames = orgGroups.map(g => `[${g.name}]`);
+    return [...groupNames, ...positionNames];
+  }, [orgPositions, orgGroups]);
 
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof updateProject>[1]) => updateProject(id!, updates),
@@ -431,7 +445,7 @@ export default function Editor() {
             onStepsChange={handleStepsChange}
             selectedElementId={selectedElement?.id}
             availableTags={availableTags}
-            availablePositions={orgPositions.map(p => p.name)}
+            availablePositions={availablePerformers}
             description={projectDescription}
             onDescriptionChange={handleDescriptionChange}
             onAddOrgTag={project.organization_id ? handleAddOrgTag : undefined}
@@ -444,7 +458,7 @@ export default function Editor() {
         <LaneNameEditor
           element={selectedElement}
           modeler={modeler}
-          positions={orgPositions.map(p => p.name)}
+          positions={availablePerformers}
         />
       )}
 

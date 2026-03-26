@@ -194,6 +194,74 @@ export type Database = {
           },
         ]
       }
+      organization_group_positions: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          position_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          position_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          position_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_group_positions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "organization_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_positions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "organization_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           accepted_at: string | null

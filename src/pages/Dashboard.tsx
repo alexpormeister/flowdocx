@@ -48,6 +48,12 @@ import {
   getMemberFolderRestrictions,
   addFolderRestriction,
   removeFolderRestrictionByMemberAndFolder,
+  getOrganizationGroupsWithPositions,
+  createOrganizationGroup,
+  updateOrganizationGroup,
+  deleteOrganizationGroup,
+  addPositionToGroup,
+  removePositionFromGroup,
   type Organization,
   type OrgRole,
 } from "@/lib/organizationApi";
@@ -150,6 +156,12 @@ export default function Dashboard() {
   const { data: folderRestrictions = [] } = useQuery({
     queryKey: ["folder-restrictions", selectedOrgId],
     queryFn: () => (selectedOrgId ? getMemberFolderRestrictions(selectedOrgId) : Promise.resolve([])),
+    enabled: !!user && !!selectedOrgId,
+  });
+
+  const { data: orgGroups = [] } = useQuery({
+    queryKey: ["org-groups", selectedOrgId],
+    queryFn: () => (selectedOrgId ? getOrganizationGroupsWithPositions(selectedOrgId) : Promise.resolve([])),
     enabled: !!user && !!selectedOrgId,
   });
 
@@ -424,6 +436,41 @@ export default function Dashboard() {
     },
   });
 
+  const createGroupMutation = useMutation({
+    mutationFn: ({ orgId, name }: { orgId: string; name: string }) => createOrganizationGroup(orgId, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-groups", selectedOrgId] });
+    },
+  });
+
+  const updateGroupMutation = useMutation({
+    mutationFn: ({ groupId, updates }: { groupId: string; updates: { name?: string } }) => updateOrganizationGroup(groupId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-groups", selectedOrgId] });
+    },
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: deleteOrganizationGroup,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-groups", selectedOrgId] });
+    },
+  });
+
+  const addGroupPositionMutation = useMutation({
+    mutationFn: ({ groupId, positionId }: { groupId: string; positionId: string }) => addPositionToGroup(groupId, positionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-groups", selectedOrgId] });
+    },
+  });
+
+  const removeGroupPositionMutation = useMutation({
+    mutationFn: ({ groupId, positionId }: { groupId: string; positionId: string }) => removePositionFromGroup(groupId, positionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-groups", selectedOrgId] });
+    },
+  });
+
   const updateMemberMutation = useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: OrgRole }) => updateMemberRole(memberId, role),
     onSuccess: () => {
@@ -686,6 +733,7 @@ export default function Dashboard() {
               members={orgMembers}
               tags={orgTags}
               positions={orgPositions}
+              groups={orgGroups}
               folders={filteredFolders}
               folderRestrictions={folderRestrictions}
               currentUserRole={currentMembership?.role || null}
@@ -724,6 +772,21 @@ export default function Dashboard() {
               }}
               onRemoveFolderRestriction={async (memberId, folderId) => {
                 await removeFolderRestrictionMutation.mutateAsync({ memberId, folderId });
+              }}
+              onCreateGroup={async (name) => {
+                await createGroupMutation.mutateAsync({ orgId: selectedOrg.id, name });
+              }}
+              onUpdateGroup={async (groupId, updates) => {
+                await updateGroupMutation.mutateAsync({ groupId, updates });
+              }}
+              onDeleteGroup={async (groupId) => {
+                await deleteGroupMutation.mutateAsync(groupId);
+              }}
+              onAddGroupPosition={async (groupId, positionId) => {
+                await addGroupPositionMutation.mutateAsync({ groupId, positionId });
+              }}
+              onRemoveGroupPosition={async (groupId, positionId) => {
+                await removeGroupPositionMutation.mutateAsync({ groupId, positionId });
               }}
             />
           )}
