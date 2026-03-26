@@ -300,7 +300,7 @@ export default function Dashboard() {
   });
 
   const updateFolderMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; system_tags?: string[] } }) => updateFolder(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: { name?: string; color?: string; system_tags?: string[] } }) => updateFolder(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
       toast.success(t("common.saved"));
