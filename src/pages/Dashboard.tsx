@@ -70,10 +70,13 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid } from "lucide-react";
+import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid, LayoutTemplate, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
+import { FOLDER_COLORS } from "@/components/dashboard/CreateFolderDialog";
+import { Label } from "@/components/ui/label";
+import { DialogFooter } from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -86,6 +89,9 @@ export default function Dashboard() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(searchParams.get("folder") || null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [showRootProjects, setShowRootProjects] = useState(false);
+  const [mainCreateFolderOpen, setMainCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderColor, setNewFolderColor] = useState(FOLDER_COLORS[0]);
 
   // Persist org selection via URL params
   const selectedOrgId = searchParams.get("org") || null;
@@ -803,9 +809,9 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Search */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative flex-1 max-w-md">
+            {/* Search + Actions */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="relative flex-1 min-w-[200px] max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder={selectedOrgId ? "Search all processes (name, description, steps, systems)..." : t("dashboard.searchProjects")}
@@ -819,6 +825,32 @@ export default function Dashboard() {
                   {displayedProjects.length} results
                 </span>
               )}
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  onClick={handleNewProject}
+                  size="sm"
+                  style={selectedOrg?.primary_color ? { backgroundColor: selectedOrg.primary_color, color: getContrastTextColor(selectedOrg.primary_color) } : undefined}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("dashboard.newProject")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTemplateGalleryOpen(true)}
+                >
+                  <LayoutTemplate className="w-4 h-4 mr-1" />
+                  {t("dashboard.newFromTemplate")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMainCreateFolderOpen(true)}
+                >
+                  <FolderPlus className="w-4 h-4 mr-1" />
+                  {t("dashboard.createFolder")}
+                </Button>
+              </div>
             </div>
 
             {projectsLoading ? (
@@ -904,6 +936,66 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+
+      {/* Create Folder Dialog (main area) */}
+      <Dialog open={mainCreateFolderOpen} onOpenChange={setMainCreateFolderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("dashboard.createFolder")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t("dashboard.folderName")}</Label>
+              <Input
+                placeholder={t("dashboard.folderName")}
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newFolderName.trim()) {
+                    createFolderMutation.mutate({ name: newFolderName.trim(), parentId: selectedFolder, color: newFolderColor });
+                    setNewFolderName("");
+                    setNewFolderColor(FOLDER_COLORS[0]);
+                    setMainCreateFolderOpen(false);
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("dashboard.folderColor") || "Color"}</Label>
+              <div className="flex gap-2 flex-wrap">
+                {FOLDER_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setNewFolderColor(c)}
+                    className={`w-8 h-8 rounded-lg transition-all ${newFolderColor === c ? "ring-2 ring-offset-2 ring-accent" : ""}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+            {selectedFolder && currentPath.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {t("dashboard.creatingIn")}: {currentPath[currentPath.length - 1]?.name}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                if (newFolderName.trim()) {
+                  createFolderMutation.mutate({ name: newFolderName.trim(), parentId: selectedFolder, color: newFolderColor });
+                  setNewFolderName("");
+                  setNewFolderColor(FOLDER_COLORS[0]);
+                  setMainCreateFolderOpen(false);
+                }
+              }}
+              disabled={!newFolderName.trim() || createFolderMutation.isPending}
+            >
+              {t("common.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Template Gallery Dialog */}
       <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
