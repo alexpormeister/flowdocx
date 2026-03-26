@@ -873,7 +873,12 @@ export function OrganizationSettings({
             </div>
           </TabsContent>
 
-
+          {/* Share Links Tab */}
+          {isAdmin && (
+            <TabsContent value="share-links" className="space-y-4">
+              <ShareLinksSection organizationId={organization.id} />
+            </TabsContent>
+          )}
 
 
           {/* Notes Tab */}
