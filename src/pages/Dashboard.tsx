@@ -897,14 +897,16 @@ export default function Dashboard() {
                   <Plus className="w-4 h-4 mr-1" />
                   {t("dashboard.newProject")}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTemplateGalleryOpen(true)}
-                >
-                  <LayoutTemplate className="w-4 h-4 mr-1" />
-                  {t("dashboard.newFromTemplate")}
-                </Button>
+                {!selectedOrgId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTemplateGalleryOpen(true)}
+                  >
+                    <LayoutTemplate className="w-4 h-4 mr-1" />
+                    {t("dashboard.newFromTemplate")}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

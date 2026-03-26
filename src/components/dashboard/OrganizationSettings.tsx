@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPresentationTokens, createPresentationToken, deletePresentationToken, togglePresentationToken } from "@/lib/presentationApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { exportStructurePng, exportGroupsPng } from "@/lib/orgExportPng";
 import { Button } from "@/components/ui/button";
@@ -62,6 +64,117 @@ const roleIcons: Record<OrgRole, typeof Crown> = {
 };
 
 // Old text export removed - using PNG export from orgExportPng.ts
+
+function ShareLinksSection({ organizationId }: { organizationId: string }) {
+  const queryClient = useQueryClient();
+  const [newLinkName, setNewLinkName] = useState("");
+
+  const { data: tokens = [], isLoading } = useQuery({
+    queryKey: ["presentation-tokens", organizationId],
+    queryFn: () => getPresentationTokens(organizationId),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => createPresentationToken(organizationId, newLinkName.trim() || "Share Link"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] });
+      setNewLinkName("");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deletePresentationToken,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => togglePresentationToken(id, active),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] }),
+  });
+
+  const getShareUrl = (token: string) => `${window.location.origin}/present/${token}`;
+
+  const copyLink = async (token: string) => {
+    await navigator.clipboard.writeText(getShareUrl(token));
+    const sonner = await import("sonner");
+    sonner.toast.success("Link copied!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Create shareable presentation links. Anyone with the link can view your organization's processes in read-only mode without logging in.
+      </p>
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Link name (e.g. Board Review)..."
+          value={newLinkName}
+          onChange={(e) => setNewLinkName(e.target.value)}
+          className="flex-1"
+        />
+        <Button
+          onClick={() => createMutation.mutate()}
+          disabled={createMutation.isPending}
+          size="sm"
+          className="gap-1.5"
+        >
+          <Plus className="w-4 h-4" />
+          Create Link
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Loading...</div>
+      ) : tokens.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground text-sm">
+          No share links created yet
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {tokens.map((t: any) => (
+            <div key={t.id} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{t.name}</span>
+                  {!t.is_active && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-destructive/10 text-destructive rounded">Disabled</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground truncate mt-0.5">{getShareUrl(t.token)}</p>
+              </div>
+              <button
+                onClick={() => copyLink(t.token)}
+                className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0"
+                title="Copy link"
+              >
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => toggleMutation.mutate({ id: t.id, active: !t.is_active })}
+                className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0"
+                title={t.is_active ? "Disable" : "Enable"}
+              >
+                {t.is_active ? (
+                  <ToggleRight className="w-4 h-4 text-primary" />
+                ) : (
+                  <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(t.id)}
+                className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors shrink-0"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function OrganizationSettings({
   organization,
@@ -372,7 +485,7 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 h-auto">
             <TabsTrigger value="profile" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Building2 className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.profile")}</span>
@@ -393,6 +506,12 @@ export function OrganizationSettings({
               <UsersRound className="w-4 h-4" />
               <span className="hidden sm:inline">Ryhmät</span>
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="share-links" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
+                <LinkIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Share Links</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="notes" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.notes")}</span>
@@ -865,7 +984,12 @@ export function OrganizationSettings({
             </div>
           </TabsContent>
 
-
+          {/* Share Links Tab */}
+          {isAdmin && (
+            <TabsContent value="share-links" className="space-y-4">
+              <ShareLinksSection organizationId={organization.id} />
+            </TabsContent>
+          )}
 
 
           {/* Notes Tab */}

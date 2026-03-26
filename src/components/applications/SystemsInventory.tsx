@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,13 +10,13 @@ import {
   getOrganizationGroupsWithPositions,
   getCurrentUserMembership,
   type OrganizationSystemTag,
-  type OrganizationPosition,
-  type OrganizationGroup,
 } from "@/lib/organizationApi";
+import { getAllSystemTagGroups, setSystemTagGroups } from "@/lib/presentationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,8 @@ import {
   UserCog,
   UsersRound,
   FileText,
+  Link as LinkIcon,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -56,7 +58,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formAdminPositionId, setFormAdminPositionId] = useState<string>("");
-  const [formGroupId, setFormGroupId] = useState<string>("");
+  const [formGroupIds, setFormGroupIds] = useState<string[]>([]);
+  const [formLinkUrl, setFormLinkUrl] = useState("");
 
   const { data: membership } = useQuery({
     queryKey: ["org-membership", orgId],
@@ -82,33 +85,77 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     enabled: !!user,
   });
 
-  const canEdit = membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
+  const { data: tagGroupsMap = {} } = useQuery({
+    queryKey: ["system-tag-groups", orgId],
+    queryFn: () => getAllSystemTagGroups(orgId),
+    enabled: !!user,
+  });
+
+  const canEdit =
+    membership?.role === "owner" ||
+    membership?.role === "admin" ||
+    membership?.role === "editor";
 
   const addMutation = useMutation({
-    mutationFn: async (params: { name: string; description?: string; admin_position_id?: string; group_id?: string }) => {
+    mutationFn: async (params: {
+      name: string;
+      description?: string;
+      admin_position_id?: string;
+      group_ids: string[];
+      link_url?: string;
+    }) => {
       const tag = await addOrganizationTag(orgId, params.name);
-      if (params.description || params.admin_position_id || params.group_id) {
-        await updateOrganizationTag(tag.id, {
-          description: params.description || null,
-          admin_position_id: params.admin_position_id || null,
-          group_id: params.group_id || null,
-        });
+      await updateOrganizationTag(tag.id, {
+        description: params.description || null,
+        admin_position_id: params.admin_position_id || null,
+        group_id: params.group_ids[0] || null, // keep legacy field
+      });
+      if (params.link_url) {
+        await updateOrganizationTag(tag.id, { tag_name: params.name } as any);
+        // Update link_url via direct call
+        const { supabase } = await import("@/integrations/supabase/client");
+        await supabase
+          .from("organization_system_tags")
+          .update({ link_url: params.link_url } as any)
+          .eq("id", tag.id);
+      }
+      if (params.group_ids.length > 0) {
+        await setSystemTagGroups(tag.id, params.group_ids);
       }
       return tag;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-tags", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["system-tag-groups", orgId] });
       toast.success("System added");
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (params: { id: string; tag_name?: string; description?: string | null; admin_position_id?: string | null; group_id?: string | null }) => {
-      const { id, ...updates } = params;
-      await updateOrganizationTag(id, updates);
+    mutationFn: async (params: {
+      id: string;
+      tag_name?: string;
+      description?: string | null;
+      admin_position_id?: string | null;
+      group_ids: string[];
+      link_url?: string | null;
+    }) => {
+      const { id, group_ids, link_url, ...updates } = params;
+      await updateOrganizationTag(id, {
+        ...updates,
+        group_id: group_ids[0] || null,
+      });
+      // Update link_url
+      const { supabase } = await import("@/integrations/supabase/client");
+      await supabase
+        .from("organization_system_tags")
+        .update({ link_url: link_url || null } as any)
+        .eq("id", id);
+      await setSystemTagGroups(id, group_ids);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-tags", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["system-tag-groups", orgId] });
       toast.success("System updated");
     },
   });
@@ -117,6 +164,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     mutationFn: removeOrganizationTag,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-tags", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["system-tag-groups", orgId] });
       toast.success("System removed");
     },
   });
@@ -136,7 +184,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormName("");
     setFormDescription("");
     setFormAdminPositionId("");
-    setFormGroupId("");
+    setFormGroupIds([]);
+    setFormLinkUrl("");
     setDialogOpen(true);
   };
 
@@ -145,7 +194,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormName(tag.tag_name);
     setFormDescription((tag as any).description || "");
     setFormAdminPositionId((tag as any).admin_position_id || "");
-    setFormGroupId((tag as any).group_id || "");
+    setFormGroupIds(tagGroupsMap[tag.id] || []);
+    setFormLinkUrl((tag as any).link_url || "");
     setDialogOpen(true);
   };
 
@@ -157,21 +207,31 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         tag_name: formName.trim(),
         description: formDescription.trim() || null,
         admin_position_id: formAdminPositionId || null,
-        group_id: formGroupId || null,
+        group_ids: formGroupIds,
+        link_url: formLinkUrl.trim() || null,
       });
     } else {
       await addMutation.mutateAsync({
         name: formName.trim(),
         description: formDescription.trim() || undefined,
         admin_position_id: formAdminPositionId || undefined,
-        group_id: formGroupId || undefined,
+        group_ids: formGroupIds,
+        link_url: formLinkUrl.trim() || undefined,
       });
     }
     setDialogOpen(false);
   };
 
-  const getPositionName = (id: string) => positions.find((p) => p.id === id)?.name || "—";
-  const getGroupName = (id: string) => groups.find((g) => g.id === id)?.name || "—";
+  const getPositionName = (id: string) =>
+    positions.find((p) => p.id === id)?.name || "—";
+  const getGroupName = (id: string) =>
+    groups.find((g) => g.id === id)?.name || "—";
+
+  const toggleGroupId = (gid: string) => {
+    setFormGroupIds((prev) =>
+      prev.includes(gid) ? prev.filter((id) => id !== gid) : [...prev, gid]
+    );
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
@@ -215,7 +275,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Server className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">{search ? "No systems match your search" : "No systems yet"}</p>
+          <p className="font-medium">
+            {search ? "No systems match your search" : "No systems yet"}
+          </p>
           {canEdit && !search && (
             <Button variant="outline" size="sm" className="mt-3" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-1" /> Add your first system
@@ -227,14 +289,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           {filtered.map((tag) => {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
-            const grpId = (tag as any).group_id as string | null;
+            const grpIds = tagGroupsMap[tag.id] || [];
+            const linkUrl = (tag as any).link_url as string | null;
 
             return (
               <div
                 key={tag.id}
                 className="group relative rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
               >
-                {/* Actions */}
                 {canEdit && (
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
@@ -257,7 +319,20 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                     <Server className="w-4 h-4 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-sm truncate">{tag.tag_name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm truncate">{tag.tag_name}</h3>
+                      {linkUrl && (
+                        <a
+                          href={linkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-primary/80 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
                     {desc && (
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{desc}</p>
                     )}
@@ -271,14 +346,20 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       {getPositionName(adminPosId)}
                     </Badge>
                   )}
-                  {grpId && (
-                    <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0.5">
+                  {grpIds.map((gid) => (
+                    <Badge
+                      key={gid}
+                      variant="secondary"
+                      className="text-[10px] gap-1 px-1.5 py-0.5"
+                    >
                       <UsersRound className="w-3 h-3" />
-                      {getGroupName(grpId)}
+                      {getGroupName(gid)}
                     </Badge>
-                  )}
-                  {!adminPosId && !grpId && !desc && (
-                    <span className="text-[10px] text-muted-foreground italic">No details added</span>
+                  ))}
+                  {!adminPosId && grpIds.length === 0 && !desc && (
+                    <span className="text-[10px] text-muted-foreground italic">
+                      No details added
+                    </span>
                   )}
                 </div>
               </div>
@@ -316,9 +397,22 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5" /> Link URL
+              </label>
+              <Input
+                placeholder="https://..."
+                value={formLinkUrl}
+                onChange={(e) => setFormLinkUrl(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium flex items-center gap-1.5">
                 <UserCog className="w-3.5 h-3.5" /> System Admin
               </label>
-              <Select value={formAdminPositionId} onValueChange={setFormAdminPositionId}>
+              <Select
+                value={formAdminPositionId || "none"}
+                onValueChange={(v) => setFormAdminPositionId(v === "none" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select position..." />
                 </SelectTrigger>
@@ -334,21 +428,26 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <UsersRound className="w-3.5 h-3.5" /> User Group
+                <UsersRound className="w-3.5 h-3.5" /> User Groups
               </label>
-              <Select value={formGroupId} onValueChange={setFormGroupId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select group..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— None —</SelectItem>
+              {groups.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No groups created yet</p>
+              ) : (
+                <div className="space-y-1.5 max-h-32 overflow-auto border rounded-md p-2">
                   {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
+                    <label
+                      key={g.id}
+                      className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded px-1 py-0.5"
+                    >
+                      <Checkbox
+                        checked={formGroupIds.includes(g.id)}
+                        onCheckedChange={() => toggleGroupId(g.id)}
+                      />
                       {g.name}
-                    </SelectItem>
+                    </label>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -357,7 +456,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!formName.trim() || addMutation.isPending || updateMutation.isPending}
+              disabled={
+                !formName.trim() || addMutation.isPending || updateMutation.isPending
+              }
             >
               {editingTag ? "Save" : "Add"}
             </Button>
