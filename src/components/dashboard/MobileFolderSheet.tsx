@@ -36,6 +36,7 @@ interface MobileFolderSheetProps {
   onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onRenameFolder: (folderId: string, newName: string) => void;
+  onUpdateFolderColor: (folderId: string, color: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
@@ -54,6 +55,7 @@ export function MobileFolderSheet({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onUpdateFolderColor,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
