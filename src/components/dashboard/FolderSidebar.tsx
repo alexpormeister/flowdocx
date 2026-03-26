@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { getContrastTextColor } from "@/lib/utils";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
+import { EditFolderDialog } from "./EditFolderDialog";
 
 interface FolderSidebarProps {
   folders: Folder[];
@@ -27,6 +28,7 @@ interface FolderSidebarProps {
   onCreateFolder: (name: string, parentId: string | null, color: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onRenameFolder: (folderId: string, newName: string) => void;
+  onUpdateFolderColor: (folderId: string, color: string) => void;
   onUpdateFolderTags: (folderId: string, tags: string[]) => void;
   onNewProject: () => void;
   onOpenTemplateGallery: () => void;
@@ -45,6 +47,7 @@ export function FolderSidebar({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onUpdateFolderColor,
   onUpdateFolderTags,
   onNewProject,
   onOpenTemplateGallery,
