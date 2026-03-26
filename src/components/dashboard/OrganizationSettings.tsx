@@ -393,10 +393,6 @@ export function OrganizationSettings({
               <UsersRound className="w-4 h-4" />
               <span className="hidden sm:inline">Ryhmät</span>
             </TabsTrigger>
-            <TabsTrigger value="tags" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
-              <Tags className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("org.globalTags")}</span>
-            </TabsTrigger>
             <TabsTrigger value="notes" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.notes")}</span>
@@ -869,48 +865,8 @@ export function OrganizationSettings({
             </div>
           </TabsContent>
 
-          {/* Global Tags Tab */}
-          <TabsContent value="tags" className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {t("org.globalTagsHelp")}
-            </p>
 
-            {(currentUserRole === "owner" || currentUserRole === "admin" || currentUserRole === "editor") && (
-              <div className="flex gap-2">
-                <Input
-                  placeholder={t("folder.addTagPlaceholder")}
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-                />
-                <Button onClick={handleAddTag} disabled={!newTag.trim() || isSubmitting}>
-                  {t("common.create")}
-                </Button>
-              </div>
-            )}
 
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent text-accent-foreground text-sm"
-                >
-                  {tag.tag_name}
-                  {(currentUserRole === "owner" || currentUserRole === "admin" || currentUserRole === "editor") && (
-                    <button
-                      onClick={() => onRemoveTag(tag.id)}
-                      className="hover:text-destructive transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </span>
-              ))}
-              {tags.length === 0 && (
-                <p className="text-sm text-muted-foreground">{t("folder.noTags")}</p>
-              )}
-            </div>
-          </TabsContent>
 
           {/* Notes Tab */}
           <TabsContent value="notes" className="space-y-4">

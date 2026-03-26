@@ -4,21 +4,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getOrganizations } from "@/lib/organizationApi";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   AppWindow,
   Server,
   Users,
+  GitBranch,
+  Monitor,
 } from "lucide-react";
 import ITInventory from "@/components/applications/ITInventory";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
-import { GitBranch } from "lucide-react";
+import SystemsInventory from "@/components/applications/SystemsInventory";
 
-type ToolTab = "it-inventory" | "role-inventory" | "dependency-graph";
+type ToolTab = "systems" | "it-inventory" | "role-inventory" | "dependency-graph";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
+  { id: "systems", label: "Systems", icon: Monitor, description: "Manage systems & software" },
   { id: "it-inventory", label: "IT Inventory", icon: Server, description: "Manage systems & impact analysis" },
   { id: "role-inventory", label: "Role Inventory", icon: Users, description: "RACI & role coverage" },
   { id: "dependency-graph", label: "Dependency Graph", icon: GitBranch, description: "System dependency visualization" },
@@ -29,7 +31,7 @@ export default function Applications() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orgId = searchParams.get("org");
-  const [activeTab, setActiveTab] = useState<ToolTab>("it-inventory");
+  const [activeTab, setActiveTab] = useState<ToolTab>("systems");
 
   const { data: organizations = [] } = useQuery({
     queryKey: ["organizations"],
@@ -84,10 +86,10 @@ export default function Applications() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
+        {activeTab === "systems" && <SystemsInventory orgId={orgId} />}
         {activeTab === "it-inventory" && <ITInventory orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
-        
       </div>
     </div>
   );
