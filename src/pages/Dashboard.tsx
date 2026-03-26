@@ -75,6 +75,7 @@ import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
 import { FOLDER_COLORS } from "@/components/dashboard/CreateFolderDialog";
+import { EditFolderDialog } from "@/components/dashboard/EditFolderDialog";
 import { Label } from "@/components/ui/label";
 import { DialogFooter } from "@/components/ui/dialog";
 
@@ -92,6 +93,7 @@ export default function Dashboard() {
   const [mainCreateFolderOpen, setMainCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderColor, setNewFolderColor] = useState(FOLDER_COLORS[0]);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
   // Persist org selection via URL params
   const selectedOrgId = searchParams.get("org") || null;
@@ -625,10 +627,8 @@ export default function Dashboard() {
     onCreateFolder: (name: string, parentId: string | null, color: string) =>
       createFolderMutation.mutate({ name, parentId, color }),
     onDeleteFolder: (id: string) => deleteFolderMutation.mutate(id),
-    onRenameFolder: (id: string, newName: string) =>
-      updateFolderMutation.mutate({ id, updates: { name: newName } }),
-    onUpdateFolderColor: (id: string, color: string) =>
-      updateFolderMutation.mutate({ id, updates: { color } }),
+    onEditFolder: (id: string, name: string, color: string) =>
+      updateFolderMutation.mutate({ id, updates: { name, color } }),
     onUpdateFolderTags: (folderId: string, tags: string[]) =>
       updateFolderMutation.mutate({ id: folderId, updates: { system_tags: tags } }),
     onNewProject: handleNewProject,
@@ -865,25 +865,42 @@ export default function Dashboard() {
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                       {childFolders.map((folder) => (
-                        <button
+                        <div
                           key={folder.id}
-                          onClick={() => handleSelectFolder(folder.id)}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleFolderDrop(e, folder.id)}
-                          className="flex flex-col items-center gap-2 p-4 rounded-lg border bg-card hover:border-accent hover:bg-accent/5 transition-all group cursor-pointer"
+                          className="relative group"
                         >
-                          <FolderIcon
-                            className="w-10 h-10 sm:w-12 sm:h-12"
-                            style={{ color: folder.color || "#0891b2" }}
-                            fill={folder.color || "#0891b2"}
-                          />
-                          <span className="text-sm font-medium truncate w-full text-center">{folder.name}</span>
-                          {(folder.system_tags?.length || 0) > 0 && (
-                            <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                              {folder.system_tags?.length} tags
-                            </span>
-                          )}
-                        </button>
+                          <button
+                            onClick={() => handleSelectFolder(folder.id)}
+                            className="flex w-full flex-col items-center gap-2 rounded-lg border bg-card p-4 transition-all hover:border-accent hover:bg-accent/5 cursor-pointer"
+                          >
+                            <FolderIcon
+                              className="w-10 h-10 sm:w-12 sm:h-12"
+                              style={{ color: folder.color || "#0891b2" }}
+                              fill={folder.color || "#0891b2"}
+                            />
+                            <span className="text-sm font-medium truncate w-full text-center">{folder.name}</span>
+                            {(folder.system_tags?.length || 0) > 0 && (
+                              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                {folder.system_tags?.length} tags
+                              </span>
+                            )}
+                          </button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="absolute right-2 top-2 h-8 w-8 opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingFolder(folder);
+                            }}
+                          >
+                            <FolderIcon className="sr-only" />
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -996,6 +1013,24 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {editingFolder && (
+        <EditFolderDialog
+          open={!!editingFolder}
+          onOpenChange={(open) => {
+            if (!open) setEditingFolder(null);
+          }}
+          folderName={editingFolder.name}
+          folderColor={editingFolder.color || FOLDER_COLORS[0]}
+          onSave={(name, color) => {
+            updateFolderMutation.mutate({
+              id: editingFolder.id,
+              updates: { name, color },
+            });
+            setEditingFolder(null);
+          }}
+        />
+      )}
 
       {/* Template Gallery Dialog */}
       <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
