@@ -471,7 +471,7 @@ export default function Dashboard() {
     },
   });
 
-
+  const updateMemberMutation = useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: OrgRole }) => updateMemberRole(memberId, role),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-members", selectedOrgId] });
