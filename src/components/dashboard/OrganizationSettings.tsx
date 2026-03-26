@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition, MemberFolderRestriction } from "@/lib/organizationApi";
+import type { Organization, OrganizationMember, OrganizationSystemTag, OrgRole, OrganizationPosition, MemberFolderRestriction, OrganizationGroup } from "@/lib/organizationApi";
 import type { Folder } from "@/lib/api";
 import { MemberFolderAccessDialog } from "./MemberFolderAccessDialog";
 
@@ -30,6 +30,7 @@ interface OrganizationSettingsProps {
   members: OrganizationMember[];
   tags: OrganizationSystemTag[];
   positions: OrganizationPosition[];
+  groups: (OrganizationGroup & { position_ids: string[] })[];
   folders: Folder[];
   folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
@@ -45,6 +46,11 @@ interface OrganizationSettingsProps {
   onDeletePosition: (positionId: string) => Promise<void>;
   onAddFolderRestriction: (memberId: string, folderId: string) => Promise<void>;
   onRemoveFolderRestriction: (memberId: string, folderId: string) => Promise<void>;
+  onCreateGroup: (name: string) => Promise<void>;
+  onUpdateGroup: (groupId: string, updates: { name?: string }) => Promise<void>;
+  onDeleteGroup: (groupId: string) => Promise<void>;
+  onAddGroupPosition: (groupId: string, positionId: string) => Promise<void>;
+  onRemoveGroupPosition: (groupId: string, positionId: string) => Promise<void>;
 }
 
 const roleIcons: Record<OrgRole, typeof Crown> = {
