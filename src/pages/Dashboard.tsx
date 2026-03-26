@@ -74,7 +74,9 @@ import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as F
 import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
-import { CreateFolderDialog } from "@/components/dashboard/CreateFolderDialog";
+import { FOLDER_COLORS } from "@/components/dashboard/CreateFolderDialog";
+import { Label } from "@/components/ui/label";
+import { DialogFooter } from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -88,6 +90,8 @@ export default function Dashboard() {
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [showRootProjects, setShowRootProjects] = useState(false);
   const [mainCreateFolderOpen, setMainCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderColor, setNewFolderColor] = useState(FOLDER_COLORS[0]);
 
   // Persist org selection via URL params
   const selectedOrgId = searchParams.get("org") || null;
