@@ -933,6 +933,18 @@ export default function Dashboard() {
         </main>
       </div>
 
+      {/* Create Folder Dialog (main area) */}
+      <CreateFolderDialog
+        open={mainCreateFolderOpen}
+        onOpenChange={setMainCreateFolderOpen}
+        onCreateFolder={(name, color) => {
+          createFolderMutation.mutate({ name, parentId: selectedFolder, color });
+          setMainCreateFolderOpen(false);
+        }}
+        isCreating={createFolderMutation.isPending}
+        parentFolderName={selectedFolder && currentPath.length > 0 ? currentPath[currentPath.length - 1]?.name : null}
+      />
+
       {/* Template Gallery Dialog */}
       <Dialog open={templateGalleryOpen} onOpenChange={setTemplateGalleryOpen}>
         <DialogContent className="max-w-3xl w-[95vw]">
