@@ -87,6 +87,7 @@ export default function Dashboard() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(searchParams.get("folder") || null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [showRootProjects, setShowRootProjects] = useState(false);
+  const [mainCreateFolderOpen, setMainCreateFolderOpen] = useState(false);
 
   // Persist org selection via URL params
   const selectedOrgId = searchParams.get("org") || null;
