@@ -184,12 +184,20 @@ export function MobileFolderSheet({
             )}
           </button>
           {canDelete && (
-            <button
-              onClick={() => onDeleteFolder(folder.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+            <div className="opacity-0 group-hover:opacity-100 flex items-center transition-all">
+              <button
+                onClick={() => setEditingFolder(folder)}
+                className="p-1 text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => onDeleteFolder(folder.id)}
+                className="p-1 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
           )}
         </div>
         {hasChildren && isExpanded && (
@@ -303,6 +311,20 @@ export function MobileFolderSheet({
           </div>
         </div>
       </SheetContent>
+
+      {editingFolder && (
+        <EditFolderDialog
+          open={!!editingFolder}
+          onOpenChange={(open) => { if (!open) setEditingFolder(null); }}
+          folderName={editingFolder.name}
+          folderColor={editingFolder.color || "#0891b2"}
+          onSave={(name, color) => {
+            if (name !== editingFolder.name) onRenameFolder(editingFolder.id, name);
+            if (color !== (editingFolder.color || "#0891b2")) onUpdateFolderColor(editingFolder.id, color);
+            setEditingFolder(null);
+          }}
+        />
+      )}
     </Sheet>
   );
 }
