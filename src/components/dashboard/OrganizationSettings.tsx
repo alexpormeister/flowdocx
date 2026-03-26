@@ -94,10 +94,10 @@ function ShareLinksSection({ organizationId }: { organizationId: string }) {
 
   const getShareUrl = (token: string) => `${window.location.origin}/present/${token}`;
 
-  const copyLink = (token: string) => {
-    navigator.clipboard.writeText(getShareUrl(token));
-    const { toast } = require("sonner");
-    toast.success("Link copied!");
+  const copyLink = async (token: string) => {
+    await navigator.clipboard.writeText(getShareUrl(token));
+    const sonner = await import("sonner");
+    sonner.toast.success("Link copied!");
   };
 
   return (
