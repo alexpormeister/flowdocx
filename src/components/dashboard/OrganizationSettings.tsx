@@ -718,6 +718,161 @@ export function OrganizationSettings({
             </div>
           </TabsContent>
 
+          {/* Groups Tab */}
+          <TabsContent value="groups" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Luo ryhmiä, jotka kokoavat yhteen organisaation positioita. Ryhmiä voi käyttää BPMN-kaavioissa uimaratojen ja tehtävien suorittajina.
+            </p>
+
+            {isAdmin && (
+              <div className="flex gap-2 p-3 rounded-lg border bg-muted/30">
+                <Input
+                  placeholder="Ryhmän nimi (esim. Johtoryhmä)"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newGroupName.trim()) {
+                      onCreateGroup(newGroupName.trim());
+                      setNewGroupName("");
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => {
+                    if (newGroupName.trim()) {
+                      onCreateGroup(newGroupName.trim());
+                      setNewGroupName("");
+                    }
+                  }}
+                  disabled={!newGroupName.trim() || isSubmitting}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {groups.map((group) => {
+                const isEditing = editingGroupId === group.id;
+                const groupPositionNames = group.position_ids
+                  .map(pid => positions.find(p => p.id === pid)?.name)
+                  .filter(Boolean);
+
+                return (
+                  <div key={group.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-1">
+                        <UsersRound className="w-5 h-5 text-primary" />
+                        {isEditing ? (
+                          <div className="flex items-center gap-1 flex-1">
+                            <Input
+                              value={editingGroupName}
+                              onChange={(e) => setEditingGroupName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && editingGroupName.trim()) {
+                                  onUpdateGroup(group.id, { name: editingGroupName.trim() });
+                                  setEditingGroupId(null);
+                                }
+                                if (e.key === "Escape") setEditingGroupId(null);
+                              }}
+                              className="h-7 text-sm"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => {
+                                if (editingGroupName.trim()) {
+                                  onUpdateGroup(group.id, { name: editingGroupName.trim() });
+                                  setEditingGroupId(null);
+                                }
+                              }}
+                              className="text-primary hover:text-primary/80"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setEditingGroupId(null)} className="text-muted-foreground hover:text-foreground">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="font-semibold text-sm">{group.name}</span>
+                        )}
+                      </div>
+                      {isAdmin && !isEditing && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingGroupId(group.id);
+                              setEditingGroupName(group.name);
+                            }}
+                            className="text-muted-foreground hover:text-primary"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => onDeleteGroup(group.id)} className="text-muted-foreground hover:text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Position chips */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {groupPositionNames.map((name, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent/20 text-accent-foreground text-xs">
+                          {name}
+                          {isAdmin && (
+                            <button
+                              onClick={() => {
+                                const posId = group.position_ids.find(pid => positions.find(p => p.id === pid)?.name === name);
+                                if (posId) onRemoveGroupPosition(group.id, posId);
+                              }}
+                              className="hover:text-destructive"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      {groupPositionNames.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">Ei positioita lisätty</p>
+                      )}
+                    </div>
+
+                    {/* Add position to group */}
+                    {isAdmin && positions.length > 0 && (
+                      <Select
+                        value=""
+                        onValueChange={(posId) => {
+                          if (posId && !group.position_ids.includes(posId)) {
+                            onAddGroupPosition(group.id, posId);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-48">
+                          <SelectValue placeholder="Lisää positio ryhmään..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {positions
+                            .filter(p => !group.position_ids.includes(p.id))
+                            .map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                );
+              })}
+              {groups.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Ei ryhmiä vielä. Luo ensimmäinen ryhmä yllä.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Global Tags Tab */}
           <TabsContent value="tags" className="space-y-4">
             <p className="text-sm text-muted-foreground">
