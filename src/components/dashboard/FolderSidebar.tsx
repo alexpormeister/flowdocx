@@ -298,6 +298,20 @@ export function FolderSidebar({
           </div>
         )}
       </div>
+
+      {editingFolder && (
+        <EditFolderDialog
+          open={!!editingFolder}
+          onOpenChange={(open) => { if (!open) setEditingFolder(null); }}
+          folderName={editingFolder.name}
+          folderColor={editingFolder.color || "#0891b2"}
+          onSave={(name, color) => {
+            if (name !== editingFolder.name) onRenameFolder(editingFolder.id, name);
+            if (color !== (editingFolder.color || "#0891b2")) onUpdateFolderColor(editingFolder.id, color);
+            setEditingFolder(null);
+          }}
+        />
+      )}
     </aside>
   );
 }
