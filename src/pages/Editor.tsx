@@ -104,6 +104,13 @@ export default function Editor() {
     return orgTags.map((t) => t.tag_name);
   }, [orgTags]);
 
+  // Combine position names and group names for performer dropdowns
+  const availablePerformers = useMemo(() => {
+    const positionNames = orgPositions.map(p => p.name);
+    const groupNames = orgGroups.map(g => `[${g.name}]`);
+    return [...groupNames, ...positionNames];
+  }, [orgPositions, orgGroups]);
+
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof updateProject>[1]) => updateProject(id!, updates),
     onSuccess: () => {
