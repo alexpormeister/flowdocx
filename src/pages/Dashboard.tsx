@@ -805,9 +805,9 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Search */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative flex-1 max-w-md">
+            {/* Search + Actions */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="relative flex-1 min-w-[200px] max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder={selectedOrgId ? "Search all processes (name, description, steps, systems)..." : t("dashboard.searchProjects")}
@@ -821,6 +821,32 @@ export default function Dashboard() {
                   {displayedProjects.length} results
                 </span>
               )}
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  onClick={handleNewProject}
+                  size="sm"
+                  style={selectedOrg?.primary_color ? { backgroundColor: selectedOrg.primary_color, color: getContrastTextColor(selectedOrg.primary_color) } : undefined}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t("dashboard.newProject")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTemplateGalleryOpen(true)}
+                >
+                  <LayoutTemplate className="w-4 h-4 mr-1" />
+                  {t("dashboard.newFromTemplate")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMainCreateFolderOpen(true)}
+                >
+                  <FolderPlus className="w-4 h-4 mr-1" />
+                  {t("dashboard.createFolder")}
+                </Button>
+              </div>
             </div>
 
             {projectsLoading ? (
