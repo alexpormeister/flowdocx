@@ -445,7 +445,7 @@ export default function Editor() {
             onStepsChange={handleStepsChange}
             selectedElementId={selectedElement?.id}
             availableTags={availableTags}
-            availablePositions={orgPositions.map(p => p.name)}
+            availablePositions={availablePerformers}
             description={projectDescription}
             onDescriptionChange={handleDescriptionChange}
             onAddOrgTag={project.organization_id ? handleAddOrgTag : undefined}
@@ -458,7 +458,7 @@ export default function Editor() {
         <LaneNameEditor
           element={selectedElement}
           modeler={modeler}
-          positions={orgPositions.map(p => p.name)}
+          positions={availablePerformers}
         />
       )}
 
