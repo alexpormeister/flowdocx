@@ -943,14 +943,57 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle>{t("dashboard.createFolder")}</DialogTitle>
           </DialogHeader>
-          <MainCreateFolderForm
-            onCreateFolder={(name, color) => {
-              createFolderMutation.mutate({ name, parentId: selectedFolder, color });
-              setMainCreateFolderOpen(false);
-            }}
-            isCreating={createFolderMutation.isPending}
-            parentFolderName={selectedFolder && currentPath.length > 0 ? currentPath[currentPath.length - 1]?.name : null}
-          />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t("dashboard.folderName")}</Label>
+              <Input
+                placeholder={t("dashboard.folderName")}
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newFolderName.trim()) {
+                    createFolderMutation.mutate({ name: newFolderName.trim(), parentId: selectedFolder, color: newFolderColor });
+                    setNewFolderName("");
+                    setNewFolderColor(FOLDER_COLORS[0]);
+                    setMainCreateFolderOpen(false);
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("dashboard.folderColor") || "Color"}</Label>
+              <div className="flex gap-2 flex-wrap">
+                {FOLDER_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setNewFolderColor(c)}
+                    className={`w-8 h-8 rounded-lg transition-all ${newFolderColor === c ? "ring-2 ring-offset-2 ring-accent" : ""}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+            {selectedFolder && currentPath.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {t("dashboard.creatingIn")}: {currentPath[currentPath.length - 1]?.name}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                if (newFolderName.trim()) {
+                  createFolderMutation.mutate({ name: newFolderName.trim(), parentId: selectedFolder, color: newFolderColor });
+                  setNewFolderName("");
+                  setNewFolderColor(FOLDER_COLORS[0]);
+                  setMainCreateFolderOpen(false);
+                }
+              }}
+              disabled={!newFolderName.trim() || createFolderMutation.isPending}
+            >
+              {t("common.create")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
