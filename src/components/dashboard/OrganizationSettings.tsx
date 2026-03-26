@@ -134,6 +134,9 @@ export function OrganizationSettings({
   const [editingPositionName, setEditingPositionName] = useState("");
   const [draggedPositionId, setDraggedPositionId] = useState<string | null>(null);
   const [dragOverPositionId, setDragOverPositionId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState("");
 
   useEffect(() => {
     setPrimaryColor(organization.primary_color || "#0f172a");
