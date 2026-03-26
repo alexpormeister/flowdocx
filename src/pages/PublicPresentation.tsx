@@ -3,14 +3,27 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { lookupPresentationToken } from "@/lib/presentationApi";
-import { getElementLinks } from "@/lib/elementLinksApi";
 import NavigatedViewer from "bpmn-js/lib/NavigatedViewer";
 import "bpmn-js/dist/assets/diagram-js.css";
 import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
 import { ArrowLeft, Mail, User, X, ExternalLink, FolderOpen, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
+
+async function fetchPresentationData(token: string) {
+  const { data, error } = await supabase.functions.invoke("get-presentation-data", {
+    body: { token },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data as {
+    token: any;
+    organization: any;
+    projects: any[];
+    folders: any[];
+    elementLinks: any[];
+  };
+}
 
 export default function PublicPresentation() {
   const { token } = useParams<{ token: string }>();
@@ -25,83 +38,52 @@ export default function PublicPresentation() {
   );
   const [sidebarOpen, setSidebarOpen] = useState(!searchParams.get("project"));
 
-  // Verify token
-  const { data: tokenData, isLoading: tokenLoading, error: tokenError } = useQuery({
-    queryKey: ["presentation-token", token],
-    queryFn: () => lookupPresentationToken(token!),
+  const { data: presentationData, isLoading, error: loadError } = useQuery({
+    queryKey: ["presentation-data", token],
+    queryFn: () => fetchPresentationData(token!),
     enabled: !!token,
   });
 
-  // Check if user is org member (can navigate away)
+  const projects = presentationData?.projects || [];
+  const folders = presentationData?.folders || [];
+  const elementLinks = presentationData?.elementLinks || [];
+  const org = presentationData?.organization;
+
+  // Check if user is org member
   const { data: membership } = useQuery({
-    queryKey: ["org-membership-public", tokenData?.organization_id],
+    queryKey: ["org-membership-public", org?.id],
     queryFn: async () => {
-      if (!user || !tokenData?.organization_id) return null;
+      if (!user || !org?.id) return null;
       const { data } = await supabase
         .from("organization_members")
         .select("id, role")
-        .eq("organization_id", tokenData.organization_id)
+        .eq("organization_id", org.id)
         .eq("user_id", user.id)
         .maybeSingle();
       return data;
     },
-    enabled: !!user && !!tokenData?.organization_id,
+    enabled: !!user && !!org?.id,
   });
 
   const isOrgMember = !!membership;
-
-  // Get org projects
-  const { data: projects = [] } = useQuery({
-    queryKey: ["public-org-projects", tokenData?.organization_id],
-    queryFn: async () => {
-      if (!tokenData?.organization_id) return [];
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("organization_id", tokenData.organization_id)
-        .order("name");
-      if (error) return [];
-      return data || [];
-    },
-    enabled: !!tokenData?.organization_id,
-  });
-
-  // Get folders for org
-  const { data: folders = [] } = useQuery({
-    queryKey: ["public-org-folders", tokenData?.organization_id],
-    queryFn: async () => {
-      if (!tokenData?.organization_id) return [];
-      const { data } = await supabase
-        .from("folders")
-        .select("*")
-        .eq("organization_id", tokenData.organization_id)
-        .order("name");
-      return data || [];
-    },
-    enabled: !!tokenData?.organization_id,
-  });
 
   const selectedProject = useMemo(
     () => projects.find((p: any) => p.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   );
 
-  const { data: elementLinks = [] } = useQuery({
-    queryKey: ["element-links-public", selectedProjectId],
-    queryFn: () => getElementLinks(selectedProjectId!),
-    enabled: !!selectedProjectId && !!user,
-  });
-
   const selectedStep = useMemo(() => {
     if (!selectedElement || !selectedProject) return null;
-    const steps = (selectedProject as any).process_steps || [];
+    const steps = selectedProject.process_steps || [];
     return steps.find((s: any) => s.id === selectedElement.id) || null;
   }, [selectedElement, selectedProject]);
 
   const selectedLink = useMemo(() => {
-    if (!selectedElement) return null;
-    return elementLinks.find((l) => l.element_id === selectedElement.id) || null;
-  }, [selectedElement, elementLinks]);
+    if (!selectedElement || !selectedProjectId) return null;
+    return elementLinks.find(
+      (l: any) => l.element_id === selectedElement.id && l.project_id === selectedProjectId
+    ) || null;
+  }, [selectedElement, elementLinks, selectedProjectId]);
 
   const linkedProject = useMemo(() => {
     if (!selectedLink) return null;
@@ -123,7 +105,7 @@ export default function PublicPresentation() {
     const viewer = new NavigatedViewer({ container: containerRef.current });
     viewerRef.current = viewer;
 
-    viewer.importXML((selectedProject as any).bpmn_xml).then(() => {
+    viewer.importXML(selectedProject.bpmn_xml).then(() => {
       const canvas = viewer.get("canvas") as any;
       canvas.zoom("fit-viewport");
     });
@@ -147,7 +129,7 @@ export default function PublicPresentation() {
     return () => viewer.destroy();
   }, [selectedProject]);
 
-  if (tokenLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -155,7 +137,7 @@ export default function PublicPresentation() {
     );
   }
 
-  if (!tokenData || tokenError) {
+  if (loadError || !presentationData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-3">
@@ -185,7 +167,7 @@ export default function PublicPresentation() {
             onClick={() => {
               setSelectedProjectId(p.id);
               setSelectedElement(null);
-              setSidebarOpen(false);
+              if (window.innerWidth < 768) setSidebarOpen(false);
             }}
             className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent/50 rounded transition-colors ${
               selectedProjectId === p.id ? "bg-accent text-accent-foreground" : ""
@@ -203,16 +185,17 @@ export default function PublicPresentation() {
 
   return (
     <div className="flex h-screen w-full bg-background">
-      {/* Sidebar - Process List */}
+      {/* Sidebar */}
       {sidebarOpen && (
         <div className="w-72 border-r bg-card flex flex-col shrink-0">
           <div className="p-3 border-b">
-            <h2 className="text-sm font-semibold">{tokenData.name}</h2>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Presentation Mode</p>
+            <h2 className="text-sm font-semibold">{org?.name || "Presentation"}</h2>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {presentationData.token.name} — Presentation Mode
+            </p>
           </div>
           <div className="flex-1 overflow-auto p-2 space-y-0.5">
             {folderTree.rootFolders.map((f: any) => renderFolderItem(f))}
-            {/* Root-level projects (no folder) */}
             {projects
               .filter((p: any) => !p.folder_id)
               .map((p: any) => (
@@ -221,7 +204,7 @@ export default function PublicPresentation() {
                   onClick={() => {
                     setSelectedProjectId(p.id);
                     setSelectedElement(null);
-                    setSidebarOpen(false);
+                    if (window.innerWidth < 768) setSidebarOpen(false);
                   }}
                   className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent/50 rounded transition-colors ${
                     selectedProjectId === p.id ? "bg-accent text-accent-foreground" : ""
@@ -234,7 +217,12 @@ export default function PublicPresentation() {
           </div>
           {isOrgMember && (
             <div className="p-2 border-t">
-              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate("/dashboard")}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => navigate("/dashboard")}
+              >
                 <ArrowLeft className="w-3 h-3 mr-1" /> Back to Dashboard
               </Button>
             </div>
@@ -258,33 +246,31 @@ export default function PublicPresentation() {
                     <FolderOpen className="w-4 h-4" />
                   </Button>
                   <div className="flex items-center gap-2 min-w-0">
-                    <h1 className="text-base font-semibold truncate">
-                      {(selectedProject as any).name}
-                    </h1>
-                    <StatusBadge status={(selectedProject as any).status || "draft"} />
+                    <h1 className="text-base font-semibold truncate">{selectedProject.name}</h1>
+                    <StatusBadge status={selectedProject.status || "draft"} />
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
-                  {(selectedProject as any).owner_name && (
+                  {selectedProject.owner_name && (
                     <span className="flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5" />
-                      {(selectedProject as any).owner_name}
+                      {selectedProject.owner_name}
                     </span>
                   )}
-                  {(selectedProject as any).owner_email && (
+                  {selectedProject.owner_email && (
                     <a
-                      href={`mailto:${(selectedProject as any).owner_email}`}
+                      href={`mailto:${selectedProject.owner_email}`}
                       className="flex items-center gap-1.5 hover:text-accent transition-colors"
                     >
                       <Mail className="w-3.5 h-3.5" />
-                      {(selectedProject as any).owner_email}
+                      {selectedProject.owner_email}
                     </a>
                   )}
                 </div>
               </div>
-              {(selectedProject as any).description && (
+              {selectedProject.description && (
                 <p className="text-xs text-muted-foreground mt-1 ml-11 truncate">
-                  {(selectedProject as any).description}
+                  {selectedProject.description}
                 </p>
               )}
             </header>
@@ -364,7 +350,7 @@ export default function PublicPresentation() {
 
                     {!selectedElement.documentation && !selectedStep && (
                       <p className="text-xs text-muted-foreground italic">
-                        No documentation available for this element.
+                        No documentation available.
                       </p>
                     )}
 
@@ -374,12 +360,12 @@ export default function PublicPresentation() {
                         size="sm"
                         className="w-full gap-2 text-xs"
                         onClick={() => {
-                          setSelectedProjectId((linkedProject as any).id);
+                          setSelectedProjectId(linkedProject.id);
                           setSelectedElement(null);
                         }}
                       >
                         <ExternalLink className="w-3 h-3" />
-                        Open: {(linkedProject as any).name}
+                        Open: {linkedProject.name}
                       </Button>
                     )}
                   </div>
