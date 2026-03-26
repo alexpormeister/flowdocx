@@ -372,6 +372,7 @@ export type Database = {
           description: string | null
           group_id: string | null
           id: string
+          link_url: string | null
           organization_id: string
           tag_name: string
         }
@@ -382,6 +383,7 @@ export type Database = {
           description?: string | null
           group_id?: string | null
           id?: string
+          link_url?: string | null
           organization_id: string
           tag_name: string
         }
@@ -392,6 +394,7 @@ export type Database = {
           description?: string | null
           group_id?: string | null
           id?: string
+          link_url?: string | null
           organization_id?: string
           tag_name?: string
         }
@@ -454,6 +457,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      presentation_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -603,6 +647,42 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_tag_groups: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          system_tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          system_tag_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          system_tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_tag_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "organization_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_tag_groups_system_tag_id_fkey"
+            columns: ["system_tag_id"]
+            isOneToOne: false
+            referencedRelation: "organization_system_tags"
             referencedColumns: ["id"]
           },
         ]
