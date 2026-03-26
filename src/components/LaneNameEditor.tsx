@@ -89,21 +89,52 @@ export default function LaneNameEditor({ element, modeler, positions }: LaneName
         </div>
         {open && filtered.length > 0 && (
           <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-36 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
-            {filtered.map((pos) => (
-              <button
-                key={pos}
-                type="button"
-                className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  setInputValue(pos);
-                  applyName(pos);
-                  setOpen(false);
-                }}
-              >
-                {pos}
-              </button>
-            ))}
+            {/* Groups first */}
+            {filtered.filter(p => p.startsWith("[")).length > 0 && (
+              <>
+                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-medium border-b bg-muted/30">
+                  Ryhmät
+                </div>
+                {filtered.filter(p => p.startsWith("[")).map((pos) => (
+                  <button
+                    key={pos}
+                    type="button"
+                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors font-medium"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setInputValue(pos);
+                      applyName(pos);
+                      setOpen(false);
+                    }}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </>
+            )}
+            {/* Positions */}
+            {filtered.filter(p => !p.startsWith("[")).length > 0 && (
+              <>
+                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-medium border-b bg-muted/30">
+                  Positiot
+                </div>
+                {filtered.filter(p => !p.startsWith("[")).map((pos) => (
+                  <button
+                    key={pos}
+                    type="button"
+                    className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setInputValue(pos);
+                      applyName(pos);
+                      setOpen(false);
+                    }}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
