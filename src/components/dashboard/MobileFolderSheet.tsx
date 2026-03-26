@@ -19,12 +19,14 @@ import {
   Folder as FolderIcon,
   Share2,
   Menu,
+  Pencil,
 } from "lucide-react";
 import { type Folder } from "@/lib/api";
 import { getContrastTextColor } from "@/lib/utils";
 import { FolderTagsManager } from "./FolderTagsManager";
 import { ShareDialog, type ShareEntry } from "./ShareDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
+import { EditFolderDialog } from "./EditFolderDialog";
 
 interface MobileFolderSheetProps {
   folders: Folder[];
