@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { exportStructurePng, exportGroupsPng } from "@/lib/orgExportPng";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,33 +61,7 @@ const roleIcons: Record<OrgRole, typeof Crown> = {
   viewer: Eye,
 };
 
-function downloadOrgStructure(orgName: string, positions: OrganizationPosition[], members: OrganizationMember[]) {
-  const buildTree = (parentId: string | null, indent: number): string[] => {
-    const children = positions
-      .filter(p => p.parent_position_id === parentId)
-      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    
-    const lines: string[] = [];
-    for (const pos of children) {
-      const prefix = "  ".repeat(indent);
-      const posMembers = members.filter(m => m.position_id === pos.id);
-      const memberStr = posMembers.length > 0
-        ? ` (${posMembers.map(m => `${m.email}${m.title ? ` - ${m.title}` : ""}`).join(", ")})`
-        : "";
-      lines.push(`${prefix}├── ${pos.name}${memberStr}`);
-      lines.push(...buildTree(pos.id, indent + 1));
-    }
-    return lines;
-  };
-
-  const content = [`${orgName} - Organization Structure`, "=".repeat(40), "", ...buildTree(null, 0)].join("\n");
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${orgName.replace(/\s+/g, "_")}_structure.txt`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
+// Old text export removed - using PNG export from orgExportPng.ts
 
 export function OrganizationSettings({
   organization,
@@ -661,7 +636,7 @@ export function OrganizationSettings({
                   variant="outline"
                   size="sm"
                   className="gap-2 text-xs"
-                  onClick={() => downloadOrgStructure(organization.name, positions, members || [])}
+                  onClick={() => exportStructurePng(organization.name, positions, members || [], organization.primary_color || "#0f172a", organization.accent_color || "#0891b2")}
                 >
                   <Download className="w-3 h-3" />
                   {t("org.exportStructure")}
@@ -720,9 +695,30 @@ export function OrganizationSettings({
 
           {/* Groups Tab */}
           <TabsContent value="groups" className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Luo ryhmiä, jotka kokoavat yhteen organisaation positioita. Ryhmiä voi käyttää BPMN-kaavioissa uimaratojen ja tehtävien suorittajina.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Luo ryhmiä, jotka kokoavat yhteen organisaation positioita. Ryhmiä voi käyttää BPMN-kaavioissa uimaratojen ja tehtävien suorittajina.
+              </p>
+              {groups.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs ml-4 shrink-0"
+                  onClick={() => {
+                    const groupData = groups.map(g => ({
+                      name: g.name,
+                      positionNames: g.position_ids
+                        .map(pid => positions.find(p => p.id === pid)?.name)
+                        .filter(Boolean) as string[],
+                    }));
+                    exportGroupsPng(organization.name, groupData, organization.primary_color || "#0f172a", organization.accent_color || "#0891b2");
+                  }}
+                >
+                  <Download className="w-3 h-3" />
+                  Export PNG
+                </Button>
+              )}
+            </div>
 
             {isAdmin && (
               <div className="flex gap-2 p-3 rounded-lg border bg-muted/30">
