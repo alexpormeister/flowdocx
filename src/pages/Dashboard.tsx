@@ -48,6 +48,12 @@ import {
   getMemberFolderRestrictions,
   addFolderRestriction,
   removeFolderRestrictionByMemberAndFolder,
+  getOrganizationGroupsWithPositions,
+  createOrganizationGroup,
+  updateOrganizationGroup,
+  deleteOrganizationGroup,
+  addPositionToGroup,
+  removePositionFromGroup,
   type Organization,
   type OrgRole,
 } from "@/lib/organizationApi";
