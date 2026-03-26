@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPresentationTokens, createPresentationToken, deletePresentationToken, togglePresentationToken } from "@/lib/presentationApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { exportStructurePng, exportGroupsPng } from "@/lib/orgExportPng";
 import { Button } from "@/components/ui/button";
