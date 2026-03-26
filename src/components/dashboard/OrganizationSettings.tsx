@@ -93,6 +93,7 @@ export function OrganizationSettings({
   members,
   tags,
   positions,
+  groups,
   folders,
   folderRestrictions,
   currentUserRole,
@@ -108,6 +109,11 @@ export function OrganizationSettings({
   onDeletePosition,
   onAddFolderRestriction,
   onRemoveFolderRestriction,
+  onCreateGroup,
+  onUpdateGroup,
+  onDeleteGroup,
+  onAddGroupPosition,
+  onRemoveGroupPosition,
 }: OrganizationSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
