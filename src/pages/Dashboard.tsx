@@ -159,6 +159,12 @@ export default function Dashboard() {
     enabled: !!user && !!selectedOrgId,
   });
 
+  const { data: orgGroups = [] } = useQuery({
+    queryKey: ["org-groups", selectedOrgId],
+    queryFn: () => (selectedOrgId ? getOrganizationGroupsWithPositions(selectedOrgId) : Promise.resolve([])),
+    enabled: !!user && !!selectedOrgId,
+  });
+
   // Get current user's restricted folder IDs (from restrictions table)
   const myRestrictedFolderIds = useMemo(() => {
     if (!currentMembership || !folderRestrictions.length) return new Set<string>();
