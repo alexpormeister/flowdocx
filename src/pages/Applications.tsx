@@ -90,6 +90,7 @@ export default function Applications() {
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
+        {activeTab === "customer-lifecycle" && <CustomerLifecyclePanel orgId={orgId} />}
       </div>
     </div>
   );
