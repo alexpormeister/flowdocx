@@ -16,7 +16,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet";
 import BpmnCanvas from "@/components/BpmnCanvas";
-import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
+import ProcessDataPanel, { type ProcessStep, type GatewayPath } from "@/components/ProcessDataPanel";
 import LaneNameEditor from "@/components/LaneNameEditor";
 import ExportMenu from "@/components/ExportMenu";
 import StatusBadge from "@/components/StatusBadge";
