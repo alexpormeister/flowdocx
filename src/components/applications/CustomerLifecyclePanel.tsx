@@ -80,8 +80,8 @@ const STAGE_COLORS = [
   "#2563eb", "#4f46e5",
 ];
 
-const NODE_W = 200;
-const NODE_H_BASE = 80;
+const NODE_W = 240;
+const NODE_H_BASE = 60;
 
 export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const { user } = useAuth();
@@ -670,7 +670,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
                   className="rounded-t-[10px] px-3 py-2 flex items-center justify-between"
                   style={{ backgroundColor: stage.color || "#0891b2", color: "#fff" }}
                 >
-                  <span className="text-xs font-semibold truncate flex-1">{stage.name}</span>
+                  <span className="text-xs font-semibold flex-1 break-words leading-tight">{stage.name}</span>
                   <div className="flex items-center gap-0.5 shrink-0">
                     {/* Connect handle */}
                     <button
