@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,11 +12,13 @@ import {
   type OrganizationSystemTag,
 } from "@/lib/organizationApi";
 import { getAllSystemTagGroups, setSystemTagGroups } from "@/lib/presentationApi";
+import { getProjects, type Project } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Search,
   Plus,
   Pencil,
@@ -42,11 +49,21 @@ import {
   FileText,
   Link as LinkIcon,
   ExternalLink,
+  AlertTriangle,
+  ChevronDown,
+  Workflow,
+  ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 
 interface SystemsInventoryProps {
   orgId: string;
+}
+
+interface AffectedDetail {
+  project: Project;
+  steps: { step: number; task: string; performer?: string }[];
 }
 
 export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
@@ -60,6 +77,10 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [formAdminPositionId, setFormAdminPositionId] = useState<string>("");
   const [formGroupIds, setFormGroupIds] = useState<string[]>([]);
   const [formLinkUrl, setFormLinkUrl] = useState("");
+  const [showImpactAnalysis, setShowImpactAnalysis] = useState(false);
+  const [disabledSystems, setDisabledSystems] = useState<Set<string>>(new Set());
+  const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
+  const navigate = (await import("react-router-dom")).useNavigate ? undefined : undefined;
 
   const { data: membership } = useQuery({
     queryKey: ["org-membership", orgId],
@@ -91,11 +112,84 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     enabled: !!user,
   });
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: getProjects,
+    enabled: !!user,
+  });
+
   const canEdit =
     membership?.role === "owner" ||
     membership?.role === "admin" ||
     membership?.role === "editor";
 
+  // IT Inventory logic
+  const orgProjects = useMemo(
+    () => projects.filter((p) => p.organization_id === orgId && !p.is_template),
+    [projects, orgId]
+  );
+
+  const tagProjectMap = useMemo(() => {
+    const map: Record<string, AffectedDetail[]> = {};
+    for (const tag of tags) map[tag.tag_name] = [];
+    for (const project of orgProjects) {
+      const steps = (project.process_steps as any[]) || [];
+      const tagSteps: Record<string, { step: number; task: string; performer?: string }[]> = {};
+      for (const step of steps) {
+        for (const sys of step.system || []) {
+          if (!tagSteps[sys]) tagSteps[sys] = [];
+          tagSteps[sys].push({ step: step.step, task: step.task || "[Untitled]", performer: step.performer });
+        }
+      }
+      for (const tag of project.system_tags || []) {
+        if (!tagSteps[tag]) tagSteps[tag] = [];
+      }
+      for (const [tag, stepsArr] of Object.entries(tagSteps)) {
+        if (!map[tag]) map[tag] = [];
+        map[tag].push({ project, steps: stepsArr });
+      }
+    }
+    return map;
+  }, [tags, orgProjects]);
+
+  const toggleSystem = (tagName: string) => {
+    setDisabledSystems((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagName)) next.delete(tagName);
+      else next.add(tagName);
+      return next;
+    });
+  };
+
+  const toggleImpactExpand = (projectId: string) => {
+    setExpandedImpact((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  };
+
+  const affectedDetails = useMemo(() => {
+    if (disabledSystems.size === 0) return [];
+    const detailMap = new Map<string, AffectedDetail>();
+    for (const sys of disabledSystems) {
+      for (const detail of tagProjectMap[sys] || []) {
+        const existing = detailMap.get(detail.project.id);
+        if (existing) {
+          const existingStepIds = new Set(existing.steps.map((s) => s.step));
+          for (const s of detail.steps) {
+            if (!existingStepIds.has(s.step)) existing.steps.push(s);
+          }
+        } else {
+          detailMap.set(detail.project.id, { ...detail, steps: [...detail.steps] });
+        }
+      }
+    }
+    return Array.from(detailMap.values());
+  }, [disabledSystems, tagProjectMap]);
+
+  // Mutations
   const addMutation = useMutation({
     mutationFn: async (params: {
       name: string;
@@ -108,11 +202,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       await updateOrganizationTag(tag.id, {
         description: params.description || null,
         admin_position_id: params.admin_position_id || null,
-        group_id: params.group_ids[0] || null, // keep legacy field
+        group_id: params.group_ids[0] || null,
       });
       if (params.link_url) {
-        await updateOrganizationTag(tag.id, { tag_name: params.name } as any);
-        // Update link_url via direct call
         const { supabase } = await import("@/integrations/supabase/client");
         await supabase
           .from("organization_system_tags")
@@ -145,7 +237,6 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         ...updates,
         group_id: group_ids[0] || null,
       });
-      // Update link_url
       const { supabase } = await import("@/integrations/supabase/client");
       await supabase
         .from("organization_system_tags")
@@ -178,6 +269,17 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         (t as any).description?.toLowerCase().includes(q)
     );
   }, [tags, search]);
+
+  // Warning counts
+  const warningStats = useMemo(() => {
+    let missingLink = 0;
+    let missingAdmin = 0;
+    for (const tag of tags) {
+      if (!(tag as any).link_url) missingLink++;
+      if (!(tag as any).admin_position_id) missingAdmin++;
+    }
+    return { missingLink, missingAdmin };
+  }, [tags]);
 
   const openCreate = () => {
     setEditingTag(null);
@@ -246,13 +348,42 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             Manage your organization's systems & software inventory.
           </p>
         </div>
-        {canEdit && (
-          <Button onClick={openCreate} size="sm" className="gap-1.5">
-            <Plus className="w-4 h-4" />
-            Add System
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showImpactAnalysis ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowImpactAnalysis(!showImpactAnalysis)}
+            className="gap-1.5"
+          >
+            <ShieldAlert className="w-4 h-4" />
+            Impact Analysis
           </Button>
-        )}
+          {canEdit && (
+            <Button onClick={openCreate} size="sm" className="gap-1.5">
+              <Plus className="w-4 h-4" />
+              Add System
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Warning banner */}
+      {tags.length > 0 && (warningStats.missingLink > 0 || warningStats.missingAdmin > 0) && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800">Incomplete system data</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-amber-700">
+              {warningStats.missingAdmin > 0 && (
+                <span>{warningStats.missingAdmin} system(s) missing admin</span>
+              )}
+              {warningStats.missingLink > 0 && (
+                <span>{warningStats.missingLink} system(s) missing link</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -264,6 +395,20 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           className="pl-9"
         />
       </div>
+
+      {/* Impact Analysis Panel */}
+      {showImpactAnalysis && (
+        <ImpactAnalysisPanel
+          tags={tags}
+          tagProjectMap={tagProjectMap}
+          disabledSystems={disabledSystems}
+          toggleSystem={toggleSystem}
+          affectedDetails={affectedDetails}
+          expandedImpact={expandedImpact}
+          toggleImpactExpand={toggleImpactExpand}
+          orgId={orgId}
+        />
+      )}
 
       {/* Systems grid */}
       {isLoading ? (
@@ -291,6 +436,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             const adminPosId = (tag as any).admin_position_id as string | null;
             const grpIds = tagGroupsMap[tag.id] || [];
             const linkUrl = (tag as any).link_url as string | null;
+            const warnings: string[] = [];
+            if (!adminPosId) warnings.push("No admin");
+            if (!linkUrl) warnings.push("No link");
 
             return (
               <div
@@ -339,6 +487,21 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                   </div>
                 </div>
 
+                {/* Warnings */}
+                {warnings.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {warnings.map((w) => (
+                      <span
+                        key={w}
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        {w}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {adminPosId && (
                     <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0.5">
@@ -356,11 +519,6 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       {getGroupName(gid)}
                     </Badge>
                   ))}
-                  {!adminPosId && grpIds.length === 0 && !desc && (
-                    <span className="text-[10px] text-muted-foreground italic">
-                      No details added
-                    </span>
-                  )}
                 </div>
               </div>
             );
@@ -465,6 +623,117 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Impact Analysis sub-component
+function ImpactAnalysisPanel({
+  tags,
+  tagProjectMap,
+  disabledSystems,
+  toggleSystem,
+  affectedDetails,
+  expandedImpact,
+  toggleImpactExpand,
+  orgId,
+}: {
+  tags: any[];
+  tagProjectMap: Record<string, AffectedDetail[]>;
+  disabledSystems: Set<string>;
+  toggleSystem: (name: string) => void;
+  affectedDetails: AffectedDetail[];
+  expandedImpact: Set<string>;
+  toggleImpactExpand: (id: string) => void;
+  orgId: string;
+}) {
+  const navigate = (await import("react-router-dom")).useNavigate();
+  const sortedTags = useMemo(() => {
+    return Object.keys(tagProjectMap).sort((a, b) => a.localeCompare(b, "fi", { sensitivity: "base" }));
+  }, [tagProjectMap]);
+
+  return (
+    <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
+      <h3 className="font-semibold flex items-center gap-2">
+        <ShieldAlert className="w-5 h-5 text-primary" />
+        Impact Analysis
+      </h3>
+      <p className="text-sm text-muted-foreground">
+        Toggle systems off to simulate outages and see affected processes.
+      </p>
+
+      {/* System toggles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {sortedTags.map((tagName) => {
+          const isOff = disabledSystems.has(tagName);
+          const processCount = (tagProjectMap[tagName] || []).length;
+          return (
+            <div
+              key={tagName}
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors ${
+                isOff ? "border-destructive/40 bg-destructive/5" : "bg-card"
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`w-2 h-2 rounded-full ${isOff ? "bg-destructive animate-pulse" : "bg-green-500"}`} />
+                <span className="truncate font-medium">{tagName}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0">({processCount})</span>
+              </div>
+              <Switch checked={!isOff} onCheckedChange={() => toggleSystem(tagName)} />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Impact results */}
+      {disabledSystems.size > 0 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <span className="font-semibold text-destructive">
+              {disabledSystems.size} system(s) disabled — {affectedDetails.length} process(es) affected
+            </span>
+          </div>
+          <div className="space-y-2">
+            {affectedDetails.map((detail) => (
+              <Collapsible
+                key={detail.project.id}
+                open={expandedImpact.has(detail.project.id)}
+                onOpenChange={() => toggleImpactExpand(detail.project.id)}
+              >
+                <CollapsibleTrigger asChild>
+                  <button className="flex items-center gap-2 w-full text-left text-sm px-4 py-3 rounded-lg bg-card border hover:border-destructive/50 transition-colors">
+                    <ChevronDown
+                      className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${
+                        expandedImpact.has(detail.project.id) ? "" : "-rotate-90"
+                      }`}
+                    />
+                    <Workflow className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate flex-1">{detail.project.name}</span>
+                    <Badge variant="outline" className="text-destructive border-destructive/30 shrink-0">
+                      {detail.steps.length} step(s)
+                    </Badge>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="ml-10 mt-1 space-y-1 pb-1">
+                    {detail.steps.map((s, i) => (
+                      <div key={i} className="flex items-center gap-3 text-xs px-3 py-2 rounded-md bg-muted/50 text-muted-foreground">
+                        <span className="font-mono text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">#{s.step}</span>
+                        <span className="flex-1 truncate">{s.task}</span>
+                        {s.performer && <span className="text-[10px] opacity-60">{s.performer}</span>}
+                      </div>
+                    ))}
+                    {detail.steps.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic px-3 py-1">Tagged at project level</p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
