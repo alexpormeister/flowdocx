@@ -396,7 +396,14 @@ export default function Editor() {
     toast.success(t("common.saved"));
   };
 
-  const handleBack = () => navigate(-1);
+  const handleBack = () => {
+    const folderId = project?.folder_id;
+    if (folderId) {
+      navigate(`/dashboard?folder=${folderId}`);
+    } else {
+      navigate("/dashboard");
+    }
+  };
 
   // Get link for selected element
   const selectedElementLink = useMemo(() => {
