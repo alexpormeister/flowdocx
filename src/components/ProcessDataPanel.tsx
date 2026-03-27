@@ -334,28 +334,28 @@ function getElementTypeStyles(type?: BpmnElementType) {
         label: "Event",
         bg: "bg-emerald-500/5 border-emerald-500/20",
         border: "border-emerald-500/30",
-        badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+        badge: "bg-emerald-500/15 text-emerald-700",
       };
     case "gateway":
       return {
         label: "Gateway",
         bg: "bg-amber-500/5 border-amber-500/20",
         border: "border-amber-500/30",
-        badge: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+        badge: "bg-amber-500/15 text-amber-700",
       };
     case "subprocess":
       return {
         label: "Sub-process",
         bg: "bg-purple-500/5 border-purple-500/20",
         border: "border-purple-500/30",
-        badge: "bg-purple-500/15 text-purple-700 dark:text-purple-400",
+        badge: "bg-purple-500/15 text-purple-700",
       };
     case "task":
       return {
         label: "Task",
         bg: "bg-sky-500/5 border-sky-500/20",
         border: "border-sky-500/30",
-        badge: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
+        badge: "bg-sky-500/15 text-sky-700",
       };
     default:
       return {
