@@ -397,12 +397,20 @@ export default function Editor() {
   };
 
   const handleBack = () => {
-    const folderId = project?.folder_id;
-    if (folderId) {
-      navigate(`/dashboard?folder=${folderId}`);
-    } else {
-      navigate("/dashboard");
+    const params = new URLSearchParams();
+    const orgId = searchParams.get("org") || project?.organization_id;
+    const folderId = searchParams.get("folder") || project?.folder_id;
+
+    if (orgId) {
+      params.set("org", orgId);
     }
+
+    if (folderId) {
+      params.set("folder", folderId);
+    }
+
+    const query = params.toString();
+    navigate(query ? `/dashboard?${query}` : "/dashboard");
   };
 
   // Get link for selected element
