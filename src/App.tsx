@@ -14,6 +14,7 @@ import Applications from "./pages/Applications";
 
 import Profile from "./pages/Profile";
 import PublicPresentation from "./pages/PublicPresentation";
+import PublicLifecycle from "./pages/PublicLifecycle";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
               
               <Route path="/profile" element={<Profile />} />
               <Route path="/present/:token" element={<PublicPresentation />} />
+              <Route path="/lifecycle/:token/:lifecycleId" element={<PublicLifecycle />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

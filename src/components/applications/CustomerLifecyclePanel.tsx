@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getProjects, type Project } from "@/lib/api";
+import { getPresentationTokens, createPresentationToken, deletePresentationToken } from "@/lib/presentationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +35,9 @@ import {
   ZoomOut,
   Maximize,
   ChevronDown,
+  Share2,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
 // Types
@@ -80,8 +84,8 @@ const STAGE_COLORS = [
   "#2563eb", "#4f46e5",
 ];
 
-const NODE_W = 200;
-const NODE_H_BASE = 80;
+const NODE_W = 240;
+const NODE_H_BASE = 60;
 
 export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const { user } = useAuth();
@@ -113,6 +117,8 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [connectionLabel, setConnectionLabel] = useState("");
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareTokenName, setShareTokenName] = useState("");
 
   // Queries
   const { data: lifecycles = [] } = useQuery({
@@ -182,6 +188,12 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
     queryFn: getProjects,
+    enabled: !!user,
+  });
+
+  const { data: shareTokens = [] } = useQuery({
+    queryKey: ["presentation-tokens", orgId],
+    queryFn: () => getPresentationTokens(orgId),
     enabled: !!user,
   });
 
@@ -562,6 +574,9 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
               <Maximize className="w-3.5 h-3.5" />
             </Button>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
+            <Share2 className="w-4 h-4 mr-1" />Jaa
+          </Button>
           <Button variant="ghost" size="sm" className="text-destructive" onClick={() => {
             if (confirm("Poistetaanko elinkaari?")) deleteLifecycle.mutate(selectedLifecycleId);
           }}>
@@ -670,7 +685,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
                   className="rounded-t-[10px] px-3 py-2 flex items-center justify-between"
                   style={{ backgroundColor: stage.color || "#0891b2", color: "#fff" }}
                 >
-                  <span className="text-xs font-semibold truncate flex-1">{stage.name}</span>
+                  <span className="text-xs font-semibold flex-1 break-words leading-tight">{stage.name}</span>
                   <div className="flex items-center gap-0.5 shrink-0">
                     {/* Connect handle */}
                     <button
@@ -857,6 +872,55 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
       </Dialog>
 
       {renderAddLifecycleDialog()}
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Jaa elinkaari</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {shareTokens.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Valitse olemassa oleva jakolinkki tai luo uusi:</p>
+                {shareTokens.filter(t => t.is_active).map(t => {
+                  const shareUrl = `${window.location.origin}/lifecycle/${t.token}/${selectedLifecycleId}`;
+                  return (
+                    <div key={t.id} className="flex items-center gap-2 border rounded-lg p-2">
+                      <span className="text-xs font-medium flex-1 truncate">{t.name}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        navigator.clipboard.writeText(shareUrl);
+                        toast({ title: "Linkki kopioitu!" });
+                      }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(shareUrl, '_blank')}>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Luo jakolinkki, jolla elinkaarta voi katsella ilman kirjautumista.</p>
+            )}
+            <div className="border-t pt-3 space-y-2">
+              <label className="text-sm font-medium">Uusi jakolinkki</label>
+              <Input value={shareTokenName} onChange={e => setShareTokenName(e.target.value)} placeholder="esim. Asiakaselinkaari – tiimi" />
+              <Button className="w-full" disabled={!shareTokenName.trim()} onClick={async () => {
+                try {
+                  await createPresentationToken(orgId, shareTokenName);
+                  queryClient.invalidateQueries({ queryKey: ["presentation-tokens", orgId] });
+                  setShareTokenName("");
+                  toast({ title: "Jakolinkki luotu" });
+                } catch {
+                  toast({ title: "Virhe jakolinkin luonnissa", variant: "destructive" });
+                }
+              }}>
+                <Plus className="w-4 h-4 mr-1" />Luo linkki
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
