@@ -802,16 +802,6 @@ export default function Dashboard() {
               >
                 <AppWindow className="w-4 h-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                title="Capability Map"
-                onClick={() => navigate(`/applications?org=${selectedOrgId}`)}
-                style={hasOrgTheme ? { color: "#fff" } : undefined}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
             </>
           )}
           <AdminCreateUserDialog />
