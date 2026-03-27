@@ -807,7 +807,7 @@ export default function Dashboard() {
                 size="icon"
                 className="h-8 w-8"
                 title="Capability Map"
-                onClick={() => navigate(`/capability-map?org=${selectedOrgId}`)}
+                onClick={() => navigate(`/applications?org=${selectedOrgId}`)}
                 style={hasOrgTheme ? { color: "#fff" } : undefined}
               >
                 <LayoutGrid className="w-4 h-4" />
