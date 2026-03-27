@@ -80,7 +80,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [showImpactAnalysis, setShowImpactAnalysis] = useState(false);
   const [disabledSystems, setDisabledSystems] = useState<Set<string>>(new Set());
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
-  const navigate = (await import("react-router-dom")).useNavigate ? undefined : undefined;
+  
 
   const { data: membership } = useQuery({
     queryKey: ["org-membership", orgId],
@@ -647,7 +647,7 @@ function ImpactAnalysisPanel({
   toggleImpactExpand: (id: string) => void;
   orgId: string;
 }) {
-  const navigate = (await import("react-router-dom")).useNavigate();
+  const navigate = useNavigate();
   const sortedTags = useMemo(() => {
     return Object.keys(tagProjectMap).sort((a, b) => a.localeCompare(b, "fi", { sensitivity: "base" }));
   }, [tagProjectMap]);
