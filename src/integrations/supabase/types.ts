@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_lifecycle_stage_processes: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          stage_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_lifecycle_stage_processes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_lifecycle_stage_processes_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycle_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_lifecycle_stages: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          order_index: number
+          organization_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          organization_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_lifecycle_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       element_links: {
         Row: {
           created_at: string
