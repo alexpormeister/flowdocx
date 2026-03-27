@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getProjects, type Project } from "@/lib/api";
+import { getPresentationTokens, createPresentationToken, deletePresentationToken } from "@/lib/presentationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +35,9 @@ import {
   ZoomOut,
   Maximize,
   ChevronDown,
+  Share2,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
 // Types
