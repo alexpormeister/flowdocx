@@ -16,7 +16,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet";
 import BpmnCanvas from "@/components/BpmnCanvas";
-import ProcessDataPanel, { type ProcessStep } from "@/components/ProcessDataPanel";
+import ProcessDataPanel, { type ProcessStep, type GatewayPath } from "@/components/ProcessDataPanel";
 import LaneNameEditor from "@/components/LaneNameEditor";
 import ExportMenu from "@/components/ExportMenu";
 import StatusBadge from "@/components/StatusBadge";
@@ -319,6 +319,21 @@ export default function Editor() {
       const existing = existingMap.get(el.id);
       const bo = el.businessObject;
       const lanePerformer = getPerformerFromLane(el);
+      const elType = getElementType(el.type);
+
+      // Extract gateway paths (outgoing sequence flows)
+      let gatewayPaths: GatewayPath[] | undefined;
+      if (elType === "gateway" && bo?.outgoing) {
+        const outgoing = Array.isArray(bo.outgoing) ? bo.outgoing : [bo.outgoing];
+        gatewayPaths = outgoing
+          .filter((flow: any) => flow)
+          .map((flow: any) => ({
+            label: flow.name || "",
+            targetId: flow.targetRef?.id || "",
+            targetName: flow.targetRef?.name || flow.targetRef?.id || "",
+          }));
+      }
+
       return {
         id: el.id,
         step: i + 1,
@@ -326,7 +341,8 @@ export default function Editor() {
         performer: existing?.performer || lanePerformer || "",
         system: existing?.system || [],
         decision: existing?.decision || "",
-        elementType: getElementType(el.type),
+        elementType: elType,
+        gatewayPaths,
       };
     });
 

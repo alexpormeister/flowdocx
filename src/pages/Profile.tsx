@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, User, Save } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import { BackgroundSettings } from "@/components/dashboard/BackgroundSettings";
 import { toast } from "sonner";
@@ -163,10 +162,6 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Label>{t("profile.theme")}</Label>
-                  <ThemeToggle />
-                </div>
                 <div className="flex items-center gap-2">
                   <Label>{t("profile.language")}</Label>
                   <LanguageToggle />
