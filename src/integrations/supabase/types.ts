@@ -14,6 +14,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_lifecycle_connections: {
+        Row: {
+          created_at: string
+          from_stage_id: string
+          id: string
+          label: string | null
+          lifecycle_id: string
+          to_stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_stage_id: string
+          id?: string
+          label?: string | null
+          lifecycle_id: string
+          to_stage_id: string
+        }
+        Update: {
+          created_at?: string
+          from_stage_id?: string
+          id?: string
+          label?: string | null
+          lifecycle_id?: string
+          to_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_lifecycle_connections_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycle_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_lifecycle_connections_lifecycle_id_fkey"
+            columns: ["lifecycle_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_lifecycle_connections_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycle_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_lifecycle_stage_processes: {
         Row: {
           created_at: string
@@ -56,31 +105,79 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          lifecycle_id: string | null
           name: string
           order_index: number
           organization_id: string
+          position_x: number
+          position_y: number
         }
         Insert: {
           color?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          lifecycle_id?: string | null
           name: string
           order_index?: number
           organization_id: string
+          position_x?: number
+          position_y?: number
         }
         Update: {
           color?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          lifecycle_id?: string | null
           name?: string
           order_index?: number
+          organization_id?: string
+          position_x?: number
+          position_y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_lifecycle_stages_lifecycle_id_fkey"
+            columns: ["lifecycle_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_lifecycle_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_lifecycles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           organization_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "customer_lifecycle_stages_organization_id_fkey"
+            foreignKeyName: "customer_lifecycles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
