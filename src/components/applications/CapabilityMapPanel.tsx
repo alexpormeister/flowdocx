@@ -1,0 +1,195 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { getProjects, getFolders, type Project, type Folder } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { LayoutGrid, ZoomIn, ZoomOut } from "lucide-react";
+
+const STATUS_CONFIG: Record<string, { bg: string; border: string; text: string; label: string; dot: string }> = {
+  published: {
+    bg: "bg-green-50",
+    border: "border-green-300",
+    text: "text-green-800",
+    label: "Published",
+    dot: "bg-green-500",
+  },
+  review: {
+    bg: "bg-yellow-50",
+    border: "border-yellow-300",
+    text: "text-yellow-800",
+    label: "Under Review",
+    dot: "bg-yellow-500",
+  },
+  draft: {
+    bg: "bg-muted/50",
+    border: "border-border",
+    text: "text-muted-foreground",
+    label: "Draft",
+    dot: "bg-muted-foreground/40",
+  },
+};
+
+interface CapabilityArea {
+  folder: Folder;
+  projects: Project[];
+  children: CapabilityArea[];
+}
+
+function buildCapabilityTree(
+  folders: Folder[],
+  projects: Project[],
+  parentId: string | null
+): CapabilityArea[] {
+  return folders
+    .filter((f) => f.parent_id === parentId)
+    .map((folder) => ({
+      folder,
+      projects: projects.filter((p) => p.folder_id === folder.id),
+      children: buildCapabilityTree(folders, projects, folder.id),
+    }))
+    .filter((area) => area.projects.length > 0 || area.children.length > 0);
+}
+
+function ProcessBox({ project, onClick }: { project: Project; onClick: () => void }) {
+  const config = STATUS_CONFIG[project.status || "draft"] || STATUS_CONFIG.draft;
+  return (
+    <button
+      onClick={onClick}
+      title={project.name}
+      className={`rounded-lg border-2 p-3 text-left transition-all duration-150 hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] w-full ${config.bg} ${config.border}`}
+      style={{ minHeight: 56, wordBreak: "break-word", overflowWrap: "anywhere" }}
+    >
+      <div className="flex items-start gap-2">
+        <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${config.dot}`} />
+        <span className={`text-[13px] font-medium leading-tight ${config.text}`}>
+          {project.name}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function AreaCard({ area, depth, onProjectClick }: { area: CapabilityArea; depth: number; onProjectClick: (id: string) => void }) {
+  const isTop = depth === 0;
+  return (
+    <div
+      className={`rounded-xl border-2 ${isTop ? "border-primary/30 bg-card shadow-sm" : "border-border bg-background"}`}
+      style={{ padding: isTop ? 20 : 16 }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <div className={`w-1.5 rounded-full ${isTop ? "bg-primary h-7" : "bg-muted-foreground/30 h-5"}`} />
+        <h3 className={`font-bold ${isTop ? "text-base text-primary" : "text-sm text-foreground"}`}>{area.folder.name}</h3>
+        <Badge variant="outline" className="ml-auto text-[10px] shrink-0">
+          {area.projects.length + area.children.reduce((s, c) => s + c.projects.length, 0)}
+        </Badge>
+      </div>
+      {area.projects.length > 0 && (
+        <div className="flex flex-wrap gap-3 mb-4" style={{ alignItems: "stretch" }}>
+          {area.projects.map((p) => (
+            <div key={p.id} style={{ flex: "1 1 200px", maxWidth: 280 }}>
+              <ProcessBox project={p} onClick={() => onProjectClick(p.id)} />
+            </div>
+          ))}
+        </div>
+      )}
+      {area.children.length > 0 && (
+        <div className="space-y-3">
+          {area.children.map((child) => (
+            <AreaCard key={child.folder.id} area={child} depth={depth + 1} onProjectClick={onProjectClick} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function CapabilityMapPanel({ orgId }: { orgId: string }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [zoom, setZoom] = useState(100);
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: getProjects,
+    enabled: !!user,
+  });
+
+  const { data: folders = [] } = useQuery({
+    queryKey: ["folders"],
+    queryFn: getFolders,
+    enabled: !!user,
+  });
+
+  const orgProjects = useMemo(() => projects.filter((p) => p.organization_id === orgId && !p.is_template), [projects, orgId]);
+  const orgFolders = useMemo(() => folders.filter((f) => f.organization_id === orgId), [folders, orgId]);
+  const capabilityTree = useMemo(() => buildCapabilityTree(orgFolders, orgProjects, null), [orgFolders, orgProjects]);
+  const rootProjects = useMemo(() => orgProjects.filter((p) => !p.folder_id), [orgProjects]);
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/presentation/${projectId}?org=${orgId}`);
+  };
+
+  const scale = zoom / 100;
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Legend + Zoom */}
+      <div className="border-b bg-card/50 px-4 md:px-6 py-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-5 text-xs max-w-7xl mx-auto">
+          <span className="font-medium text-muted-foreground">Status:</span>
+          {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+            <span key={key} className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${config.dot}`} />
+              {config.label}
+            </span>
+          ))}
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <ZoomOut className="w-4 h-4 text-muted-foreground hidden sm:block" />
+            <Slider value={[zoom]} onValueChange={(v) => setZoom(v[0])} min={40} max={150} step={10} className="w-20 sm:w-28" />
+            <ZoomIn className="w-4 h-4 text-muted-foreground hidden sm:block" />
+            <span className="text-xs text-muted-foreground w-10 text-right hidden sm:inline">{zoom}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Zoomable content */}
+      <div className="flex-1 overflow-auto">
+        <div
+          style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: `${100 / scale}%` }}
+          className="p-4 md:p-8"
+        >
+          <div className="max-w-7xl mx-auto space-y-5">
+            {capabilityTree.map((area) => (
+              <AreaCard key={area.folder.id} area={area} depth={0} onProjectClick={handleProjectClick} />
+            ))}
+            {rootProjects.length > 0 && (
+              <div className="rounded-xl border-2 border-primary/30 bg-card shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1.5 h-7 rounded-full bg-primary" />
+                  <h3 className="font-bold text-base text-primary">Uncategorized</h3>
+                  <Badge variant="outline" className="text-[10px] ml-auto">{rootProjects.length}</Badge>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {rootProjects.map((project) => (
+                    <div key={project.id} style={{ flex: "1 1 200px", maxWidth: 280 }}>
+                      <ProcessBox project={project} onClick={() => handleProjectClick(project.id)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {capabilityTree.length === 0 && rootProjects.length === 0 && (
+              <div className="text-center py-16 text-muted-foreground">
+                <LayoutGrid className="w-14 h-14 mx-auto mb-4 opacity-30" />
+                <p className="font-medium">No processes found</p>
+                <p className="text-xs mt-1">Create processes and organize them into folders.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
