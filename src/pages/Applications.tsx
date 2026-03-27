@@ -7,23 +7,23 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   AppWindow,
-  Server,
+  Monitor,
   Users,
   GitBranch,
-  Monitor,
+  LayoutGrid,
 } from "lucide-react";
-import ITInventory from "@/components/applications/ITInventory";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
 import SystemsInventory from "@/components/applications/SystemsInventory";
+import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
 
-type ToolTab = "systems" | "it-inventory" | "role-inventory" | "dependency-graph";
+type ToolTab = "systems" | "role-inventory" | "dependency-graph" | "capability-map";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
-  { id: "systems", label: "Systems", icon: Monitor, description: "Manage systems & software" },
-  { id: "it-inventory", label: "IT Inventory", icon: Server, description: "Manage systems & impact analysis" },
+  { id: "systems", label: "Systems", icon: Monitor, description: "Manage systems & impact analysis" },
   { id: "role-inventory", label: "Role Inventory", icon: Users, description: "RACI & role coverage" },
   { id: "dependency-graph", label: "Dependency Graph", icon: GitBranch, description: "System dependency visualization" },
+  { id: "capability-map", label: "Capability Map", icon: LayoutGrid, description: "Business capability overview" },
 ];
 
 export default function Applications() {
@@ -51,7 +51,6 @@ export default function Applications() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-card shrink-0">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
@@ -60,7 +59,6 @@ export default function Applications() {
         <h1 className="text-sm sm:text-lg font-semibold truncate">{selectedOrg.name} — Applications & Tools</h1>
       </header>
 
-      {/* Tab navigation */}
       <div className="border-b bg-card/50 px-4 md:px-6 shrink-0">
         <nav className="flex gap-1 max-w-7xl mx-auto -mb-px">
           {TOOLS.map((tool) => {
@@ -84,12 +82,11 @@ export default function Applications() {
         </nav>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === "systems" && <SystemsInventory orgId={orgId} />}
-        {activeTab === "it-inventory" && <ITInventory orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
+        {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import Editor from "./pages/Editor";
 import Presentation from "./pages/Presentation";
 import Documentation from "./pages/Documentation";
 import Applications from "./pages/Applications";
-import CapabilityMap from "./pages/CapabilityMap";
+
 import Profile from "./pages/Profile";
 import PublicPresentation from "./pages/PublicPresentation";
 import NotFound from "./pages/NotFound";
@@ -34,7 +34,7 @@ const App = () => (
               <Route path="/presentation/:id" element={<Presentation />} />
               <Route path="/documentation/:id" element={<Documentation />} />
               <Route path="/applications" element={<Applications />} />
-              <Route path="/capability-map" element={<CapabilityMap />} />
+              
               <Route path="/profile" element={<Profile />} />
               <Route path="/present/:token" element={<PublicPresentation />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
