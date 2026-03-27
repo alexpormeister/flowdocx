@@ -191,6 +191,12 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     enabled: !!user,
   });
 
+  const { data: shareTokens = [] } = useQuery({
+    queryKey: ["presentation-tokens", orgId],
+    queryFn: () => getPresentationTokens(orgId),
+    enabled: !!user,
+  });
+
   const orgProjects = useMemo(
     () => projects.filter(p => p.organization_id === orgId),
     [projects, orgId]
