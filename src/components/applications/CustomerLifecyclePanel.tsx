@@ -574,6 +574,9 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
               <Maximize className="w-3.5 h-3.5" />
             </Button>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
+            <Share2 className="w-4 h-4 mr-1" />Jaa
+          </Button>
           <Button variant="ghost" size="sm" className="text-destructive" onClick={() => {
             if (confirm("Poistetaanko elinkaari?")) deleteLifecycle.mutate(selectedLifecycleId);
           }}>
