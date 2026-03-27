@@ -872,6 +872,55 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
       </Dialog>
 
       {renderAddLifecycleDialog()}
+
+      {/* Share Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Jaa elinkaari</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {shareTokens.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Valitse olemassa oleva jakolinkki tai luo uusi:</p>
+                {shareTokens.filter(t => t.is_active).map(t => {
+                  const shareUrl = `${window.location.origin}/lifecycle/${t.token}/${selectedLifecycleId}`;
+                  return (
+                    <div key={t.id} className="flex items-center gap-2 border rounded-lg p-2">
+                      <span className="text-xs font-medium flex-1 truncate">{t.name}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        navigator.clipboard.writeText(shareUrl);
+                        toast({ title: "Linkki kopioitu!" });
+                      }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(shareUrl, '_blank')}>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Luo jakolinkki, jolla elinkaarta voi katsella ilman kirjautumista.</p>
+            )}
+            <div className="border-t pt-3 space-y-2">
+              <label className="text-sm font-medium">Uusi jakolinkki</label>
+              <Input value={shareTokenName} onChange={e => setShareTokenName(e.target.value)} placeholder="esim. Asiakaselinkaari – tiimi" />
+              <Button className="w-full" disabled={!shareTokenName.trim()} onClick={async () => {
+                try {
+                  await createPresentationToken(orgId, shareTokenName);
+                  queryClient.invalidateQueries({ queryKey: ["presentation-tokens", orgId] });
+                  setShareTokenName("");
+                  toast({ title: "Jakolinkki luotu" });
+                } catch {
+                  toast({ title: "Virhe jakolinkin luonnissa", variant: "destructive" });
+                }
+              }}>
+                <Plus className="w-4 h-4 mr-1" />Luo linkki
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
