@@ -1,10 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, Tag, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Tag, ChevronDown, Search, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SystemTagBadge from "./SystemTagBadge";
 
 export type BpmnElementType = "task" | "event" | "gateway" | "subprocess" | "other";
+
+export interface GatewayPath {
+  label: string;
+  targetId: string;
+  targetName: string;
+}
 
 export interface ProcessStep {
   id: string;
@@ -14,6 +20,7 @@ export interface ProcessStep {
   system: string[];
   decision: string;
   elementType?: BpmnElementType;
+  gatewayPaths?: GatewayPath[];
 }
 
 interface ProcessDataPanelProps {
@@ -64,7 +71,6 @@ export default function ProcessDataPanel({
     const step = steps.find(s => s.id === stepId);
     if (step && !step.system.includes(tag)) {
       updateStep(stepId, "system", [...step.system, tag]);
-      // Auto-add to org global tags
       if (onAddOrgTag) {
         onAddOrgTag(tag);
       }
@@ -76,13 +82,6 @@ export default function ProcessDataPanel({
     const step = steps.find(s => s.id === stepId);
     if (step) {
       updateStep(stepId, "system", step.system.filter(t => t !== tag));
-    }
-  };
-
-  const handleCustomTagAdd = (stepId: string) => {
-    if (customTagInput.trim()) {
-      addSystemTag(stepId, customTagInput.trim());
-      setCustomTagInput("");
     }
   };
 
@@ -100,7 +99,6 @@ export default function ProcessDataPanel({
       </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
-        {/* Description field */}
         {onDescriptionChange && (
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Description</label>
@@ -123,6 +121,7 @@ export default function ProcessDataPanel({
 
         {steps.map((step) => {
           const typeStyles = getElementTypeStyles(step.elementType);
+          const isGateway = step.elementType === "gateway";
           return (
           <div
             key={step.id}
@@ -156,20 +155,44 @@ export default function ProcessDataPanel({
               className="h-8 text-sm bg-background"
             />
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <PerformerCombobox
                 value={step.performer}
                 onChange={(val) => updateStep(step.id, "performer", val)}
                 positions={availablePositions}
               />
-              <Input
-                placeholder="Decision"
-                value={step.decision}
-                onChange={(e) => updateStep(step.id, "decision", e.target.value)}
-                className="h-8 text-xs bg-background"
-              />
             </div>
 
+            {/* Gateway Decision Paths */}
+            {isGateway && step.gatewayPaths && step.gatewayPaths.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                  Decision Paths
+                </label>
+                <div className="space-y-1">
+                  {step.gatewayPaths.map((path, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded bg-amber-50 border border-amber-200 text-xs"
+                    >
+                      <span className="font-medium text-amber-800 min-w-0 shrink-0">
+                        {path.label || "—"}
+                      </span>
+                      <ArrowRight className="w-3 h-3 text-amber-500 shrink-0" />
+                      <span className="text-amber-700 truncate">
+                        {path.targetName || path.targetId}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isGateway && (!step.gatewayPaths || step.gatewayPaths.length === 0) && (
+              <div className="px-2 py-1.5 rounded bg-amber-50 border border-amber-200 text-[10px] text-amber-600">
+                Sync to detect decision paths from diagram
+              </div>
+            )}
 
             {/* System Tags */}
             <div className="flex flex-wrap gap-1 items-center">
@@ -182,56 +205,15 @@ export default function ProcessDataPanel({
               ))}
 
               {newSystemTag?.stepId === step.id ? (
-                <div className="flex gap-1 items-center">
-                  {availableTags.length > 0 ? (
-                    <select
-                      className="h-6 text-xs rounded border border-border bg-background px-1 text-foreground"
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          // Show custom input
-                        } else if (e.target.value) {
-                          addSystemTag(step.id, e.target.value);
-                        }
-                      }}
-                      autoFocus
-                      onBlur={() => {
-                        if (!customTagInput) setNewSystemTag(null);
-                      }}
-                    >
-                      <option value="">Select...</option>
-                      {availableTags.filter(o => !step.system.includes(o)).map(o => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                      <option value="__custom__">+ Custom...</option>
-                    </select>
-                  ) : (
-                    <div className="flex gap-1">
-                      <Input
-                        className="h-6 text-xs w-24"
-                        placeholder="Tag name..."
-                        value={customTagInput}
-                        onChange={(e) => setCustomTagInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleCustomTagAdd(step.id);
-                          } else if (e.key === "Escape") {
-                            setNewSystemTag(null);
-                            setCustomTagInput("");
-                          }
-                        }}
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        className="h-6 px-2 text-xs"
-                        onClick={() => handleCustomTagAdd(step.id)}
-                        disabled={!customTagInput.trim()}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <SystemTagSearchDropdown
+                  availableTags={availableTags.filter(t => !step.system.includes(t))}
+                  onSelect={(tag) => addSystemTag(step.id, tag)}
+                  onCustomAdd={(tag) => addSystemTag(step.id, tag)}
+                  onClose={() => {
+                    setNewSystemTag(null);
+                    setCustomTagInput("");
+                  }}
+                />
               ) : (
                 <button
                   onClick={() => setNewSystemTag({ stepId: step.id, value: "" })}
@@ -250,7 +232,97 @@ export default function ProcessDataPanel({
   );
 }
 
-// Performer combobox: dropdown of org positions + custom text input
+function SystemTagSearchDropdown({
+  availableTags,
+  onSelect,
+  onCustomAdd,
+  onClose,
+}: {
+  availableTags: string[];
+  onSelect: (tag: string) => void;
+  onCustomAdd: (tag: string) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
+
+  const filtered = availableTags.filter(t =>
+    t.toLowerCase().includes(search.toLowerCase())
+  );
+  const exactMatch = availableTags.some(t => t.toLowerCase() === search.toLowerCase());
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex items-center gap-1 border rounded-md bg-background px-1.5 py-0.5">
+        <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if (filtered.length === 1) {
+                onSelect(filtered[0]);
+              } else if (search.trim() && !exactMatch) {
+                onCustomAdd(search.trim());
+              }
+            } else if (e.key === "Escape") {
+              onClose();
+            }
+          }}
+          placeholder="Search systems..."
+          className="h-5 text-[10px] bg-transparent outline-none w-24"
+        />
+      </div>
+      {(filtered.length > 0 || (search.trim() && !exactMatch)) && (
+        <div className="absolute z-50 top-full left-0 mt-1 w-48 max-h-36 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          {filtered.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(tag);
+              }}
+            >
+              {tag}
+            </button>
+          ))}
+          {search.trim() && !exactMatch && (
+            <button
+              type="button"
+              className="w-full text-left px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors border-t text-muted-foreground"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onCustomAdd(search.trim());
+              }}
+            >
+              + Add "{search.trim()}"
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PerformerCombobox({
   value,
   onChange,
@@ -270,7 +342,6 @@ function PerformerCombobox({
   const filtered = positions.filter(
     (p) => p.toLowerCase().includes(inputValue.toLowerCase()) && p !== value
   );
-
   const hasPositions = positions.length > 0;
 
   return (
