@@ -101,8 +101,9 @@ export default function Dashboard() {
   const [newFolderColor, setNewFolderColor] = useState(FOLDER_COLORS[0]);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
-  // Persist org selection via URL params
+  // Persist org/folder selection via URL params
   const selectedOrgId = searchParams.get("org") || null;
+  const selectedFolderParam = searchParams.get("folder") || null;
   const setSelectedOrgId = (orgId: string | null) => {
     const params = new URLSearchParams(searchParams);
     if (orgId) {
@@ -612,20 +613,32 @@ export default function Dashboard() {
   };
 
   const handleSelectFolder = (folderId: string | null) => {
+    const params = new URLSearchParams(searchParams);
+
+    if (folderId) {
+      params.set("folder", folderId);
+      setShowRootProjects(false);
+    } else {
+      params.delete("folder");
+    }
+
     setSelectedFolder(folderId);
-    setShowRootProjects(false);
+    setSearchParams(params, { replace: true });
   };
 
   const handleShowRootProjects = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("folder");
     setSelectedFolder(null);
     setShowRootProjects(true);
+    setSearchParams(params, { replace: true });
   };
 
-  // Reset folder selection when org changes
   useEffect(() => {
-    setSelectedFolder(null);
-    setShowRootProjects(false);
-  }, [selectedOrgId]);
+    const hasValidFolder = !!selectedFolderParam && filteredFolders.some((folder) => folder.id === selectedFolderParam);
+    setSelectedFolder(hasValidFolder ? selectedFolderParam : null);
+    setShowRootProjects(!hasValidFolder);
+  }, [selectedFolderParam, filteredFolders]);
 
   // Background style
   const backgroundStyle = useMemo(() => {
