@@ -117,6 +117,8 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [connectionLabel, setConnectionLabel] = useState("");
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareTokenName, setShareTokenName] = useState("");
 
   // Queries
   const { data: lifecycles = [] } = useQuery({
