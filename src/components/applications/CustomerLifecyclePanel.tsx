@@ -129,13 +129,10 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     enabled: !!user,
   });
 
-  // Auto-select first lifecycle
+  // Only auto-select if the selected lifecycle was deleted (no longer exists)
   useEffect(() => {
-    if (lifecycles.length > 0 && !selectedLifecycleId) {
-      setSelectedLifecycleId(lifecycles[0].id);
-    }
     if (lifecycles.length > 0 && selectedLifecycleId && !lifecycles.find(l => l.id === selectedLifecycleId)) {
-      setSelectedLifecycleId(lifecycles[0].id);
+      setSelectedLifecycleId(null);
     }
   }, [lifecycles, selectedLifecycleId]);
 
