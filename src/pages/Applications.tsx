@@ -16,14 +16,17 @@ import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
 import SystemsInventory from "@/components/applications/SystemsInventory";
 import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
+import CustomerLifecyclePanel from "@/components/applications/CustomerLifecyclePanel";
+import { Heart } from "lucide-react";
 
-type ToolTab = "systems" | "role-inventory" | "dependency-graph" | "capability-map";
+type ToolTab = "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "systems", label: "Systems", icon: Monitor, description: "Manage systems & impact analysis" },
   { id: "role-inventory", label: "Role Inventory", icon: Users, description: "RACI & role coverage" },
   { id: "dependency-graph", label: "Dependency Graph", icon: GitBranch, description: "System dependency visualization" },
   { id: "capability-map", label: "Capability Map", icon: LayoutGrid, description: "Business capability overview" },
+  { id: "customer-lifecycle", label: "Customer Lifecycle", icon: Heart, description: "Customer lifecycle management" },
 ];
 
 export default function Applications() {
@@ -87,6 +90,7 @@ export default function Applications() {
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
+        {activeTab === "customer-lifecycle" && <CustomerLifecyclePanel orgId={orgId} />}
       </div>
     </div>
   );
