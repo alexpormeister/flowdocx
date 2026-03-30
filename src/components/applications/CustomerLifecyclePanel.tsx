@@ -101,6 +101,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
 
   // Interaction state
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [connecting, setConnecting] = useState<{ fromId: string; mouseX: number; mouseY: number } | null>(null);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
 
@@ -386,11 +387,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     }
     if (dragging) {
       const pos = screenToCanvas(e.clientX, e.clientY);
-      updateStage.mutate({
-        id: dragging.id,
-        position_x: pos.x - dragging.offsetX,
-        position_y: pos.y - dragging.offsetY,
-      });
+      setDragPos({ x: pos.x - dragging.offsetX, y: pos.y - dragging.offsetY });
     }
     if (connecting) {
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -406,11 +403,21 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
 
   const handleCanvasMouseUp = useCallback((e: React.MouseEvent) => {
     setIsPanning(false);
-    if (dragging) setDragging(null);
+    if (dragging && dragPos) {
+      updateStage.mutate({ id: dragging.id, position_x: dragPos.x, position_y: dragPos.y });
+      setDragging(null);
+      setDragPos(null);
+    } else if (dragging) {
+      setDragging(null);
+      setDragPos(null);
+    }
     if (connecting) {
-      // Check if we dropped on a stage
       const pos = screenToCanvas(e.clientX, e.clientY);
-      const target = stages.find(s =>
+      const effectiveStages = stages.map(s => {
+        if (dragging && dragPos && s.id === dragging.id) return { ...s, position_x: dragPos.x, position_y: dragPos.y };
+        return s;
+      });
+      const target = effectiveStages.find(s =>
         s.id !== connecting.fromId &&
         pos.x >= s.position_x && pos.x <= s.position_x + NODE_W &&
         pos.y >= s.position_y && pos.y <= s.position_y + NODE_H_BASE
@@ -420,7 +427,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
       }
       setConnecting(null);
     }
-  }, [dragging, connecting, stages, screenToCanvas]);
+  }, [dragging, dragPos, connecting, stages, screenToCanvas]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
