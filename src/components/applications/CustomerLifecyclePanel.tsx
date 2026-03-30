@@ -607,7 +607,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
-        onMouseLeave={() => { setIsPanning(false); setDragging(null); setConnecting(null); }}
+        onMouseLeave={() => { setIsPanning(false); if (dragging && dragPos) { updateStage.mutate({ id: dragging.id, position_x: dragPos.x, position_y: dragPos.y }); } setDragging(null); setDragPos(null); setConnecting(null); }}
         onWheel={handleWheel}
       >
         {/* Grid pattern */}
@@ -637,9 +637,11 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
             </defs>
 
             {connections.map(conn => {
-              const from = getStage(conn.from_stage_id);
-              const to = getStage(conn.to_stage_id);
-              if (!from || !to) return null;
+              const fromRaw = getStage(conn.from_stage_id);
+              const toRaw = getStage(conn.to_stage_id);
+              if (!fromRaw || !toRaw) return null;
+              const from = getEffectiveStage(fromRaw);
+              const to = getEffectiveStage(toRaw);
               const { path, midX, midY } = getArrowPath(from, to);
               return (
                 <g key={conn.id} className="pointer-events-auto cursor-pointer" onClick={(e) => {
@@ -673,19 +675,22 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
           </svg>
 
           {/* Stage nodes */}
-          {stages.map(stage => {
+          {stages.map(stageRaw => {
+            const stage = getEffectiveStage(stageRaw);
             const procs = getStageProcesses(stage.id);
             const nodeH = NODE_H_BASE + procs.length * 28;
             const isSelected = selectedStageId === stage.id;
+            const isDragging = dragging?.id === stage.id;
             return (
               <div
                 key={stage.id}
-                className={`absolute select-none rounded-xl border-2 bg-card shadow-sm transition-shadow ${isSelected ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"}`}
+                className={`absolute select-none rounded-xl border-2 bg-card shadow-sm ${isDragging ? "shadow-lg ring-2 ring-primary z-50" : isSelected ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md transition-shadow"}`}
                 style={{
                   left: stage.position_x,
                   top: stage.position_y,
                   width: NODE_W,
                   borderColor: stage.color || "hsl(var(--border))",
+                  ...(isDragging ? { willChange: "transform" } : {}),
                 }}
                 onClick={(e) => { e.stopPropagation(); setSelectedStageId(stage.id); }}
                 onMouseDown={(e) => {
