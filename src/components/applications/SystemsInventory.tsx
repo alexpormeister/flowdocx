@@ -537,15 +537,22 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       {getPositionName(adminPosId)}
                     </Badge>
                   )}
-                  {grpIds.map((gid) => (
-                    <Badge
-                      key={gid}
-                      variant="secondary"
-                      className="text-[10px] gap-1 px-1.5 py-0.5"
-                    >
-                      <UsersRound className="w-3 h-3" />
-                      {getGroupName(gid)}
-                    </Badge>
+                  {(() => {
+                    const saved = new Set(grpIds);
+                    const detected = autoDetectedGroups[tag.tag_name] || [];
+                    const allIds = [...new Set([...grpIds, ...detected])];
+                    return allIds.map((gid) => (
+                      <Badge
+                        key={gid}
+                        variant={saved.has(gid) ? "secondary" : "outline"}
+                        className={`text-[10px] gap-1 px-1.5 py-0.5 ${!saved.has(gid) ? "border-dashed border-primary/40 text-primary" : ""}`}
+                      >
+                        <UsersRound className="w-3 h-3" />
+                        {getGroupName(gid)}
+                        {!saved.has(gid) && <span className="text-[8px] opacity-60">(auto)</span>}
+                      </Badge>
+                    ));
+                  })()}
                   ))}
                 </div>
               </div>
