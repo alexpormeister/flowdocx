@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     if (projectIds.length > 0) {
       const { data } = await supabase
         .from('projects')
-        .select('id, name, description, status')
+        .select('id, name, description, status, bpmn_xml, process_steps, owner_name, owner_email')
         .in('id', projectIds);
       projects = data || [];
     }
