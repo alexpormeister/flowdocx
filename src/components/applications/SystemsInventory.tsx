@@ -153,6 +153,29 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     return map;
   }, [tags, orgProjects]);
 
+  // Auto-detect user groups: for each system, find performers in steps that use it, match to org groups
+  const autoDetectedGroups = useMemo(() => {
+    const map: Record<string, string[]> = {}; // tag_name -> group_id[]
+    const groupNameToId = new Map(groups.map(g => [g.name.toLowerCase(), g.id]));
+    for (const tag of tags) {
+      const performerNames = new Set<string>();
+      for (const project of orgProjects) {
+        const steps = (project.process_steps as any[]) || [];
+        for (const step of steps) {
+          if ((step.system || []).includes(tag.tag_name) && step.performer) {
+            performerNames.add(step.performer.toLowerCase());
+          }
+        }
+      }
+      const matchedIds: string[] = [];
+      for (const [name, id] of groupNameToId) {
+        if (performerNames.has(name)) matchedIds.push(id);
+      }
+      if (matchedIds.length > 0) map[tag.tag_name] = matchedIds;
+    }
+    return map;
+  }, [tags, orgProjects, groups]);
+
   const toggleSystem = (tagName: string) => {
     setDisabledSystems((prev) => {
       const next = new Set(prev);
@@ -297,7 +320,11 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormName(tag.tag_name);
     setFormDescription((tag as any).description || "");
     setFormAdminPositionId((tag as any).admin_position_id || "");
-    setFormGroupIds(tagGroupsMap[tag.id] || []);
+    // Merge saved groups with auto-detected groups
+    const saved = tagGroupsMap[tag.id] || [];
+    const detected = autoDetectedGroups[tag.tag_name] || [];
+    const merged = [...new Set([...saved, ...detected])];
+    setFormGroupIds(merged);
     setFormLinkUrl((tag as any).link_url || "");
     setDialogOpen(true);
   };
@@ -510,16 +537,22 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       {getPositionName(adminPosId)}
                     </Badge>
                   )}
-                  {grpIds.map((gid) => (
-                    <Badge
-                      key={gid}
-                      variant="secondary"
-                      className="text-[10px] gap-1 px-1.5 py-0.5"
-                    >
-                      <UsersRound className="w-3 h-3" />
-                      {getGroupName(gid)}
-                    </Badge>
-                  ))}
+                  {(() => {
+                    const saved = new Set(grpIds);
+                    const detected = autoDetectedGroups[tag.tag_name] || [];
+                    const allIds = [...new Set([...grpIds, ...detected])];
+                    return allIds.map((gid) => (
+                      <Badge
+                        key={gid}
+                        variant={saved.has(gid) ? "secondary" : "outline"}
+                        className={`text-[10px] gap-1 px-1.5 py-0.5 ${!saved.has(gid) ? "border-dashed border-primary/40 text-primary" : ""}`}
+                      >
+                        <UsersRound className="w-3 h-3" />
+                        {getGroupName(gid)}
+                        {!saved.has(gid) && <span className="text-[8px] opacity-60">(auto)</span>}
+                      </Badge>
+                    ));
+                  })()}
                 </div>
               </div>
             );

@@ -101,6 +101,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
 
   // Interaction state
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
   const [connecting, setConnecting] = useState<{ fromId: string; mouseX: number; mouseY: number } | null>(null);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
 
@@ -356,6 +357,14 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const getProject = (projectId: string) => orgProjects.find(p => p.id === projectId);
   const getStage = (id: string) => stages.find(s => s.id === id);
 
+  // Compute effective positions: use dragPos for the dragged stage
+  const getEffectiveStage = useCallback((stage: Stage): Stage => {
+    if (dragging && dragPos && stage.id === dragging.id) {
+      return { ...stage, position_x: dragPos.x, position_y: dragPos.y };
+    }
+    return stage;
+  }, [dragging, dragPos]);
+
   const availableProjects = useMemo(() => {
     if (!linkingStageId) return orgProjects;
     const linked = new Set(stageProcesses.filter(sp => sp.stage_id === linkingStageId).map(sp => sp.project_id));
@@ -386,11 +395,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     }
     if (dragging) {
       const pos = screenToCanvas(e.clientX, e.clientY);
-      updateStage.mutate({
-        id: dragging.id,
-        position_x: pos.x - dragging.offsetX,
-        position_y: pos.y - dragging.offsetY,
-      });
+      setDragPos({ x: pos.x - dragging.offsetX, y: pos.y - dragging.offsetY });
     }
     if (connecting) {
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -406,11 +411,21 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
 
   const handleCanvasMouseUp = useCallback((e: React.MouseEvent) => {
     setIsPanning(false);
-    if (dragging) setDragging(null);
+    if (dragging && dragPos) {
+      updateStage.mutate({ id: dragging.id, position_x: dragPos.x, position_y: dragPos.y });
+      setDragging(null);
+      setDragPos(null);
+    } else if (dragging) {
+      setDragging(null);
+      setDragPos(null);
+    }
     if (connecting) {
-      // Check if we dropped on a stage
       const pos = screenToCanvas(e.clientX, e.clientY);
-      const target = stages.find(s =>
+      const effectiveStages = stages.map(s => {
+        if (dragging && dragPos && s.id === dragging.id) return { ...s, position_x: dragPos.x, position_y: dragPos.y };
+        return s;
+      });
+      const target = effectiveStages.find(s =>
         s.id !== connecting.fromId &&
         pos.x >= s.position_x && pos.x <= s.position_x + NODE_W &&
         pos.y >= s.position_y && pos.y <= s.position_y + NODE_H_BASE
@@ -420,7 +435,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
       }
       setConnecting(null);
     }
-  }, [dragging, connecting, stages, screenToCanvas]);
+  }, [dragging, dragPos, connecting, stages, screenToCanvas]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -592,7 +607,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
-        onMouseLeave={() => { setIsPanning(false); setDragging(null); setConnecting(null); }}
+        onMouseLeave={() => { setIsPanning(false); if (dragging && dragPos) { updateStage.mutate({ id: dragging.id, position_x: dragPos.x, position_y: dragPos.y }); } setDragging(null); setDragPos(null); setConnecting(null); }}
         onWheel={handleWheel}
       >
         {/* Grid pattern */}
@@ -622,9 +637,11 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
             </defs>
 
             {connections.map(conn => {
-              const from = getStage(conn.from_stage_id);
-              const to = getStage(conn.to_stage_id);
-              if (!from || !to) return null;
+              const fromRaw = getStage(conn.from_stage_id);
+              const toRaw = getStage(conn.to_stage_id);
+              if (!fromRaw || !toRaw) return null;
+              const from = getEffectiveStage(fromRaw);
+              const to = getEffectiveStage(toRaw);
               const { path, midX, midY } = getArrowPath(from, to);
               return (
                 <g key={conn.id} className="pointer-events-auto cursor-pointer" onClick={(e) => {
@@ -658,19 +675,22 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
           </svg>
 
           {/* Stage nodes */}
-          {stages.map(stage => {
+          {stages.map(stageRaw => {
+            const stage = getEffectiveStage(stageRaw);
             const procs = getStageProcesses(stage.id);
             const nodeH = NODE_H_BASE + procs.length * 28;
             const isSelected = selectedStageId === stage.id;
+            const isDragging = dragging?.id === stage.id;
             return (
               <div
                 key={stage.id}
-                className={`absolute select-none rounded-xl border-2 bg-card shadow-sm transition-shadow ${isSelected ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"}`}
+                className={`absolute select-none rounded-xl border-2 bg-card shadow-sm ${isDragging ? "shadow-lg ring-2 ring-primary z-50" : isSelected ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md transition-shadow"}`}
                 style={{
                   left: stage.position_x,
                   top: stage.position_y,
                   width: NODE_W,
                   borderColor: stage.color || "hsl(var(--border))",
+                  ...(isDragging ? { willChange: "transform" } : {}),
                 }}
                 onClick={(e) => { e.stopPropagation(); setSelectedStageId(stage.id); }}
                 onMouseDown={(e) => {

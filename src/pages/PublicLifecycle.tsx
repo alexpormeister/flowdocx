@@ -1,8 +1,11 @@
-import { useMemo, useCallback, useState, useRef } from "react";
+import { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import NavigatedViewer from "bpmn-js/lib/NavigatedViewer";
+import "bpmn-js/dist/assets/diagram-js.css";
+import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
+import { ZoomIn, ZoomOut, Maximize, ArrowLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NODE_W = 240;
@@ -33,6 +36,12 @@ interface StageProcess {
 interface ProjectInfo {
   id: string;
   name: string;
+  description?: string | null;
+  status?: string;
+  bpmn_xml?: string;
+  process_steps?: any[];
+  owner_name?: string | null;
+  owner_email?: string | null;
 }
 
 async function fetchLifecycleData(token: string, lifecycleId: string) {
@@ -55,11 +64,14 @@ async function fetchLifecycleData(token: string, lifecycleId: string) {
 export default function PublicLifecycle() {
   const { token, lifecycleId } = useParams<{ token: string; lifecycleId: string }>();
   const canvasRef = useRef<HTMLDivElement>(null);
+  const bpmnContainerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<any>(null);
 
   const [pan, setPan] = useState({ x: 40, y: 40 });
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [viewingProject, setViewingProject] = useState<ProjectInfo | null>(null);
 
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["public-lifecycle", token, lifecycleId],
@@ -75,6 +87,32 @@ export default function PublicLifecycle() {
   const getStage = (id: string) => stages.find(s => s.id === id);
   const getProject = (id: string) => projects.find(p => p.id === id);
   const getStageProcesses = (stageId: string) => stageProcesses.filter(sp => sp.stage_id === stageId);
+
+  // BPMN viewer
+  useEffect(() => {
+    if (!viewingProject?.bpmn_xml || !bpmnContainerRef.current) return;
+
+    // Cleanup previous
+    if (viewerRef.current) {
+      viewerRef.current.destroy();
+      viewerRef.current = null;
+    }
+
+    const viewer = new NavigatedViewer({
+      container: bpmnContainerRef.current,
+    });
+    viewerRef.current = viewer;
+
+    viewer.importXML(viewingProject.bpmn_xml).then(() => {
+      const canvas = viewer.get("canvas") as any;
+      canvas.zoom("fit-viewport");
+    });
+
+    return () => {
+      viewer.destroy();
+      viewerRef.current = null;
+    };
+  }, [viewingProject]);
 
   const getArrowPath = (from: Stage, to: Stage) => {
     const fx = from.position_x + NODE_W / 2;
@@ -155,6 +193,55 @@ export default function PublicLifecycle() {
           <p className="text-lg font-semibold text-destructive">Virheellinen tai vanhentunut linkki</p>
           <p className="text-sm text-muted-foreground">Tämä jakolinkki ei ole enää aktiivinen.</p>
         </div>
+      </div>
+    );
+  }
+
+  // Process viewer mode
+  if (viewingProject) {
+    return (
+      <div className="flex flex-col h-screen bg-background">
+        <header className="h-14 border-b flex items-center justify-between px-4 bg-card shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button variant="ghost" size="sm" onClick={() => setViewingProject(null)}>
+              <ArrowLeft className="w-4 h-4 mr-1" />Takaisin
+            </Button>
+            <span className="text-xs text-muted-foreground">|</span>
+            <h1 className="text-sm font-semibold truncate">{viewingProject.name}</h1>
+            {viewingProject.status && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{viewingProject.status}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {viewingProject.owner_name && <span>{viewingProject.owner_name}</span>}
+          </div>
+        </header>
+
+        {viewingProject.bpmn_xml ? (
+          <div ref={bpmnContainerRef} className="flex-1" />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <p className="text-sm">Prosessia ei voitu ladata.</p>
+          </div>
+        )}
+
+        {/* Process steps */}
+        {viewingProject.process_steps && (viewingProject.process_steps as any[]).length > 0 && (
+          <div className="border-t max-h-48 overflow-auto bg-card">
+            <div className="px-4 py-2">
+              <h3 className="text-xs font-semibold text-muted-foreground mb-2">Prosessin vaiheet</h3>
+              <div className="space-y-1">
+                {(viewingProject.process_steps as any[]).map((step: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3 text-xs px-2 py-1.5 rounded bg-muted/50">
+                    <span className="font-mono text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">#{step.step}</span>
+                    <span className="flex-1 truncate">{step.task || "—"}</span>
+                    {step.performer && <span className="text-muted-foreground text-[10px]">{step.performer}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -257,9 +344,14 @@ export default function PublicLifecycle() {
                       const proj = getProject(sp.project_id);
                       if (!proj) return null;
                       return (
-                        <div key={sp.id} className="flex items-center gap-1 text-[10px] rounded bg-muted/50 px-2 py-1">
+                        <button
+                          key={sp.id}
+                          className="flex items-center gap-1 text-[10px] rounded bg-muted/50 px-2 py-1 w-full text-left hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                          onClick={() => setViewingProject(proj)}
+                        >
                           <span className="flex-1 truncate">{proj.name}</span>
-                        </div>
+                          <span className="text-[8px] text-muted-foreground shrink-0">Avaa →</span>
+                        </button>
                       );
                     })}
                   </div>
