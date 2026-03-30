@@ -357,6 +357,14 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const getProject = (projectId: string) => orgProjects.find(p => p.id === projectId);
   const getStage = (id: string) => stages.find(s => s.id === id);
 
+  // Compute effective positions: use dragPos for the dragged stage
+  const getEffectiveStage = useCallback((stage: Stage): Stage => {
+    if (dragging && dragPos && stage.id === dragging.id) {
+      return { ...stage, position_x: dragPos.x, position_y: dragPos.y };
+    }
+    return stage;
+  }, [dragging, dragPos]);
+
   const availableProjects = useMemo(() => {
     if (!linkingStageId) return orgProjects;
     const linked = new Set(stageProcesses.filter(sp => sp.stage_id === linkingStageId).map(sp => sp.project_id));
