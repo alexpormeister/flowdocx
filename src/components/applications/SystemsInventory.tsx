@@ -553,7 +553,6 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       </Badge>
                     ));
                   })()}
-                  ))}
                 </div>
               </div>
             );
