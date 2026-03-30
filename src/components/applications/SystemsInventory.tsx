@@ -153,6 +153,29 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     return map;
   }, [tags, orgProjects]);
 
+  // Auto-detect user groups: for each system, find performers in steps that use it, match to org groups
+  const autoDetectedGroups = useMemo(() => {
+    const map: Record<string, string[]> = {}; // tag_name -> group_id[]
+    const groupNameToId = new Map(groups.map(g => [g.name.toLowerCase(), g.id]));
+    for (const tag of tags) {
+      const performerNames = new Set<string>();
+      for (const project of orgProjects) {
+        const steps = (project.process_steps as any[]) || [];
+        for (const step of steps) {
+          if ((step.system || []).includes(tag.tag_name) && step.performer) {
+            performerNames.add(step.performer.toLowerCase());
+          }
+        }
+      }
+      const matchedIds: string[] = [];
+      for (const [name, id] of groupNameToId) {
+        if (performerNames.has(name)) matchedIds.push(id);
+      }
+      if (matchedIds.length > 0) map[tag.tag_name] = matchedIds;
+    }
+    return map;
+  }, [tags, orgProjects, groups]);
+
   const toggleSystem = (tagName: string) => {
     setDisabledSystems((prev) => {
       const next = new Set(prev);
