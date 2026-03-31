@@ -687,38 +687,43 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                       {node.type === "task" && (
                         <circle r={3} fill={node.color} />
                       )}
-                      {/* Label - positioned via collision-free layout */}
+                      {/* Label centered on node with white background */}
                       {(() => {
-                        const layout = labelLayouts.get(node.id);
-                        if (!layout) return null;
-                        const lx = layout.x - node.x;
-                        const ly = layout.y - node.y;
-                        const lineHeight = layout.fontSize + 3;
-                        const startY = ly - ((layout.lines.length - 1) * lineHeight) / 2;
+                        const fontSize = node.type === "task" ? 8 : node.type === "process" ? 10 : 11;
+                        const fontWeight = node.type === "system" ? 700 : node.type === "process" ? 600 : 400;
+                        const maxChars = node.type === "task" ? 14 : 18;
+                        const lines = splitLabelLines(node.label, maxChars);
+                        const lineHeight = fontSize + 2;
+                        const textHeight = lines.length * lineHeight;
+                        const maxLineLen = Math.max(...lines.map(l => l.length));
+                        const textWidth = maxLineLen * fontSize * 0.55;
+                        // Padding around text
+                        const px = 4, py = 2;
+                        const boxW = textWidth + px * 2;
+                        const boxH = textHeight + py * 2;
+                        // Ensure box doesn't exceed node radius so circle peeks out
+                        const maxBoxSize = Math.max(node.radius * 2 - 4, boxW);
+                        const finalW = Math.min(boxW, maxBoxSize);
+                        const startY = -textHeight / 2 + fontSize * 0.35;
                         return (
                           <>
-                            {/* Background for readability */}
                             <rect
-                              x={layout.anchor === "start" ? lx - 2 : layout.anchor === "end" ? lx - layout.width + 2 : lx - layout.width / 2 - 2}
-                              y={startY - layout.fontSize}
-                              width={layout.width + 4}
-                              height={layout.lines.length * lineHeight + 4}
+                              x={-finalW / 2}
+                              y={-boxH / 2}
+                              width={finalW}
+                              height={boxH}
                               rx={3}
-                              fill="hsl(var(--card))"
-                              fillOpacity={0.92}
-                              stroke="hsl(var(--border))"
-                              strokeWidth={0.5}
-                              strokeOpacity={0.5}
+                              fill="white"
+                              fillOpacity={0.88}
                             />
                             <text
-                              textAnchor={layout.anchor}
-                              fill="currentColor"
-                              className="text-foreground"
-                              fontSize={layout.fontSize}
-                              fontWeight={layout.fontWeight}
+                              textAnchor="middle"
+                              fill="hsl(var(--foreground))"
+                              fontSize={fontSize}
+                              fontWeight={fontWeight}
                             >
-                              {layout.lines.map((line, li) => (
-                                <tspan key={li} x={lx} y={startY + li * lineHeight}>
+                              {lines.map((line, li) => (
+                                <tspan key={li} x={0} y={startY + li * lineHeight}>
                                   {line}
                                 </tspan>
                               ))}
