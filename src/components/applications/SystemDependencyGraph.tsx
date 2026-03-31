@@ -39,6 +39,138 @@ interface GraphEdge {
   performer?: string;
 }
 
+interface GraphLabelLayout {
+  nodeId: string;
+  lines: string[];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  lineHeight: number;
+  fontSize: number;
+  fontWeight: number;
+  side: "left" | "right" | "top" | "bottom";
+}
+
+const GRAPH_CENTER = { x: 400, y: 300 };
+const LABEL_PADDING_X = 8;
+const LABEL_PADDING_Y = 6;
+const LABEL_GAP = 18;
+const LABEL_MARGIN = 10;
+const GRAPH_BOUNDS = { minX: 16, minY: 16, maxX: 784, maxY: 584 };
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const splitLabelLines = (label: string, maxChars: number) => {
+  const words = label.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    if (word.length > maxChars) {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = "";
+      }
+      for (let i = 0; i < word.length; i += maxChars) {
+        lines.push(word.slice(i, i + maxChars));
+      }
+      continue;
+    }
+
+    if (currentLine && `${currentLine} ${word}`.length > maxChars) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = currentLine ? `${currentLine} ${word}` : word;
+    }
+  }
+
+  if (currentLine) lines.push(currentLine);
+  return lines.length ? lines : [label];
+};
+
+const boxesOverlap = (
+  a: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
+  b: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
+  padding = LABEL_MARGIN
+) =>
+  a.x - padding < b.x + b.width &&
+  a.x + a.width + padding > b.x &&
+  a.y - padding < b.y + b.height &&
+  a.y + a.height + padding > b.y;
+
+const circleOverlapsBox = (
+  node: Pick<GraphNode, "x" | "y" | "radius">,
+  box: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
+  padding = 6
+) => {
+  const closestX = clamp(node.x, box.x - padding, box.x + box.width + padding);
+  const closestY = clamp(node.y, box.y - padding, box.y + box.height + padding);
+  const dx = node.x - closestX;
+  const dy = node.y - closestY;
+  return dx * dx + dy * dy < (node.radius + padding) * (node.radius + padding);
+};
+
+const pointInsideRect = (x: number, y: number, rect: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">, padding = 4) =>
+  x >= rect.x - padding &&
+  x <= rect.x + rect.width + padding &&
+  y >= rect.y - padding &&
+  y <= rect.y + rect.height + padding;
+
+const segmentsIntersect = (
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+  dx: number,
+  dy: number
+) => {
+  const ccw = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) =>
+    (ry - py) * (qx - px) > (qy - py) * (rx - px);
+
+  return (
+    ccw(ax, ay, cx, cy, dx, dy) !== ccw(bx, by, cx, cy, dx, dy) &&
+    ccw(ax, ay, bx, by, cx, cy) !== ccw(ax, ay, bx, by, dx, dy)
+  );
+};
+
+const segmentIntersectsRect = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  rect: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
+  padding = 4
+) => {
+  const left = rect.x - padding;
+  const right = rect.x + rect.width + padding;
+  const top = rect.y - padding;
+  const bottom = rect.y + rect.height + padding;
+
+  if (
+    Math.max(x1, x2) < left ||
+    Math.min(x1, x2) > right ||
+    Math.max(y1, y2) < top ||
+    Math.min(y1, y2) > bottom
+  ) {
+    return false;
+  }
+
+  if (pointInsideRect(x1, y1, rect, padding) || pointInsideRect(x2, y2, rect, padding)) {
+    return true;
+  }
+
+  return (
+    segmentsIntersect(x1, y1, x2, y2, left, top, right, top) ||
+    segmentsIntersect(x1, y1, x2, y2, right, top, right, bottom) ||
+    segmentsIntersect(x1, y1, x2, y2, right, bottom, left, bottom) ||
+    segmentsIntersect(x1, y1, x2, y2, left, bottom, left, top)
+  );
+};
+
 const PROCESS_COLORS = [
   "hsl(var(--primary))",
   "hsl(210, 70%, 55%)",
@@ -402,6 +534,116 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     return details.reduce((s, d) => s + d.steps.length, 0);
   }, [selectedCenter, searchMode, systemProcessMap]);
 
+  const labelLayouts = useMemo(() => {
+    if (!nodes.length) return [] as GraphLabelLayout[];
+
+    const nodeLookup = new Map(nodes.map((node) => [node.id, node]));
+    const connectedEdges = edges
+      .map((edge) => {
+        const source = nodeLookup.get(edge.source);
+        const target = nodeLookup.get(edge.target);
+        if (!source || !target) return null;
+        return { x1: source.x, y1: source.y, x2: target.x, y2: target.y };
+      })
+      .filter((edge): edge is { x1: number; y1: number; x2: number; y2: number } => !!edge);
+
+    const layouts = nodes.map<GraphLabelLayout>((node) => {
+      const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
+      const fontWeight = node.type === "system" ? 700 : node.type === "process" ? 600 : 400;
+      const lines = splitLabelLines(node.label, node.type === "task" ? 18 : 22);
+      const lineHeight = fontSize + 3;
+      const longestLine = Math.max(...lines.map((line) => line.length), 1);
+      const width = Math.max(76, longestLine * fontSize * 0.58 + LABEL_PADDING_X * 2);
+      const height = lines.length * lineHeight + LABEL_PADDING_Y * 2;
+      const dx = node.x - GRAPH_CENTER.x;
+      const dy = node.y - GRAPH_CENTER.y;
+
+      let side: GraphLabelLayout["side"] = "bottom";
+      let x = node.x - width / 2;
+      let y = node.y + node.radius + LABEL_GAP;
+
+      if (Math.abs(dx) < 24 && Math.abs(dy) < 24) {
+        side = "top";
+        y = node.y - node.radius - LABEL_GAP - height;
+      } else if (Math.abs(dx) >= Math.abs(dy)) {
+        side = dx >= 0 ? "right" : "left";
+        x = dx >= 0 ? node.x + node.radius + LABEL_GAP : node.x - node.radius - LABEL_GAP - width;
+        y = node.y - height / 2;
+      } else {
+        side = dy >= 0 ? "bottom" : "top";
+        x = node.x - width / 2;
+        y = dy >= 0 ? node.y + node.radius + LABEL_GAP : node.y - node.radius - LABEL_GAP - height;
+      }
+
+      return {
+        nodeId: node.id,
+        lines,
+        x: clamp(x, GRAPH_BOUNDS.minX, GRAPH_BOUNDS.maxX - width),
+        y: clamp(y, GRAPH_BOUNDS.minY, GRAPH_BOUNDS.maxY - height),
+        width,
+        height,
+        lineHeight,
+        fontSize,
+        fontWeight,
+        side,
+      };
+    });
+
+    const pushOutward = (label: GraphLabelLayout, amount: number) => {
+      if (label.side === "left") label.x -= amount;
+      if (label.side === "right") label.x += amount;
+      if (label.side === "top") label.y -= amount;
+      if (label.side === "bottom") label.y += amount;
+      label.x = clamp(label.x, GRAPH_BOUNDS.minX, GRAPH_BOUNDS.maxX - label.width);
+      label.y = clamp(label.y, GRAPH_BOUNDS.minY, GRAPH_BOUNDS.maxY - label.height);
+    };
+
+    for (let pass = 0; pass < 12; pass += 1) {
+      for (let i = 0; i < layouts.length; i += 1) {
+        const current = layouts[i];
+
+        for (let j = 0; j < layouts.length; j += 1) {
+          if (i === j) continue;
+          const other = layouts[j];
+          if (!boxesOverlap(current, other)) continue;
+
+          const overlapX = Math.min(current.x + current.width, other.x + other.width) - Math.max(current.x, other.x);
+          const overlapY = Math.min(current.y + current.height, other.y + other.height) - Math.max(current.y, other.y);
+
+          if (current.side === "left" || current.side === "right") {
+            current.y += current.y <= other.y ? -(overlapY / 2 + LABEL_MARGIN) : overlapY / 2 + LABEL_MARGIN;
+            pushOutward(current, overlapX / 2 + 8);
+          } else {
+            current.x += current.x <= other.x ? -(overlapX / 2 + LABEL_MARGIN) : overlapX / 2 + LABEL_MARGIN;
+            pushOutward(current, overlapY / 2 + 8);
+          }
+
+          current.x = clamp(current.x, GRAPH_BOUNDS.minX, GRAPH_BOUNDS.maxX - current.width);
+          current.y = clamp(current.y, GRAPH_BOUNDS.minY, GRAPH_BOUNDS.maxY - current.height);
+        }
+
+        for (const node of nodes) {
+          if (node.id === current.nodeId) continue;
+          let safety = 0;
+          while (circleOverlapsBox(node, current) && safety < 8) {
+            pushOutward(current, 12);
+            safety += 1;
+          }
+        }
+
+        for (const edge of connectedEdges) {
+          let safety = 0;
+          while (segmentIntersectsRect(edge.x1, edge.y1, edge.x2, edge.y2, current) && safety < 8) {
+            pushOutward(current, 10);
+            safety += 1;
+          }
+        }
+      }
+    }
+
+    return layouts;
+  }, [nodes, edges]);
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-4">
       {/* Controls */}
@@ -605,6 +847,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                   const isEdgeConnected =
                     hoveredEdge &&
                     (hoveredEdge.source === node.id || hoveredEdge.target === node.id);
+                  const labelLayout = labelLayouts.find((layout) => layout.nodeId === node.id);
 
                   return (
                     <g
@@ -675,39 +918,37 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                         <circle r={3} fill={node.color} />
                       )}
                       {/* Label */}
-                      {(() => {
-                        const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
-                        const maxCharsPerLine = node.type === "task" ? 18 : 22;
-                        const words = node.label.split(/\s+/);
-                        const lines: string[] = [];
-                        let currentLine = "";
-                        for (const word of words) {
-                          if (currentLine && (currentLine + " " + word).length > maxCharsPerLine) {
-                            lines.push(currentLine);
-                            currentLine = word;
-                          } else {
-                            currentLine = currentLine ? currentLine + " " + word : word;
-                          }
-                        }
-                        if (currentLine) lines.push(currentLine);
-                        const startY = node.radius + 16;
-                        const lineHeight = fontSize + 3;
-                        return (
+                      {labelLayout && (
+                        <g
+                          transform={`translate(${labelLayout.x - node.x}, ${labelLayout.y - node.y})`}
+                          pointerEvents="none"
+                        >
+                          <rect
+                            x={0}
+                            y={0}
+                            width={labelLayout.width}
+                            height={labelLayout.height}
+                            rx={8}
+                            fill="hsl(var(--card))"
+                            fillOpacity={0.96}
+                            stroke="hsl(var(--border))"
+                            strokeWidth={1}
+                          />
                           <text
-                            textAnchor="middle"
-                            fill="currentColor"
-                            className="text-foreground"
-                            fontSize={fontSize}
-                            fontWeight={node.type === "system" ? 700 : node.type === "process" ? 600 : 400}
+                            x={LABEL_PADDING_X}
+                            y={LABEL_PADDING_Y + labelLayout.fontSize}
+                            fill="hsl(var(--foreground))"
+                            fontSize={labelLayout.fontSize}
+                            fontWeight={labelLayout.fontWeight}
                           >
-                            {lines.map((line, li) => (
-                              <tspan key={li} x={0} y={startY + li * lineHeight}>
+                            {labelLayout.lines.map((line, li) => (
+                              <tspan key={li} x={LABEL_PADDING_X} y={LABEL_PADDING_Y + labelLayout.fontSize + li * labelLayout.lineHeight}>
                                 {line}
                               </tspan>
                             ))}
                           </text>
-                        );
-                      })()}
+                        </g>
+                      )}
                     </g>
                   );
                 })}
