@@ -856,38 +856,43 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                       {node.type === "task" && (
                         <circle r={3} fill={node.color} />
                       )}
-                      {/* Label */}
+                      {/* Label - positioned via collision-free layout */}
                       {(() => {
-                        const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
-                        const maxCharsPerLine = node.type === "task" ? 18 : 22;
-                        const words = node.label.split(/\s+/);
-                        const lines: string[] = [];
-                        let currentLine = "";
-                        for (const word of words) {
-                          if (currentLine && (currentLine + " " + word).length > maxCharsPerLine) {
-                            lines.push(currentLine);
-                            currentLine = word;
-                          } else {
-                            currentLine = currentLine ? currentLine + " " + word : word;
-                          }
-                        }
-                        if (currentLine) lines.push(currentLine);
-                        const startY = node.radius + 16;
-                        const lineHeight = fontSize + 3;
+                        const layout = labelLayouts.get(node.id);
+                        if (!layout) return null;
+                        const lx = layout.x - node.x;
+                        const ly = layout.y - node.y;
+                        const lineHeight = layout.fontSize + 3;
+                        const startY = ly - ((layout.lines.length - 1) * lineHeight) / 2;
                         return (
-                          <text
-                            textAnchor="middle"
-                            fill="currentColor"
-                            className="text-foreground"
-                            fontSize={fontSize}
-                            fontWeight={node.type === "system" ? 700 : node.type === "process" ? 600 : 400}
-                          >
-                            {lines.map((line, li) => (
-                              <tspan key={li} x={0} y={startY + li * lineHeight}>
-                                {line}
-                              </tspan>
-                            ))}
-                          </text>
+                          <>
+                            {/* Background for readability */}
+                            <rect
+                              x={layout.anchor === "start" ? lx - 2 : layout.anchor === "end" ? lx - layout.width + 2 : lx - layout.width / 2 - 2}
+                              y={startY - layout.fontSize}
+                              width={layout.width + 4}
+                              height={layout.lines.length * lineHeight + 4}
+                              rx={3}
+                              fill="hsl(var(--card))"
+                              fillOpacity={0.92}
+                              stroke="hsl(var(--border))"
+                              strokeWidth={0.5}
+                              strokeOpacity={0.5}
+                            />
+                            <text
+                              textAnchor={layout.anchor}
+                              fill="currentColor"
+                              className="text-foreground"
+                              fontSize={layout.fontSize}
+                              fontWeight={layout.fontWeight}
+                            >
+                              {layout.lines.map((line, li) => (
+                                <tspan key={li} x={lx} y={startY + li * lineHeight}>
+                                  {line}
+                                </tspan>
+                              ))}
+                            </text>
+                          </>
                         );
                       })()}
                     </g>
