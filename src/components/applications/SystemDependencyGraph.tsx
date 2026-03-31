@@ -675,16 +675,39 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                         <circle r={3} fill={node.color} />
                       )}
                       {/* Label */}
-                      <text
-                        y={node.radius + 14}
-                        textAnchor="middle"
-                        fill="currentColor"
-                        className="text-foreground"
-                        fontSize={node.type === "task" ? 9 : node.type === "process" ? 11 : 12}
-                        fontWeight={node.type === "system" ? 700 : node.type === "process" ? 600 : 400}
-                      >
-                        {node.label.length > 24 ? node.label.slice(0, 22) + "…" : node.label}
-                      </text>
+                      {(() => {
+                        const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
+                        const maxCharsPerLine = node.type === "task" ? 18 : 22;
+                        const words = node.label.split(/\s+/);
+                        const lines: string[] = [];
+                        let currentLine = "";
+                        for (const word of words) {
+                          if (currentLine && (currentLine + " " + word).length > maxCharsPerLine) {
+                            lines.push(currentLine);
+                            currentLine = word;
+                          } else {
+                            currentLine = currentLine ? currentLine + " " + word : word;
+                          }
+                        }
+                        if (currentLine) lines.push(currentLine);
+                        const startY = node.radius + 16;
+                        const lineHeight = fontSize + 3;
+                        return (
+                          <text
+                            textAnchor="middle"
+                            fill="currentColor"
+                            className="text-foreground"
+                            fontSize={fontSize}
+                            fontWeight={node.type === "system" ? 700 : node.type === "process" ? 600 : 400}
+                          >
+                            {lines.map((line, li) => (
+                              <tspan key={li} x={0} y={startY + li * lineHeight}>
+                                {line}
+                              </tspan>
+                            ))}
+                          </text>
+                        );
+                      })()}
                     </g>
                   );
                 })}
