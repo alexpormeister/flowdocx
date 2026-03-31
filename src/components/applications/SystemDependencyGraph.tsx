@@ -398,7 +398,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
 
   // Compute collision-free label positions
   const labelLayouts = useMemo(() => {
-    if (nodes.length === 0) return new Map<string, { x: number; y: number; lines: string[]; fontSize: number; fontWeight: number; anchor: string }>();
+    if (nodes.length === 0) return new Map<string, { x: number; y: number; lines: string[]; fontSize: number; fontWeight: number; anchor: string; width: number; height: number }>();
 
     const layouts = new Map<string, { x: number; y: number; lines: string[]; fontSize: number; fontWeight: number; anchor: string; width: number; height: number }>();
 
