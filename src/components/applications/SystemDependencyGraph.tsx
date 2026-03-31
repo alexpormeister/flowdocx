@@ -675,16 +675,39 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                         <circle r={3} fill={node.color} />
                       )}
                       {/* Label */}
-                      <text
-                        y={node.radius + 14}
-                        textAnchor="middle"
-                        fill="currentColor"
-                        className="text-foreground"
-                        fontSize={node.type === "task" ? 9 : node.type === "process" ? 11 : 12}
-                        fontWeight={node.type === "system" ? 700 : node.type === "process" ? 600 : 400}
-                      >
-                        {node.label.length > 24 ? node.label.slice(0, 22) + "…" : node.label}
-                      </text>
+                      {(() => {
+                        const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
+                        const maxCharsPerLine = node.type === "task" ? 18 : 22;
+                        const words = node.label.split(/\s+/);
+                        const lines: string[] = [];
+                        let currentLine = "";
+                        for (const word of words) {
+                          if (currentLine && (currentLine + " " + word).length > maxCharsPerLine) {
+                            lines.push(currentLine);
+                            currentLine = word;
+                          } else {
+                            currentLine = currentLine ? currentLine + " " + word : word;
+                          }
+                        }
+                        if (currentLine) lines.push(currentLine);
+                        const startY = node.radius + 16;
+                        const lineHeight = fontSize + 3;
+                        return (
+                          <text
+                            textAnchor="middle"
+                            fill="currentColor"
+                            className="text-foreground"
+                            fontSize={fontSize}
+                            fontWeight={node.type === "system" ? 700 : node.type === "process" ? 600 : 400}
+                          >
+                            {lines.map((line, li) => (
+                              <tspan key={li} x={0} y={startY + li * lineHeight}>
+                                {line}
+                              </tspan>
+                            ))}
+                          </text>
+                        );
+                      })()}
                     </g>
                   );
                 })}
@@ -694,15 +717,15 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
             {/* Tooltip */}
             {(hoveredEdge?.taskName || hoveredNode) && (
               <div
-                className="absolute pointer-events-none bg-popover border rounded-lg shadow-lg px-3 py-2 text-sm z-50 max-w-[220px]"
+                className="absolute pointer-events-none bg-popover border rounded-lg shadow-lg px-3 py-2 text-sm z-50 max-w-[300px]"
                 style={{
-                  left: Math.min(mousePos.x - (containerRef.current?.getBoundingClientRect().left || 0) + 12, (containerRef.current?.clientWidth || 400) - 230),
+                  left: Math.min(mousePos.x - (containerRef.current?.getBoundingClientRect().left || 0) + 12, (containerRef.current?.clientWidth || 400) - 310),
                   top: mousePos.y - (containerRef.current?.getBoundingClientRect().top || 0) - 40,
                 }}
               >
                 {hoveredEdge?.taskName && (
                   <>
-                    <p className="font-medium truncate">{hoveredEdge.taskName}</p>
+                    <p className="font-medium break-words">{hoveredEdge.taskName}</p>
                     {hoveredEdge.performer && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Rooli: {hoveredEdge.performer}
@@ -712,7 +735,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                 )}
                 {hoveredNode && !hoveredEdge?.taskName && (
                   <>
-                    <p className="font-medium truncate">{hoveredNode.label}</p>
+                    <p className="font-medium break-words">{hoveredNode.label}</p>
                     <p className="text-xs text-muted-foreground capitalize">{hoveredNode.type}</p>
                     {hoveredNode.performer && (
                       <p className="text-xs text-muted-foreground">
