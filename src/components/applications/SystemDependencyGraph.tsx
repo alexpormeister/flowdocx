@@ -39,138 +39,6 @@ interface GraphEdge {
   performer?: string;
 }
 
-interface GraphLabelLayout {
-  nodeId: string;
-  lines: string[];
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lineHeight: number;
-  fontSize: number;
-  fontWeight: number;
-  side: "left" | "right" | "top" | "bottom";
-}
-
-const GRAPH_CENTER = { x: 400, y: 300 };
-const LABEL_PADDING_X = 8;
-const LABEL_PADDING_Y = 6;
-const LABEL_GAP = 18;
-const LABEL_MARGIN = 10;
-const GRAPH_BOUNDS = { minX: 16, minY: 16, maxX: 784, maxY: 584 };
-
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-
-const splitLabelLines = (label: string, maxChars: number) => {
-  const words = label.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let currentLine = "";
-
-  for (const word of words) {
-    if (word.length > maxChars) {
-      if (currentLine) {
-        lines.push(currentLine);
-        currentLine = "";
-      }
-      for (let i = 0; i < word.length; i += maxChars) {
-        lines.push(word.slice(i, i + maxChars));
-      }
-      continue;
-    }
-
-    if (currentLine && `${currentLine} ${word}`.length > maxChars) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = currentLine ? `${currentLine} ${word}` : word;
-    }
-  }
-
-  if (currentLine) lines.push(currentLine);
-  return lines.length ? lines : [label];
-};
-
-const boxesOverlap = (
-  a: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
-  b: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
-  padding = LABEL_MARGIN
-) =>
-  a.x - padding < b.x + b.width &&
-  a.x + a.width + padding > b.x &&
-  a.y - padding < b.y + b.height &&
-  a.y + a.height + padding > b.y;
-
-const circleOverlapsBox = (
-  node: Pick<GraphNode, "x" | "y" | "radius">,
-  box: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
-  padding = 6
-) => {
-  const closestX = clamp(node.x, box.x - padding, box.x + box.width + padding);
-  const closestY = clamp(node.y, box.y - padding, box.y + box.height + padding);
-  const dx = node.x - closestX;
-  const dy = node.y - closestY;
-  return dx * dx + dy * dy < (node.radius + padding) * (node.radius + padding);
-};
-
-const pointInsideRect = (x: number, y: number, rect: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">, padding = 4) =>
-  x >= rect.x - padding &&
-  x <= rect.x + rect.width + padding &&
-  y >= rect.y - padding &&
-  y <= rect.y + rect.height + padding;
-
-const segmentsIntersect = (
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  cx: number,
-  cy: number,
-  dx: number,
-  dy: number
-) => {
-  const ccw = (px: number, py: number, qx: number, qy: number, rx: number, ry: number) =>
-    (ry - py) * (qx - px) > (qy - py) * (rx - px);
-
-  return (
-    ccw(ax, ay, cx, cy, dx, dy) !== ccw(bx, by, cx, cy, dx, dy) &&
-    ccw(ax, ay, bx, by, cx, cy) !== ccw(ax, ay, bx, by, dx, dy)
-  );
-};
-
-const segmentIntersectsRect = (
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  rect: Pick<GraphLabelLayout, "x" | "y" | "width" | "height">,
-  padding = 4
-) => {
-  const left = rect.x - padding;
-  const right = rect.x + rect.width + padding;
-  const top = rect.y - padding;
-  const bottom = rect.y + rect.height + padding;
-
-  if (
-    Math.max(x1, x2) < left ||
-    Math.min(x1, x2) > right ||
-    Math.max(y1, y2) < top ||
-    Math.min(y1, y2) > bottom
-  ) {
-    return false;
-  }
-
-  if (pointInsideRect(x1, y1, rect, padding) || pointInsideRect(x2, y2, rect, padding)) {
-    return true;
-  }
-
-  return (
-    segmentsIntersect(x1, y1, x2, y2, left, top, right, top) ||
-    segmentsIntersect(x1, y1, x2, y2, right, top, right, bottom) ||
-    segmentsIntersect(x1, y1, x2, y2, right, bottom, left, bottom) ||
-    segmentsIntersect(x1, y1, x2, y2, left, bottom, left, top)
-  );
-};
-
 const PROCESS_COLORS = [
   "hsl(var(--primary))",
   "hsl(210, 70%, 55%)",
@@ -528,126 +396,193 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
 
   const getNodeById = (id: string) => nodes.find((n) => n.id === id);
 
-  const totalTaskCount = useMemo(() => {
-    if (!selectedCenter || searchMode !== "system") return 0;
-    const details = systemProcessMap[selectedCenter] || [];
-    return details.reduce((s, d) => s + d.steps.length, 0);
-  }, [selectedCenter, searchMode, systemProcessMap]);
-
+  // Compute collision-free label positions
   const labelLayouts = useMemo(() => {
-    if (!nodes.length) return [] as GraphLabelLayout[];
+    if (nodes.length === 0) return new Map<string, { x: number; y: number; lines: string[]; fontSize: number; fontWeight: number; anchor: string; width: number; height: number }>();
 
-    const nodeLookup = new Map(nodes.map((node) => [node.id, node]));
-    const connectedEdges = edges
-      .map((edge) => {
-        const source = nodeLookup.get(edge.source);
-        const target = nodeLookup.get(edge.target);
-        if (!source || !target) return null;
-        return { x1: source.x, y1: source.y, x2: target.x, y2: target.y };
-      })
-      .filter((edge): edge is { x1: number; y1: number; x2: number; y2: number } => !!edge);
+    const layouts = new Map<string, { x: number; y: number; lines: string[]; fontSize: number; fontWeight: number; anchor: string; width: number; height: number }>();
 
-    const layouts = nodes.map<GraphLabelLayout>((node) => {
-      const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
-      const fontWeight = node.type === "system" ? 700 : node.type === "process" ? 600 : 400;
-      const lines = splitLabelLines(node.label, node.type === "task" ? 18 : 22);
-      const lineHeight = fontSize + 3;
-      const longestLine = Math.max(...lines.map((line) => line.length), 1);
-      const width = Math.max(76, longestLine * fontSize * 0.58 + LABEL_PADDING_X * 2);
-      const height = lines.length * lineHeight + LABEL_PADDING_Y * 2;
-      const dx = node.x - GRAPH_CENTER.x;
-      const dy = node.y - GRAPH_CENTER.y;
-
-      let side: GraphLabelLayout["side"] = "bottom";
-      let x = node.x - width / 2;
-      let y = node.y + node.radius + LABEL_GAP;
-
-      if (Math.abs(dx) < 24 && Math.abs(dy) < 24) {
-        side = "top";
-        y = node.y - node.radius - LABEL_GAP - height;
-      } else if (Math.abs(dx) >= Math.abs(dy)) {
-        side = dx >= 0 ? "right" : "left";
-        x = dx >= 0 ? node.x + node.radius + LABEL_GAP : node.x - node.radius - LABEL_GAP - width;
-        y = node.y - height / 2;
-      } else {
-        side = dy >= 0 ? "bottom" : "top";
-        x = node.x - width / 2;
-        y = dy >= 0 ? node.y + node.radius + LABEL_GAP : node.y - node.radius - LABEL_GAP - height;
+    // Helper: split label into lines
+    const splitLines = (label: string, maxChars: number) => {
+      const words = label.split(/\s+/);
+      const lines: string[] = [];
+      let cur = "";
+      for (const w of words) {
+        if (cur && (cur + " " + w).length > maxChars) { lines.push(cur); cur = w; }
+        else cur = cur ? cur + " " + w : w;
       }
-
-      return {
-        nodeId: node.id,
-        lines,
-        x: clamp(x, GRAPH_BOUNDS.minX, GRAPH_BOUNDS.maxX - width),
-        y: clamp(y, GRAPH_BOUNDS.minY, GRAPH_BOUNDS.maxY - height),
-        width,
-        height,
-        lineHeight,
-        fontSize,
-        fontWeight,
-        side,
-      };
-    });
-
-    const pushOutward = (label: GraphLabelLayout, amount: number) => {
-      if (label.side === "left") label.x -= amount;
-      if (label.side === "right") label.x += amount;
-      if (label.side === "top") label.y -= amount;
-      if (label.side === "bottom") label.y += amount;
-      label.x = clamp(label.x, GRAPH_BOUNDS.minX, GRAPH_BOUNDS.maxX - label.width);
-      label.y = clamp(label.y, GRAPH_BOUNDS.minY, GRAPH_BOUNDS.maxY - label.height);
+      if (cur) lines.push(cur);
+      return lines;
     };
 
-    for (let pass = 0; pass < 12; pass += 1) {
-      for (let i = 0; i < layouts.length; i += 1) {
-        const current = layouts[i];
+    // First pass: compute initial label positions and bounding boxes
+    for (const node of nodes) {
+      const fontSize = node.type === "task" ? 9 : node.type === "process" ? 11 : 12;
+      const fontWeight = node.type === "system" ? 700 : node.type === "process" ? 600 : 400;
+      const maxChars = node.type === "task" ? 18 : 22;
+      const lines = splitLines(node.label, maxChars);
+      const lineHeight = fontSize + 3;
+      const maxLineLen = Math.max(...lines.map(l => l.length));
+      const estWidth = maxLineLen * fontSize * 0.6 + 8;
+      const estHeight = lines.length * lineHeight + 4;
 
-        for (let j = 0; j < layouts.length; j += 1) {
+      // Place label on the side away from center (400,300)
+      const cx = 400, cy = 300;
+      const dx = node.x - cx;
+      const dy = node.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // For center node, place below
+      const offset = node.radius + 14;
+      let lx: number, ly: number, anchor: string;
+      if (dist < 10) {
+        lx = node.x;
+        ly = node.y + offset + estHeight / 2;
+        anchor = "middle";
+      } else {
+        // Place along outward direction
+        lx = node.x + nx * offset;
+        ly = node.y + ny * offset + estHeight / 2;
+        // Choose anchor based on direction
+        if (Math.abs(nx) > 0.5) {
+          anchor = nx > 0 ? "start" : "end";
+          ly = node.y + ny * (node.radius + 6);
+        } else {
+          anchor = "middle";
+          ly = node.y + (ny > 0 ? 1 : -1) * offset + (ny > 0 ? estHeight / 2 : -estHeight / 2);
+        }
+      }
+
+      layouts.set(node.id, { x: lx, y: ly, lines, fontSize, fontWeight, anchor, width: estWidth, height: estHeight });
+    }
+
+    // Helper: get bounding rect of a label
+    const getRect = (l: { x: number; y: number; width: number; height: number; anchor: string }) => {
+      let left: number;
+      if (l.anchor === "start") left = l.x;
+      else if (l.anchor === "end") left = l.x - l.width;
+      else left = l.x - l.width / 2;
+      return { left, top: l.y - l.height / 2, right: left + l.width, bottom: l.y + l.height / 2 };
+    };
+
+    // Helper: check rect overlap
+    const rectsOverlap = (a: ReturnType<typeof getRect>, b: ReturnType<typeof getRect>, pad = 4) =>
+      a.left - pad < b.right && a.right + pad > b.left && a.top - pad < b.bottom && a.bottom + pad > b.top;
+
+    // Helper: check if rect overlaps a circle
+    const rectOverlapsCircle = (r: ReturnType<typeof getRect>, cx: number, cy: number, cr: number, pad = 6) => {
+      const closestX = Math.max(r.left - pad, Math.min(cx, r.right + pad));
+      const closestY = Math.max(r.top - pad, Math.min(cy, r.bottom + pad));
+      const dx = cx - closestX, dy = cy - closestY;
+      return dx * dx + dy * dy < (cr + pad) * (cr + pad);
+    };
+
+    // Helper: check if rect overlaps a line segment
+    const rectOverlapsLine = (r: ReturnType<typeof getRect>, x1: number, y1: number, x2: number, y2: number, pad = 4) => {
+      const rl = r.left - pad, rt = r.top - pad, rr = r.right + pad, rb = r.bottom + pad;
+      // Cohen-Sutherland style: check if line passes through padded rect
+      const outCode = (x: number, y: number) => {
+        let c = 0;
+        if (x < rl) c |= 1; else if (x > rr) c |= 2;
+        if (y < rt) c |= 4; else if (y > rb) c |= 8;
+        return c;
+      };
+      let c1 = outCode(x1, y1), c2 = outCode(x2, y2);
+      let ax = x1, ay = y1, bx = x2, by = y2;
+      for (let i = 0; i < 10; i++) {
+        if (!(c1 | c2)) return true; // both inside
+        if (c1 & c2) return false; // both same side
+        const c = c1 || c2;
+        let x = 0, y = 0;
+        if (c & 8) { x = ax + (bx - ax) * (rb - ay) / (by - ay); y = rb; }
+        else if (c & 4) { x = ax + (bx - ax) * (rt - ay) / (by - ay); y = rt; }
+        else if (c & 2) { y = ay + (by - ay) * (rr - ax) / (bx - ax); x = rr; }
+        else if (c & 1) { y = ay + (by - ay) * (rl - ax) / (bx - ax); x = rl; }
+        if (c === c1) { ax = x; ay = y; c1 = outCode(ax, ay); }
+        else { bx = x; by = y; c2 = outCode(bx, by); }
+      }
+      return true;
+    };
+
+    // Get all edge segments
+    const edgeSegments = edges.map(e => {
+      const s = nodes.find(n => n.id === e.source);
+      const t = nodes.find(n => n.id === e.target);
+      return s && t ? { x1: s.x, y1: s.y, x2: t.x, y2: t.y } : null;
+    }).filter(Boolean) as { x1: number; y1: number; x2: number; y2: number }[];
+
+    // Iterative collision resolution (20 passes)
+    for (let pass = 0; pass < 20; pass++) {
+      let anyMoved = false;
+      const entries = Array.from(layouts.entries());
+
+      for (let i = 0; i < entries.length; i++) {
+        const [nodeId, layout] = entries[i];
+        const node = nodes.find(n => n.id === nodeId)!;
+        const rect = getRect(layout);
+
+        // Push away from all node circles
+        for (const otherNode of nodes) {
+          if (rectOverlapsCircle(rect, otherNode.x, otherNode.y, otherNode.radius)) {
+            // Move label further away from the overlapping circle
+            const dx = layout.x - otherNode.x;
+            const dy = layout.y - otherNode.y;
+            const d = Math.sqrt(dx * dx + dy * dy) || 1;
+            layout.x += (dx / d) * 8;
+            layout.y += (dy / d) * 8;
+            anyMoved = true;
+          }
+        }
+
+        // Push away from edges
+        for (const seg of edgeSegments) {
+          const r = getRect(layout);
+          if (rectOverlapsLine(r, seg.x1, seg.y1, seg.x2, seg.y2)) {
+            // Move perpendicular to the edge
+            const edx = seg.x2 - seg.x1, edy = seg.y2 - seg.y1;
+            const len = Math.sqrt(edx * edx + edy * edy) || 1;
+            // perpendicular
+            let px = -edy / len, py = edx / len;
+            // pick direction away from edge midpoint relative to label
+            const mx = (seg.x1 + seg.x2) / 2, my = (seg.y1 + seg.y2) / 2;
+            const toLabel = (layout.x - mx) * px + (layout.y - my) * py;
+            if (toLabel < 0) { px = -px; py = -py; }
+            layout.x += px * 10;
+            layout.y += py * 10;
+            anyMoved = true;
+          }
+        }
+
+        // Push away from other labels
+        for (let j = 0; j < entries.length; j++) {
           if (i === j) continue;
-          const other = layouts[j];
-          if (!boxesOverlap(current, other)) continue;
-
-          const overlapX = Math.min(current.x + current.width, other.x + other.width) - Math.max(current.x, other.x);
-          const overlapY = Math.min(current.y + current.height, other.y + other.height) - Math.max(current.y, other.y);
-
-          if (current.side === "left" || current.side === "right") {
-            current.y += current.y <= other.y ? -(overlapY / 2 + LABEL_MARGIN) : overlapY / 2 + LABEL_MARGIN;
-            pushOutward(current, overlapX / 2 + 8);
-          } else {
-            current.x += current.x <= other.x ? -(overlapX / 2 + LABEL_MARGIN) : overlapX / 2 + LABEL_MARGIN;
-            pushOutward(current, overlapY / 2 + 8);
-          }
-
-          current.x = clamp(current.x, GRAPH_BOUNDS.minX, GRAPH_BOUNDS.maxX - current.width);
-          current.y = clamp(current.y, GRAPH_BOUNDS.minY, GRAPH_BOUNDS.maxY - current.height);
-        }
-
-        for (const node of nodes) {
-          if (node.id === current.nodeId) continue;
-          let safety = 0;
-          while (circleOverlapsBox(node, current) && safety < 8) {
-            pushOutward(current, 12);
-            safety += 1;
-          }
-        }
-
-        for (const edge of connectedEdges) {
-          let safety = 0;
-          while (segmentIntersectsRect(edge.x1, edge.y1, edge.x2, edge.y2, current) && safety < 8) {
-            pushOutward(current, 10);
-            safety += 1;
+          const [, other] = entries[j];
+          const otherRect = getRect(other);
+          const r = getRect(layout);
+          if (rectsOverlap(r, otherRect)) {
+            const dx = layout.x - other.x;
+            const dy = layout.y - other.y;
+            const d = Math.sqrt(dx * dx + dy * dy) || 1;
+            layout.x += (dx / d) * 6;
+            layout.y += (dy / d) * 6;
+            anyMoved = true;
           }
         }
       }
+
+      if (!anyMoved) break;
     }
 
     return layouts;
   }, [nodes, edges]);
 
-  const labelLayoutMap = useMemo(
-    () => new Map(labelLayouts.map((layout) => [layout.nodeId, layout])),
-    [labelLayouts]
-  );
+  const totalTaskCount = useMemo(() => {
+    if (!selectedCenter || searchMode !== "system") return 0;
+    const details = systemProcessMap[selectedCenter] || [];
+    return details.reduce((s, d) => s + d.steps.length, 0);
+  }, [selectedCenter, searchMode, systemProcessMap]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-4">
@@ -852,7 +787,6 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                   const isEdgeConnected =
                     hoveredEdge &&
                     (hoveredEdge.source === node.id || hoveredEdge.target === node.id);
-                  const labelLayout = labelLayoutMap.get(node.id);
 
                   return (
                     <g
@@ -922,38 +856,45 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                       {node.type === "task" && (
                         <circle r={3} fill={node.color} />
                       )}
-                      {/* Label */}
-                      {labelLayout && (
-                        <g
-                          transform={`translate(${labelLayout.x - node.x}, ${labelLayout.y - node.y})`}
-                          pointerEvents="none"
-                        >
-                          <rect
-                            x={0}
-                            y={0}
-                            width={labelLayout.width}
-                            height={labelLayout.height}
-                            rx={8}
-                            fill="hsl(var(--card))"
-                            fillOpacity={0.96}
-                            stroke="hsl(var(--border))"
-                            strokeWidth={1}
-                          />
-                          <text
-                            x={LABEL_PADDING_X}
-                            y={LABEL_PADDING_Y + labelLayout.fontSize}
-                            fill="hsl(var(--foreground))"
-                            fontSize={labelLayout.fontSize}
-                            fontWeight={labelLayout.fontWeight}
-                          >
-                            {labelLayout.lines.map((line, li) => (
-                              <tspan key={li} x={LABEL_PADDING_X} y={LABEL_PADDING_Y + labelLayout.fontSize + li * labelLayout.lineHeight}>
-                                {line}
-                              </tspan>
-                            ))}
-                          </text>
-                        </g>
-                      )}
+                      {/* Label - positioned via collision-free layout */}
+                      {(() => {
+                        const layout = labelLayouts.get(node.id);
+                        if (!layout) return null;
+                        const lx = layout.x - node.x;
+                        const ly = layout.y - node.y;
+                        const lineHeight = layout.fontSize + 3;
+                        const startY = ly - ((layout.lines.length - 1) * lineHeight) / 2;
+                        return (
+                          <>
+                            {/* Background for readability */}
+                            <rect
+                              x={layout.anchor === "start" ? lx - 2 : layout.anchor === "end" ? lx - layout.width + 2 : lx - layout.width / 2 - 2}
+                              y={startY - layout.fontSize}
+                              width={layout.width + 4}
+                              height={layout.lines.length * lineHeight + 4}
+                              rx={3}
+                              fill="hsl(var(--card))"
+                              fillOpacity={0.92}
+                              stroke="hsl(var(--border))"
+                              strokeWidth={0.5}
+                              strokeOpacity={0.5}
+                            />
+                            <text
+                              textAnchor={layout.anchor}
+                              fill="currentColor"
+                              className="text-foreground"
+                              fontSize={layout.fontSize}
+                              fontWeight={layout.fontWeight}
+                            >
+                              {layout.lines.map((line, li) => (
+                                <tspan key={li} x={lx} y={startY + li * lineHeight}>
+                                  {line}
+                                </tspan>
+                              ))}
+                            </text>
+                          </>
+                        );
+                      })()}
                     </g>
                   );
                 })}
