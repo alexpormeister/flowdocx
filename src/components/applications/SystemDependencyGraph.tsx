@@ -725,7 +725,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
               >
                 {hoveredEdge?.taskName && (
                   <>
-                    <p className="font-medium truncate">{hoveredEdge.taskName}</p>
+                    <p className="font-medium break-words">{hoveredEdge.taskName}</p>
                     {hoveredEdge.performer && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Rooli: {hoveredEdge.performer}
