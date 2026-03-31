@@ -717,9 +717,9 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
             {/* Tooltip */}
             {(hoveredEdge?.taskName || hoveredNode) && (
               <div
-                className="absolute pointer-events-none bg-popover border rounded-lg shadow-lg px-3 py-2 text-sm z-50 max-w-[220px]"
+                className="absolute pointer-events-none bg-popover border rounded-lg shadow-lg px-3 py-2 text-sm z-50 max-w-[300px]"
                 style={{
-                  left: Math.min(mousePos.x - (containerRef.current?.getBoundingClientRect().left || 0) + 12, (containerRef.current?.clientWidth || 400) - 230),
+                  left: Math.min(mousePos.x - (containerRef.current?.getBoundingClientRect().left || 0) + 12, (containerRef.current?.clientWidth || 400) - 310),
                   top: mousePos.y - (containerRef.current?.getBoundingClientRect().top || 0) - 40,
                 }}
               >
