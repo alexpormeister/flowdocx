@@ -644,6 +644,11 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     return layouts;
   }, [nodes, edges]);
 
+  const labelLayoutMap = useMemo(
+    () => new Map(labelLayouts.map((layout) => [layout.nodeId, layout])),
+    [labelLayouts]
+  );
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-4">
       {/* Controls */}
@@ -847,7 +852,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                   const isEdgeConnected =
                     hoveredEdge &&
                     (hoveredEdge.source === node.id || hoveredEdge.target === node.id);
-                  const labelLayout = labelLayouts.find((layout) => layout.nodeId === node.id);
+                  const labelLayout = labelLayoutMap.get(node.id);
 
                   return (
                     <g
