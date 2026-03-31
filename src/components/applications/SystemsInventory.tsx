@@ -163,7 +163,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         const steps = (project.process_steps as any[]) || [];
         for (const step of steps) {
           if ((step.system || []).includes(tag.tag_name) && step.performer) {
-            performerNames.add(step.performer.toLowerCase());
+            // Strip brackets e.g. "[Aspa PEM]" -> "aspa pem"
+            const raw = step.performer.replace(/^\[|\]$/g, '').trim().toLowerCase();
+            if (raw) performerNames.add(raw);
           }
         }
       }
