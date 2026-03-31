@@ -735,7 +735,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                 )}
                 {hoveredNode && !hoveredEdge?.taskName && (
                   <>
-                    <p className="font-medium truncate">{hoveredNode.label}</p>
+                    <p className="font-medium break-words">{hoveredNode.label}</p>
                     <p className="text-xs text-muted-foreground capitalize">{hoveredNode.type}</p>
                     {hoveredNode.performer && (
                       <p className="text-xs text-muted-foreground">
