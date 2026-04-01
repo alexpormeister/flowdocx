@@ -69,6 +69,9 @@ export default function Applications() {
         getOrganizationGroupsWithPositions(orgId),
       ]);
 
+      // Resolve position names for groups
+      const positionMap = new Map(positions.map((p) => [p.id, p.name]));
+
       await exportOrgZip({
         orgId,
         orgName: selectedOrg.name,
@@ -79,7 +82,7 @@ export default function Applications() {
         groups: groups.map((g) => ({
           id: g.id,
           name: g.name,
-          positionNames: g.positions?.map((p: any) => p.name) || [],
+          positionNames: g.position_ids.map((pid) => positionMap.get(pid) || "—"),
         })),
         systemTags: tags.map((t: any) => ({
           tag_name: t.tag_name,
