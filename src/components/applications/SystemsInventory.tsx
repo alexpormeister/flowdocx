@@ -703,6 +703,17 @@ function ImpactAnalysisPanel({
         Toggle systems off to simulate outages and see affected processes.
       </p>
 
+      {/* Impact search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search systems..."
+          value={impactSearch}
+          onChange={(e) => setImpactSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {/* System toggles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {sortedTags.map((tagName) => {
