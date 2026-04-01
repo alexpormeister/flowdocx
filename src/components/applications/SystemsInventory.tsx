@@ -684,9 +684,14 @@ function ImpactAnalysisPanel({
   orgId: string;
 }) {
   const navigate = useNavigate();
+  const [impactSearch, setImpactSearch] = useState("");
+
   const sortedTags = useMemo(() => {
-    return Object.keys(tagProjectMap).sort((a, b) => a.localeCompare(b, "fi", { sensitivity: "base" }));
-  }, [tagProjectMap]);
+    const keys = Object.keys(tagProjectMap);
+    const q = impactSearch.toLowerCase();
+    const filtered = q ? keys.filter((k) => k.toLowerCase().includes(q)) : keys;
+    return filtered.sort((a, b) => a.localeCompare(b, "fi", { sensitivity: "base" }));
+  }, [tagProjectMap, impactSearch]);
 
   return (
     <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
