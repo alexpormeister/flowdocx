@@ -2,7 +2,16 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getOrganizations } from "@/lib/organizationApi";
+import {
+  getOrganizations,
+  getOrganizationTags,
+  getOrganizationPositions,
+  getOrganizationMembers,
+  getOrganizationGroupsWithPositions,
+} from "@/lib/organizationApi";
+import { getProjects, getFolders } from "@/lib/api";
+import { getAllSystemTagGroups } from "@/lib/presentationApi";
+import { exportOrgZip } from "@/lib/orgExportZip";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -11,13 +20,15 @@ import {
   Users,
   GitBranch,
   LayoutGrid,
+  Heart,
+  Download,
 } from "lucide-react";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
 import SystemsInventory from "@/components/applications/SystemsInventory";
 import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
 import CustomerLifecyclePanel from "@/components/applications/CustomerLifecyclePanel";
-import { Heart } from "lucide-react";
+import { toast } from "sonner";
 
 type ToolTab = "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle";
 
@@ -35,6 +46,7 @@ export default function Applications() {
   const [searchParams] = useSearchParams();
   const orgId = searchParams.get("org");
   const [activeTab, setActiveTab] = useState<ToolTab>("systems");
+  const [exporting, setExporting] = useState(false);
 
   const { data: organizations = [] } = useQuery({
     queryKey: ["organizations"],
@@ -43,6 +55,50 @@ export default function Applications() {
   });
 
   const selectedOrg = organizations.find((o) => o.id === orgId);
+
+  const handleExportOrg = async () => {
+    if (!orgId || !selectedOrg) return;
+    setExporting(true);
+    try {
+      const [projects, folders, tags, positions, members, groups] = await Promise.all([
+        getProjects(),
+        getFolders(),
+        getOrganizationTags(orgId),
+        getOrganizationPositions(orgId),
+        getOrganizationMembers(orgId),
+        getOrganizationGroupsWithPositions(orgId),
+      ]);
+
+      // Resolve position names for groups
+      const positionMap = new Map(positions.map((p) => [p.id, p.name]));
+
+      await exportOrgZip({
+        orgId,
+        orgName: selectedOrg.name,
+        projects,
+        folders,
+        positions,
+        members,
+        groups: groups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          positionNames: g.position_ids.map((pid) => positionMap.get(pid) || "—"),
+        })),
+        systemTags: tags.map((t: any) => ({
+          tag_name: t.tag_name,
+          description: t.description,
+          link_url: t.link_url,
+          admin_position_id: t.admin_position_id,
+        })),
+      });
+      toast.success("Export valmis!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Export epäonnistui");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (!orgId || !selectedOrg) {
     return (
@@ -59,7 +115,17 @@ export default function Applications() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <AppWindow className="w-5 h-5 text-primary shrink-0 hidden sm:block" />
-        <h1 className="text-sm sm:text-lg font-semibold truncate">{selectedOrg.name} — Applications & Tools</h1>
+        <h1 className="text-sm sm:text-lg font-semibold truncate flex-1">{selectedOrg.name} — Applications & Tools</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 shrink-0"
+          onClick={handleExportOrg}
+          disabled={exporting}
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export ORG"}</span>
+        </Button>
       </header>
 
       <div className="border-b bg-card/50 px-4 md:px-6 shrink-0">
