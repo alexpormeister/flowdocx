@@ -230,7 +230,6 @@ export function OrganizationSettings({
     setPrimaryColor(organization.primary_color || "#0f172a");
     setAccentColor(organization.accent_color || "#0891b2");
     setOrgName(organization.name);
-    setOrgNotes(organization.notes || "");
   }, [organization]);
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
 
