@@ -1002,6 +1002,14 @@ export default function Dashboard() {
                   <FolderPlus className="w-4 h-4 mr-1" />
                   {t("dashboard.createFolder")}
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportBpmn}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  Import .bpmn
+                </Button>
               </div>
             </div>
 
