@@ -49,12 +49,15 @@ async function renderBpmnToPng(bpmnXml: string): Promise<Blob | null> {
 
     const viewer = new BpmnViewer({ container });
 
-    await new Promise<void>((resolve, reject) => {
-      viewer.importXML(bpmnXml, (err: any) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+    if (!bpmnXml || !bpmnXml.trim()) {
+      document.body.removeChild(container);
+      return null;
+    }
+
+    const result = await viewer.importXML(bpmnXml);
+    if (result.warnings && result.warnings.length) {
+      console.warn("BPMN import warnings:", result.warnings);
+    }
 
     const canvas = viewer.get("canvas") as any;
     canvas.zoom("fit-viewport");
