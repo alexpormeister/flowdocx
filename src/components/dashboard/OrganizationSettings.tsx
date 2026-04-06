@@ -512,10 +512,6 @@ export function OrganizationSettings({
                 <span className="hidden sm:inline">Share Links</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="notes" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("org.notes")}</span>
-            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
@@ -992,22 +988,6 @@ export function OrganizationSettings({
           )}
 
 
-          {/* Notes Tab */}
-          <TabsContent value="notes" className="space-y-4">
-            <Textarea
-              placeholder={t("org.notesPlaceholder")}
-              value={orgNotes}
-              onChange={(e) => setOrgNotes(e.target.value)}
-              disabled={!isAdmin}
-              rows={8}
-              className="resize-none"
-            />
-            {isAdmin && (
-              <Button onClick={handleSaveProfile} disabled={isSubmitting}>
-                {t("common.save")}
-              </Button>
-            )}
-          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>

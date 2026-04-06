@@ -737,6 +737,51 @@ export default function Dashboard() {
             onCreateOrg={async (name, businessId) => {
               await createOrgMutation.mutateAsync({ name, businessId });
             }}
+            onCreateOrgWithWizard={async (data) => {
+              // 1. Create org
+              const org = await createOrganization(data.name);
+              // 2. Update colors
+              await updateOrganization(org.id, {
+                primary_color: data.primaryColor,
+                accent_color: data.accentColor,
+              });
+              // 3. Create structure positions
+              if (data.structureType === "demo") {
+                const { DEMO_STRUCTURE } = await import("@/components/dashboard/OrgCreationWizard");
+                const positionMap: Record<string, string> = {};
+                for (const pos of DEMO_STRUCTURE) {
+                  const created = await createOrganizationPosition(
+                    org.id,
+                    pos.name,
+                    pos.parent_position_id ? positionMap[pos.parent_position_id] : undefined
+                  );
+                  positionMap[pos.id] = created.id;
+                }
+              }
+              // 4. Create main folder (org name) and department folders
+              const mainFolder = await createFolder(data.name, "#0891b2", null, org.id);
+              const createDeptFolders = async (
+                departments: { id: string; name: string; children: any[] }[],
+                parentId: string
+              ) => {
+                for (const dept of departments) {
+                  if (!dept.name.trim()) continue;
+                  const folder = await createFolder(dept.name.trim(), "#0891b2", parentId, org.id);
+                  if (dept.children && dept.children.length > 0) {
+                    await createDeptFolders(dept.children, folder.id);
+                  }
+                }
+              };
+              if (data.departments.length > 0) {
+                await createDeptFolders(data.departments, mainFolder.id);
+              }
+              // 5. Refresh and select
+              queryClient.invalidateQueries({ queryKey: ["organizations"] });
+              queryClient.invalidateQueries({ queryKey: ["folders"] });
+              queryClient.invalidateQueries({ queryKey: ["org-positions"] });
+              setSelectedOrgId(org.id);
+              toast.success("Organisaatio luotu!");
+            }}
             isCreating={createOrgMutation.isPending}
             triggerStyle={hasOrgTheme ? { backgroundColor: "rgba(255,255,255,0.15)", color: "#fff", borderColor: "rgba(255,255,255,0.25)" } : undefined}
           />
