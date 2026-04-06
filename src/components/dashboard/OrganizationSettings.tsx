@@ -7,7 +7,7 @@ import { exportStructurePng, exportGroupsPng } from "@/lib/orgExportPng";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -37,7 +37,7 @@ interface OrganizationSettingsProps {
   folders: Folder[];
   folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
-  onUpdateOrg: (updates: { name?: string; notes?: string; primary_color?: string; accent_color?: string }) => Promise<void>;
+  onUpdateOrg: (updates: { name?: string; primary_color?: string; accent_color?: string }) => Promise<void>;
   onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
   onUpdateMemberRole: (memberId: string, role: OrgRole) => Promise<void>;
   onUpdateMemberDetails: (memberId: string, updates: { title?: string; position_id?: string | null }) => Promise<void>;
