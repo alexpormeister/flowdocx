@@ -405,8 +405,9 @@ export default function Dashboard() {
         const name = file.name.replace(/\.(bpmn|xml)$/i, "");
         await createProjectMutation.mutateAsync({
           name,
-          bpmnXml,
-          folderId: selectedFolder,
+          bpmn_xml: bpmnXml,
+          folder_id: selectedFolder || undefined,
+          organization_id: selectedOrgId || undefined,
         });
         toast.success(`"${name}" tuotu onnistuneesti`);
       } catch (err) {
