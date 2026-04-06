@@ -61,10 +61,7 @@ export async function togglePresentationToken(id: string, isActive: boolean): Pr
 
 export async function lookupPresentationToken(token: string): Promise<PresentationToken | null> {
   const { data, error } = await supabase
-    .from("presentation_tokens")
-    .select("*")
-    .eq("token", token)
-    .eq("is_active", true)
+    .rpc("lookup_presentation_token", { _token: token })
     .maybeSingle();
   if (error) throw error;
   return data as PresentationToken | null;
