@@ -950,6 +950,8 @@ export default function Dashboard() {
             {/* Project Stats */}
             <ProjectStats
               projects={displayedProjects}
+              allOrgProjects={filteredProjectsByOrg}
+              isRootView={!!selectedOrgId && !selectedFolder && !showRootProjects}
               currentFolderName={
                 showRootProjects ? t("dashboard.desktop") : currentPath[currentPath.length - 1]?.name || null
               }

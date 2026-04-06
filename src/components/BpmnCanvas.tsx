@@ -5,6 +5,25 @@ import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus, Maximize } from "lucide-react";
 
+function colorBpmnElements(modeler: BpmnModeler) {
+  try {
+    const elementRegistry = modeler.get("elementRegistry") as any;
+    const modeling = modeler.get("modeling") as any;
+    const elements = elementRegistry.getAll();
+    for (const el of elements) {
+      if (el.type === "bpmn:StartEvent") {
+        modeling.setColor([el], { fill: "#22c55e", stroke: "#16a34a" });
+      } else if (el.type === "bpmn:EndEvent") {
+        modeling.setColor([el], { fill: "#ef4444", stroke: "#dc2626" });
+      } else if (el.type?.includes("Gateway")) {
+        modeling.setColor([el], { fill: "#eab308", stroke: "#ca8a04" });
+      }
+    }
+  } catch (e) {
+    console.warn("Could not color BPMN elements:", e);
+  }
+}
+
 const EMPTY_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -55,6 +74,7 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
     modeler.importXML(EMPTY_BPMN).then(() => {
       const canvas = modeler.get("canvas") as any;
       canvas.zoom("fit-viewport");
+      colorBpmnElements(modeler);
       onModelerReady?.(modeler);
     });
 
@@ -128,4 +148,4 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
   );
 }
 
-export { EMPTY_BPMN };
+export { EMPTY_BPMN, colorBpmnElements };
