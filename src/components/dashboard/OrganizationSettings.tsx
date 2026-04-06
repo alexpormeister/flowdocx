@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPresentationTokens, createPresentationToken, deletePresentationToken, togglePresentationToken } from "@/lib/presentationApi";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -206,7 +206,7 @@ export function OrganizationSettings({
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [orgName, setOrgName] = useState(organization.name);
-  const [orgNotes, setOrgNotes] = useState(organization.notes || "");
+  
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("viewer");
   const [inviteTitle, setInviteTitle] = useState("");
@@ -237,7 +237,7 @@ export function OrganizationSettings({
   const handleSaveProfile = async () => {
     setIsSubmitting(true);
     try {
-      await onUpdateOrg({ name: orgName, notes: orgNotes || undefined });
+      await onUpdateOrg({ name: orgName });
     } finally {
       setIsSubmitting(false);
     }
