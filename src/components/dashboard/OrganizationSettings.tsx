@@ -485,7 +485,7 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 h-auto">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
             <TabsTrigger value="profile" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Building2 className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.profile")}</span>
