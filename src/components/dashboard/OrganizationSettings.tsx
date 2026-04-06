@@ -54,6 +54,7 @@ interface OrganizationSettingsProps {
   onDeleteGroup: (groupId: string) => Promise<void>;
   onAddGroupPosition: (groupId: string, positionId: string) => Promise<void>;
   onRemoveGroupPosition: (groupId: string, positionId: string) => Promise<void>;
+  onDeleteOrg?: () => Promise<void>;
 }
 
 const roleIcons: Record<OrgRole, typeof Crown> = {
