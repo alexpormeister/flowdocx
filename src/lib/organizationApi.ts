@@ -94,6 +94,15 @@ export async function updateOrganization(
   return data;
 }
 
+export async function deleteOrganization(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("organizations")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
 // Organization Members
 export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
   const { data, error } = await supabase
