@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Building2, Plus, Check, ChevronsUpDown, Wand2, FileText } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Popover,
@@ -26,6 +25,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { OrgCreationWizard, type DepartmentNode } from "./OrgCreationWizard";
 import type { Organization } from "@/lib/organizationApi";
 
 interface OrganizationSelectorProps {
@@ -33,6 +33,13 @@ interface OrganizationSelectorProps {
   selectedOrgId: string | null;
   onSelectOrg: (orgId: string | null) => void;
   onCreateOrg: (name: string, businessId?: string) => Promise<void>;
+  onCreateOrgWithWizard?: (data: {
+    name: string;
+    primaryColor: string;
+    accentColor: string;
+    structureType: "blank" | "demo";
+    departments: DepartmentNode[];
+  }) => Promise<void>;
   isCreating?: boolean;
   triggerStyle?: React.CSSProperties;
 }
@@ -42,21 +49,24 @@ export function OrganizationSelector({
   selectedOrgId,
   onSelectOrg,
   onCreateOrg,
+  onCreateOrgWithWizard,
   isCreating,
   triggerStyle,
 }: OrganizationSelectorProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [modeDialogOpen, setModeDialogOpen] = useState(false);
+  const [blankDialogOpen, setBlankDialogOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
   const selectedOrg = organizations.find((o) => o.id === selectedOrgId);
 
-  const handleCreate = async () => {
+  const handleCreateBlank = async () => {
     if (!newOrgName.trim()) return;
     await onCreateOrg(newOrgName.trim());
     setNewOrgName("");
-    setCreateDialogOpen(false);
+    setBlankDialogOpen(false);
   };
 
   return (
@@ -122,7 +132,7 @@ export function OrganizationSelector({
                 <CommandItem
                   onSelect={() => {
                     setOpen(false);
-                    setCreateDialogOpen(true);
+                    setModeDialogOpen(true);
                   }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
@@ -134,7 +144,53 @@ export function OrganizationSelector({
         </PopoverContent>
       </Popover>
 
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      {/* Mode selection dialog */}
+      <Dialog open={modeDialogOpen} onOpenChange={setModeDialogOpen}>
+        <DialogContent className="max-w-md w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              {t("org.createOrganization")}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Valitse miten haluat luoda organisaation</p>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <button
+              onClick={() => {
+                setModeDialogOpen(false);
+                setWizardOpen(true);
+              }}
+              className="p-5 rounded-xl border-2 border-primary/30 bg-primary/5 text-left transition-all hover:shadow-lg hover:border-primary hover:scale-[1.02] group"
+            >
+              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                <Wand2 className="w-6 h-6 text-primary" />
+              </div>
+              <p className="text-sm font-semibold">Nexus Process Wizard</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ohjattu luonti: nimi, värit, rakenne ja osastot
+              </p>
+            </button>
+            <button
+              onClick={() => {
+                setModeDialogOpen(false);
+                setBlankDialogOpen(true);
+              }}
+              className="p-5 rounded-xl border-2 border-border text-left transition-all hover:shadow-lg hover:border-muted-foreground/40 hover:scale-[1.02] group"
+            >
+              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mb-3 group-hover:bg-muted/80 transition-colors">
+                <FileText className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-semibold">Aloita tyhjästä</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Luo tyhjä organisaatio ja muokkaa myöhemmin
+              </p>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Blank create dialog */}
+      <Dialog open={blankDialogOpen} onOpenChange={setBlankDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -152,7 +208,7 @@ export function OrganizationSelector({
               />
             </div>
             <Button
-              onClick={handleCreate}
+              onClick={handleCreateBlank}
               disabled={!newOrgName.trim() || isCreating}
               className="w-full"
             >
@@ -161,6 +217,19 @@ export function OrganizationSelector({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Wizard dialog */}
+      <OrgCreationWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        onComplete={async (data) => {
+          if (onCreateOrgWithWizard) {
+            await onCreateOrgWithWizard(data);
+          }
+          setWizardOpen(false);
+        }}
+        isCreating={isCreating || false}
+      />
     </div>
   );
 }
