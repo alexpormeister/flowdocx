@@ -379,6 +379,43 @@ export default function Dashboard() {
     },
   });
 
+  const deleteOrgMutation = useMutation({
+    mutationFn: (orgId: string) => deleteOrganization(orgId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setSelectedOrgId(null);
+      toast.success("Organisaatio poistettu");
+    },
+    onError: (error) => {
+      toast.error("Poistaminen epäonnistui: " + (error as Error).message);
+    },
+  });
+
+  const handleImportBpmn = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".bpmn,.xml";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const bpmnXml = await file.text();
+        const name = file.name.replace(/\.(bpmn|xml)$/i, "");
+        await createProjectMutation.mutateAsync({
+          name,
+          bpmnXml,
+          folderId: selectedFolder,
+        });
+        toast.success(`"${name}" tuotu onnistuneesti`);
+      } catch (err) {
+        toast.error("Tuonti epäonnistui: " + (err as Error).message);
+      }
+    };
+    input.click();
+  };
+
   const inviteMemberMutation = useMutation({
     mutationFn: ({
       orgId,
