@@ -55,6 +55,7 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
     modeler.importXML(EMPTY_BPMN).then(() => {
       const canvas = modeler.get("canvas") as any;
       canvas.zoom("fit-viewport");
+      colorBpmnElements(modeler);
       onModelerReady?.(modeler);
     });
 
