@@ -41,6 +41,7 @@ import {
   addOrganizationTag,
   removeOrganizationTag,
   updateOrganization,
+  deleteOrganization,
   getCurrentUserMembership,
   createOrganizationPosition,
   updateOrganizationPosition,
