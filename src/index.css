@@ -123,3 +123,19 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* BPMN element colors: Start events = green, End events = red, Gateways = yellow */
+.djs-shape[data-element-id*="StartEvent"] .djs-visual circle {
+  fill: #22c55e !important;
+  stroke: #16a34a !important;
+}
+
+.djs-shape[data-element-id*="EndEvent"] .djs-visual circle {
+  fill: #ef4444 !important;
+  stroke: #dc2626 !important;
+}
+
+.djs-shape[data-element-id*="Gateway"] .djs-visual polygon {
+  fill: #eab308 !important;
+  stroke: #ca8a04 !important;
+}
