@@ -920,6 +920,25 @@ export type Database = {
         Args: { _folder_id: string; _organization_id: string; _user_id: string }
         Returns: boolean
       }
+      lookup_presentation_token: {
+        Args: { _token: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          token: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "presentation_tokens"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       org_role: "owner" | "admin" | "editor" | "viewer"
