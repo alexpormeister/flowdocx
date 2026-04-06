@@ -885,6 +885,9 @@ export default function Dashboard() {
               onRemoveGroupPosition={async (groupId, positionId) => {
                 await removeGroupPositionMutation.mutateAsync({ groupId, positionId });
               }}
+              onDeleteOrg={async () => {
+                await deleteOrgMutation.mutateAsync(selectedOrg.id);
+              }}
             />
           )}
           {selectedOrgId && (
