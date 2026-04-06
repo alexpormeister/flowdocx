@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, FileText, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
+import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPresentationTokens, createPresentationToken, deletePresentationToken, togglePresentationToken } from "@/lib/presentationApi";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -7,7 +7,7 @@ import { exportStructurePng, exportGroupsPng } from "@/lib/orgExportPng";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -37,7 +37,7 @@ interface OrganizationSettingsProps {
   folders: Folder[];
   folderRestrictions: MemberFolderRestriction[];
   currentUserRole: OrgRole | null;
-  onUpdateOrg: (updates: { name?: string; notes?: string; primary_color?: string; accent_color?: string }) => Promise<void>;
+  onUpdateOrg: (updates: { name?: string; primary_color?: string; accent_color?: string }) => Promise<void>;
   onInviteMember: (email: string, role: OrgRole, options?: { title?: string; positionId?: string; sendEmailInvite?: boolean }) => Promise<void>;
   onUpdateMemberRole: (memberId: string, role: OrgRole) => Promise<void>;
   onUpdateMemberDetails: (memberId: string, updates: { title?: string; position_id?: string | null }) => Promise<void>;
@@ -206,7 +206,7 @@ export function OrganizationSettings({
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [orgName, setOrgName] = useState(organization.name);
-  const [orgNotes, setOrgNotes] = useState(organization.notes || "");
+  
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("viewer");
   const [inviteTitle, setInviteTitle] = useState("");
@@ -230,14 +230,13 @@ export function OrganizationSettings({
     setPrimaryColor(organization.primary_color || "#0f172a");
     setAccentColor(organization.accent_color || "#0891b2");
     setOrgName(organization.name);
-    setOrgNotes(organization.notes || "");
   }, [organization]);
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
 
   const handleSaveProfile = async () => {
     setIsSubmitting(true);
     try {
-      await onUpdateOrg({ name: orgName, notes: orgNotes || undefined });
+      await onUpdateOrg({ name: orgName });
     } finally {
       setIsSubmitting(false);
     }
@@ -485,7 +484,7 @@ export function OrganizationSettings({
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 h-auto">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto">
             <TabsTrigger value="profile" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
               <Building2 className="w-4 h-4" />
               <span className="hidden sm:inline">{t("org.profile")}</span>
@@ -512,10 +511,6 @@ export function OrganizationSettings({
                 <span className="hidden sm:inline">Share Links</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="notes" className="text-xs flex flex-col sm:flex-row gap-1 py-2">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("org.notes")}</span>
-            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
@@ -992,22 +987,6 @@ export function OrganizationSettings({
           )}
 
 
-          {/* Notes Tab */}
-          <TabsContent value="notes" className="space-y-4">
-            <Textarea
-              placeholder={t("org.notesPlaceholder")}
-              value={orgNotes}
-              onChange={(e) => setOrgNotes(e.target.value)}
-              disabled={!isAdmin}
-              rows={8}
-              className="resize-none"
-            />
-            {isAdmin && (
-              <Button onClick={handleSaveProfile} disabled={isSubmitting}>
-                {t("common.save")}
-              </Button>
-            )}
-          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
