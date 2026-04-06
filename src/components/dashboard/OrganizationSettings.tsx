@@ -54,6 +54,7 @@ interface OrganizationSettingsProps {
   onDeleteGroup: (groupId: string) => Promise<void>;
   onAddGroupPosition: (groupId: string, positionId: string) => Promise<void>;
   onRemoveGroupPosition: (groupId: string, positionId: string) => Promise<void>;
+  onDeleteOrg?: () => Promise<void>;
 }
 
 const roleIcons: Record<OrgRole, typeof Crown> = {
@@ -202,6 +203,7 @@ export function OrganizationSettings({
   onDeleteGroup,
   onAddGroupPosition,
   onRemoveGroupPosition,
+  onDeleteOrg,
 }: OrganizationSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -527,6 +529,43 @@ export function OrganizationSettings({
               <Button onClick={handleSaveProfile} disabled={isSubmitting}>
                 {t("common.save")}
               </Button>
+            )}
+
+            {/* Delete Organization */}
+            {currentUserRole === "owner" && onDeleteOrg && (
+              <div className="mt-8 pt-6 border-t border-destructive/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-destructive">Poista organisaatio</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tämä poistaa organisaation ja kaikki siihen liittyvät tiedot pysyvästi.
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      const confirmed = window.confirm(
+                        `Haluatko varmasti poistaa organisaation "${organization.name}"? Tätä toimintoa ei voi peruuttaa.`
+                      );
+                      if (confirmed) {
+                        setIsSubmitting(true);
+                        try {
+                          await onDeleteOrg();
+                          setIsOpen(false);
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    className="gap-1.5"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Poista
+                  </Button>
+                </div>
+              </div>
             )}
           </TabsContent>
 

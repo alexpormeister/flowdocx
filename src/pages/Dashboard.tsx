@@ -41,6 +41,7 @@ import {
   addOrganizationTag,
   removeOrganizationTag,
   updateOrganization,
+  deleteOrganization,
   getCurrentUserMembership,
   createOrganizationPosition,
   updateOrganizationPosition,
@@ -76,7 +77,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid, LayoutTemplate, FolderPlus, Pencil } from "lucide-react";
+import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid, LayoutTemplate, FolderPlus, Pencil, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
@@ -377,6 +378,44 @@ export default function Dashboard() {
       toast.success(t("common.saved"));
     },
   });
+
+  const deleteOrgMutation = useMutation({
+    mutationFn: (orgId: string) => deleteOrganization(orgId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setSelectedOrgId(null);
+      toast.success("Organisaatio poistettu");
+    },
+    onError: (error) => {
+      toast.error("Poistaminen epäonnistui: " + (error as Error).message);
+    },
+  });
+
+  const handleImportBpmn = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".bpmn,.xml";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const bpmnXml = await file.text();
+        const name = file.name.replace(/\.(bpmn|xml)$/i, "");
+        await createProjectMutation.mutateAsync({
+          name,
+          bpmn_xml: bpmnXml,
+          folder_id: selectedFolder || undefined,
+          organization_id: selectedOrgId || undefined,
+        });
+        toast.success(`"${name}" tuotu onnistuneesti`);
+      } catch (err) {
+        toast.error("Tuonti epäonnistui: " + (err as Error).message);
+      }
+    };
+    input.click();
+  };
 
   const inviteMemberMutation = useMutation({
     mutationFn: ({
@@ -846,6 +885,9 @@ export default function Dashboard() {
               onRemoveGroupPosition={async (groupId, positionId) => {
                 await removeGroupPositionMutation.mutateAsync({ groupId, positionId });
               }}
+              onDeleteOrg={async () => {
+                await deleteOrgMutation.mutateAsync(selectedOrg.id);
+              }}
             />
           )}
           {selectedOrgId && (
@@ -962,6 +1004,14 @@ export default function Dashboard() {
                 >
                   <FolderPlus className="w-4 h-4 mr-1" />
                   {t("dashboard.createFolder")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportBpmn}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  Import .bpmn
                 </Button>
               </div>
             </div>
