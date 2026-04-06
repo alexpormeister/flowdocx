@@ -15,7 +15,7 @@ import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
-import BpmnCanvas, { colorBpmnElements } from "@/components/BpmnCanvas";
+import BpmnCanvas from "@/components/BpmnCanvas";
 import ProcessDataPanel, { type ProcessStep, type GatewayPath } from "@/components/ProcessDataPanel";
 import LaneNameEditor from "@/components/LaneNameEditor";
 import ExportMenu from "@/components/ExportMenu";
@@ -164,7 +164,6 @@ export default function Editor() {
         const canvas = modeler.get("canvas") as any;
         canvas.zoom("fit-viewport");
         lastSavedRef.current = project.bpmn_xml;
-        colorBpmnElements(modeler);
       });
     }
   }, [project, modeler]);

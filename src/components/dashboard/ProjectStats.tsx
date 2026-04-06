@@ -5,18 +5,14 @@ import { type Project } from "@/lib/api";
 
 interface ProjectStatsProps {
   projects: Project[];
-  allOrgProjects: Project[];
   currentFolderName: string | null;
-  isRootView: boolean;
 }
 
-export function ProjectStats({ projects, allOrgProjects, currentFolderName, isRootView }: ProjectStatsProps) {
+export function ProjectStats({ projects, currentFolderName }: ProjectStatsProps) {
   const { t } = useLanguage();
 
-  // When at root (no folder selected), show all org projects stats
-  const statsProjects = isRootView ? allOrgProjects : projects;
-
-  const allTags = statsProjects.flatMap((p) => p.system_tags);
+  // Count unique system tags across all filtered projects
+  const allTags = projects.flatMap((p) => p.system_tags);
   const uniqueTags = new Set(allTags);
 
   return (
@@ -27,7 +23,7 @@ export function ProjectStats({ projects, allOrgProjects, currentFolderName, isRo
             <FileText className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <p className="text-2xl font-bold">{statsProjects.length}</p>
+            <p className="text-2xl font-bold">{projects.length}</p>
             <p className="text-xs text-muted-foreground">
               {t("dashboard.totalProjects")}
             </p>
