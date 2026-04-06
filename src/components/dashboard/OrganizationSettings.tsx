@@ -203,6 +203,7 @@ export function OrganizationSettings({
   onDeleteGroup,
   onAddGroupPosition,
   onRemoveGroupPosition,
+  onDeleteOrg,
 }: OrganizationSettingsProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
