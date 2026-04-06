@@ -148,4 +148,4 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
   );
 }
 
-export { EMPTY_BPMN };
+export { EMPTY_BPMN, colorBpmnElements };

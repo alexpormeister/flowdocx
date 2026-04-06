@@ -164,6 +164,7 @@ export default function Editor() {
         const canvas = modeler.get("canvas") as any;
         canvas.zoom("fit-viewport");
         lastSavedRef.current = project.bpmn_xml;
+        colorBpmnElements(modeler);
       });
     }
   }, [project, modeler]);
