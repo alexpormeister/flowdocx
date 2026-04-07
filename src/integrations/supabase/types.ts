@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          organization_id: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          organization_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          organization_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       customer_lifecycle_connections: {
         Row: {
           created_at: string
@@ -184,6 +226,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      deleted_organizations: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          folders_data: Json | null
+          id: string
+          members_data: Json | null
+          org_data: Json
+          original_org_id: string
+          projects_data: Json | null
+          restored_at: string | null
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          folders_data?: Json | null
+          id?: string
+          members_data?: Json | null
+          org_data: Json
+          original_org_id: string
+          projects_data?: Json | null
+          restored_at?: string | null
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          folders_data?: Json | null
+          id?: string
+          members_data?: Json | null
+          org_data?: Json
+          original_org_id?: string
+          projects_data?: Json | null
+          restored_at?: string | null
+        }
+        Relationships: []
       }
       element_links: {
         Row: {
@@ -365,6 +443,41 @@ export type Database = {
           },
         ]
       }
+      organization_feature_flags: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          feature_key: string
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_feature_flags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_group_positions: {
         Row: {
           created_at: string
@@ -535,6 +648,44 @@ export type Database = {
           },
         ]
       }
+      organization_quotas: {
+        Row: {
+          created_at: string
+          id: string
+          max_projects: number | null
+          max_systems: number | null
+          max_users: number | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_projects?: number | null
+          max_systems?: number | null
+          max_users?: number | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_projects?: number | null
+          max_systems?: number | null
+          max_users?: number | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_quotas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_system_tags: {
         Row: {
           admin_position_id: string | null
@@ -598,33 +749,42 @@ export type Database = {
           accent_color: string | null
           business_id: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           logo_url: string | null
           name: string
           notes: string | null
           primary_color: string | null
+          suspended_at: string | null
+          suspended_reason: string | null
           updated_at: string
         }
         Insert: {
           accent_color?: string | null
           business_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           logo_url?: string | null
           name: string
           notes?: string | null
           primary_color?: string | null
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
         }
         Update: {
           accent_color?: string | null
           business_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           logo_url?: string | null
           name?: string
           notes?: string | null
           primary_color?: string | null
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -901,11 +1061,14 @@ export type Database = {
           accent_color: string | null
           business_id: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           logo_url: string | null
           name: string
           notes: string | null
           primary_color: string | null
+          suspended_at: string | null
+          suspended_reason: string | null
           updated_at: string
         }
         SetofOptions: {
