@@ -216,7 +216,7 @@ function OrganizationsTab() {
                     {(org as any).suspended_at ? (
                       <Badge variant="destructive" className="gap-1"><Pause className="w-3 h-3" />Jäädytetty</Badge>
                     ) : (
-                      <Badge variant="secondary" className="gap-1 bg-green-100 text-green-800"><Play className="w-3 h-3" />Aktiivinen</Badge>
+                      <Badge variant="secondary" className="gap-1"><Play className="w-3 h-3" />Aktiivinen</Badge>
                     )}
                   </TableCell>
                   <TableCell>{memberCounts[org.id] || 0}</TableCell>
