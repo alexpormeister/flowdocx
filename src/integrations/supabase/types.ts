@@ -822,6 +822,30 @@ export type Database = {
           },
         ]
       }
+      superadmins: {
+        Row: {
+          created_at: string
+          email: string
+          granted_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          granted_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          granted_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_tag_groups: {
         Row: {
           created_at: string
@@ -920,6 +944,7 @@ export type Database = {
         Args: { _folder_id: string; _organization_id: string; _user_id: string }
         Returns: boolean
       }
+      is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       lookup_presentation_token: {
         Args: { _token: string }
         Returns: {

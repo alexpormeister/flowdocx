@@ -77,7 +77,7 @@ import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
 import { OrganizationSelector } from "@/components/dashboard/OrganizationSelector";
 import { OrganizationSettings } from "@/components/dashboard/OrganizationSettings";
-import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid, LayoutTemplate, FolderPlus, Pencil, Upload } from "lucide-react";
+import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as FolderIcon, AppWindow, LayoutGrid, LayoutTemplate, FolderPlus, Pencil, Upload, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
@@ -777,8 +777,8 @@ export default function Dashboard() {
               await createOrgMutation.mutateAsync({ name, businessId });
             }}
             onCreateOrgWithWizard={async (data) => {
-              // 1. Create org
-              const org = await createOrganization(data.name);
+              // 1. Create org via mutation (single path, avoids duplication)
+              const org = await createOrgMutation.mutateAsync({ name: data.name });
               // 2. Update colors
               await updateOrganization(org.id, {
                 primary_color: data.primaryColor,
@@ -814,12 +814,9 @@ export default function Dashboard() {
               if (data.departments.length > 0) {
                 await createDeptFolders(data.departments, mainFolder.id);
               }
-              // 5. Refresh and select
-              queryClient.invalidateQueries({ queryKey: ["organizations"] });
-              queryClient.invalidateQueries({ queryKey: ["folders"] });
-              queryClient.invalidateQueries({ queryKey: ["org-positions"] });
-              setSelectedOrgId(org.id);
-              toast.success("Organisaatio luotu!");
+              // 5. Refresh
+              await queryClient.invalidateQueries({ queryKey: ["folders"] });
+              await queryClient.invalidateQueries({ queryKey: ["org-positions"] });
             }}
             isCreating={createOrgMutation.isPending}
             triggerStyle={hasOrgTheme ? { backgroundColor: "rgba(255,255,255,0.15)", color: "#fff", borderColor: "rgba(255,255,255,0.25)" } : undefined}
@@ -921,6 +918,10 @@ export default function Dashboard() {
                 <User className="w-4 h-4 mr-2" />
                 {t("nav.profile")}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
+                <Shield className="w-4 h-4 mr-2" />
+                Admin Panel
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -949,7 +950,7 @@ export default function Dashboard() {
 
             {/* Project Stats */}
             <ProjectStats
-              projects={displayedProjects}
+              projects={!selectedFolder && !showRootProjects && selectedOrgId ? filteredProjectsByOrg : displayedProjects}
               currentFolderName={
                 showRootProjects ? t("dashboard.desktop") : currentPath[currentPath.length - 1]?.name || null
               }
