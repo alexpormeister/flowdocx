@@ -593,19 +593,10 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                       {/* White label background */}
                       <rect x={-boxW / 2 + 2} y={-boxH / 2 + 2} width={boxW - 4} height={boxH - 4}
                         rx={rx - 1} fill="white" fillOpacity={0.88} />
-                      {/* Icon indicator */}
-                      {node.type === "system" && (
-                        <rect x={-boxW / 2 + 1} y={-boxH / 2 + 1} width={4} height={boxH - 2}
-                          rx={2} fill={node.color} fillOpacity={0.7} />
-                      )}
-                      {node.type === "process" && (
-                        <rect x={-boxW / 2} y={-boxH / 2} width={boxW} height={3}
-                          rx={1} fill={node.color} fillOpacity={0.6} />
-                      )}
                       {/* Label text */}
-                      <text textAnchor="middle" fill="hsl(var(--foreground))" fontSize={fontSize} fontWeight={fontWeight}>
+                      <text textAnchor="middle" dominantBaseline="central" fill="hsl(var(--foreground))" fontSize={fontSize} fontWeight={fontWeight}>
                         {lines.map((line, li) => (
-                          <tspan key={li} x={0} y={-textH / 2 + fontSize * 0.38 + li * lineHeight}>
+                          <tspan key={li} x={0} dy={li === 0 ? -(lines.length - 1) * lineHeight / 2 : lineHeight}>
                             {line}
                           </tspan>
                         ))}
