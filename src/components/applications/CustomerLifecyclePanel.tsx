@@ -123,7 +123,9 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const [stageDesc, setStageDesc] = useState("");
   const [stageColor, setStageColor] = useState(STAGE_COLORS[0]);
   const [linkingStageId, setLinkingStageId] = useState<string | null>(null);
+  const [linkingLifecycleStageId, setLinkingLifecycleStageId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedLifecycleToLink, setSelectedLifecycleToLink] = useState("");
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [connectionLabel, setConnectionLabel] = useState("");
   const [showShareDialog, setShowShareDialog] = useState(false);
