@@ -79,6 +79,13 @@ interface StageProcess {
   created_at: string;
 }
 
+interface StageLifecycle {
+  id: string;
+  stage_id: string;
+  linked_lifecycle_id: string;
+  created_at: string;
+}
+
 const STAGE_COLORS = [
   "#0891b2", "#0d9488", "#059669", "#65a30d",
   "#ca8a04", "#ea580c", "#dc2626", "#9333ea",
@@ -116,7 +123,9 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const [stageDesc, setStageDesc] = useState("");
   const [stageColor, setStageColor] = useState(STAGE_COLORS[0]);
   const [linkingStageId, setLinkingStageId] = useState<string | null>(null);
+  const [linkingLifecycleStageId, setLinkingLifecycleStageId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedLifecycleToLink, setSelectedLifecycleToLink] = useState("");
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [connectionLabel, setConnectionLabel] = useState("");
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -183,6 +192,21 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
         .in("stage_id", stageIds);
       if (error) throw error;
       return data as StageProcess[];
+    },
+    enabled: stages.length > 0,
+  });
+
+  const { data: stageLifecycles = [] } = useQuery({
+    queryKey: ["lifecycle-stage-lifecycles", selectedLifecycleId],
+    queryFn: async () => {
+      const stageIds = stages.map(s => s.id);
+      if (!stageIds.length) return [];
+      const { data, error } = await supabase
+        .from("customer_lifecycle_stage_lifecycles")
+        .select("*")
+        .in("stage_id", stageIds);
+      if (error) throw error;
+      return data as StageLifecycle[];
     },
     enabled: stages.length > 0,
   });
@@ -353,9 +377,36 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     },
   });
 
+  const linkLifecycle = useMutation({
+    mutationFn: async ({ stageId, linkedLifecycleId }: { stageId: string; linkedLifecycleId: string }) => {
+      const { error } = await supabase
+        .from("customer_lifecycle_stage_lifecycles")
+        .insert({ stage_id: stageId, linked_lifecycle_id: linkedLifecycleId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lifecycle-stage-lifecycles", selectedLifecycleId] });
+      setLinkingLifecycleStageId(null);
+      setSelectedLifecycleToLink("");
+      toast({ title: "Elinkaari linkitetty" });
+    },
+  });
+
+  const unlinkLifecycle = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("customer_lifecycle_stage_lifecycles").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lifecycle-stage-lifecycles", selectedLifecycleId] });
+    },
+  });
+
   // Helpers
   const getStageProcesses = (stageId: string) => stageProcesses.filter(sp => sp.stage_id === stageId);
+  const getStageLinkedLifecycles = (stageId: string) => stageLifecycles.filter(sl => sl.stage_id === stageId);
   const getProject = (projectId: string) => orgProjects.find(p => p.id === projectId);
+  const getLifecycle = (id: string) => lifecycles.find(l => l.id === id);
   const getStage = (id: string) => stages.find(s => s.id === id);
 
   // Compute effective positions: use dragPos for the dragged stage
@@ -689,7 +740,8 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
           {stages.map(stageRaw => {
             const stage = getEffectiveStage(stageRaw);
             const procs = getStageProcesses(stage.id);
-            const nodeH = NODE_H_BASE + procs.length * 28;
+            const linkedLcs = getStageLinkedLifecycles(stage.id);
+            const nodeH = NODE_H_BASE + (procs.length + linkedLcs.length) * 28;
             const isSelected = selectedStageId === stage.id;
             const isDragging = dragging?.id === stage.id;
             return (
@@ -774,31 +826,28 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
                     <Link2 className="w-2.5 h-2.5" />Linkitä prosessi
                   </button>
                   {/* Linked lifecycles */}
-                  {(() => {
-                    const linkedLcs = stageProcesses
-                      .filter(sp => sp.stage_id === stage.id)
-                      .map(sp => sp.project_id)
-                      .filter(pid => !orgProjects.find(p => p.id === pid));
-                    return null;
-                  })()}
-                  {lifecycles.filter(lc => lc.id !== selectedLifecycleId).length > 0 && (
-                    <Select
-                      value=""
-                      onValueChange={(lcId) => {
-                        setSelectedLifecycleId(lcId);
-                      }}
-                    >
-                      <SelectTrigger className="h-6 text-[10px] border-dashed">
-                        <Heart className="w-2.5 h-2.5 mr-1" />
-                        <span className="text-muted-foreground">Avaa elinkaari</span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lifecycles.filter(lc => lc.id !== selectedLifecycleId).map(lc => (
-                          <SelectItem key={lc.id} value={lc.id} className="text-xs">{lc.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  {linkedLcs.map(sl => {
+                    const lc = getLifecycle(sl.linked_lifecycle_id);
+                    if (!lc) return null;
+                    return (
+                      <div key={sl.id} className="group flex items-center gap-1 text-[10px] rounded bg-accent/30 px-2 py-1">
+                        <Heart className="w-2.5 h-2.5 text-primary shrink-0" />
+                        <button
+                          className="flex-1 text-left truncate hover:text-primary transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setSelectedLifecycleId(lc.id); }}
+                        >{lc.name}</button>
+                        <button className="opacity-0 group-hover:opacity-100 p-0.5" onClick={(e) => { e.stopPropagation(); unlinkLifecycle.mutate(sl.id); }}>
+                          <Unlink className="w-2.5 h-2.5 text-destructive" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    className="w-full text-[10px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1 rounded hover:bg-muted/50 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setLinkingLifecycleStageId(stage.id); setSelectedLifecycleToLink(""); }}
+                  >
+                    <Heart className="w-2.5 h-2.5" />Linkitä elinkaari
+                  </button>
                 </div>
               </div>
             );
@@ -905,7 +954,29 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Connection Dialog */}
+      {/* Link Lifecycle Dialog */}
+      <Dialog open={!!linkingLifecycleStageId} onOpenChange={open => !open && setLinkingLifecycleStageId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Linkitä elinkaari</DialogTitle></DialogHeader>
+          <Select value={selectedLifecycleToLink} onValueChange={setSelectedLifecycleToLink}>
+            <SelectTrigger><SelectValue placeholder="Valitse elinkaari..." /></SelectTrigger>
+            <SelectContent>
+              {lifecycles
+                .filter(lc => lc.id !== selectedLifecycleId)
+                .filter(lc => !stageLifecycles.some(sl => sl.stage_id === linkingLifecycleStageId && sl.linked_lifecycle_id === lc.id))
+                .map(lc => (
+                  <SelectItem key={lc.id} value={lc.id}>{lc.name}</SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkingLifecycleStageId(null)}>Peruuta</Button>
+            <Button onClick={() => { if (linkingLifecycleStageId && selectedLifecycleToLink) linkLifecycle.mutate({ stageId: linkingLifecycleStageId, linkedLifecycleId: selectedLifecycleToLink }); }} disabled={!selectedLifecycleToLink}>Linkitä</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={!!editingConnection} onOpenChange={open => !open && setEditingConnection(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Muokkaa yhteyttä</DialogTitle></DialogHeader>
