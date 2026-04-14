@@ -79,6 +79,13 @@ interface StageProcess {
   created_at: string;
 }
 
+interface StageLifecycle {
+  id: string;
+  stage_id: string;
+  linked_lifecycle_id: string;
+  created_at: string;
+}
+
 const STAGE_COLORS = [
   "#0891b2", "#0d9488", "#059669", "#65a30d",
   "#ca8a04", "#ea580c", "#dc2626", "#9333ea",
