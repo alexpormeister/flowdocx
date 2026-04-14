@@ -105,6 +105,42 @@ export type Database = {
           },
         ]
       }
+      customer_lifecycle_stage_lifecycles: {
+        Row: {
+          created_at: string
+          id: string
+          linked_lifecycle_id: string
+          stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          linked_lifecycle_id: string
+          stage_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          linked_lifecycle_id?: string
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_lifecycle_stage_lifecycles_linked_lifecycle_id_fkey"
+            columns: ["linked_lifecycle_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_lifecycle_stage_lifecycles_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "customer_lifecycle_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_lifecycle_stage_processes: {
         Row: {
           created_at: string
