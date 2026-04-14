@@ -740,7 +740,8 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
           {stages.map(stageRaw => {
             const stage = getEffectiveStage(stageRaw);
             const procs = getStageProcesses(stage.id);
-            const nodeH = NODE_H_BASE + procs.length * 28;
+            const linkedLcs = getStageLinkedLifecycles(stage.id);
+            const nodeH = NODE_H_BASE + (procs.length + linkedLcs.length) * 28;
             const isSelected = selectedStageId === stage.id;
             const isDragging = dragging?.id === stage.id;
             return (
