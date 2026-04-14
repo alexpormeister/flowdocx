@@ -826,31 +826,28 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
                     <Link2 className="w-2.5 h-2.5" />Linkitä prosessi
                   </button>
                   {/* Linked lifecycles */}
-                  {(() => {
-                    const linkedLcs = stageProcesses
-                      .filter(sp => sp.stage_id === stage.id)
-                      .map(sp => sp.project_id)
-                      .filter(pid => !orgProjects.find(p => p.id === pid));
-                    return null;
-                  })()}
-                  {lifecycles.filter(lc => lc.id !== selectedLifecycleId).length > 0 && (
-                    <Select
-                      value=""
-                      onValueChange={(lcId) => {
-                        setSelectedLifecycleId(lcId);
-                      }}
-                    >
-                      <SelectTrigger className="h-6 text-[10px] border-dashed">
-                        <Heart className="w-2.5 h-2.5 mr-1" />
-                        <span className="text-muted-foreground">Avaa elinkaari</span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lifecycles.filter(lc => lc.id !== selectedLifecycleId).map(lc => (
-                          <SelectItem key={lc.id} value={lc.id} className="text-xs">{lc.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  {linkedLcs.map(sl => {
+                    const lc = getLifecycle(sl.linked_lifecycle_id);
+                    if (!lc) return null;
+                    return (
+                      <div key={sl.id} className="group flex items-center gap-1 text-[10px] rounded bg-accent/30 px-2 py-1">
+                        <Heart className="w-2.5 h-2.5 text-primary shrink-0" />
+                        <button
+                          className="flex-1 text-left truncate hover:text-primary transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setSelectedLifecycleId(lc.id); }}
+                        >{lc.name}</button>
+                        <button className="opacity-0 group-hover:opacity-100 p-0.5" onClick={(e) => { e.stopPropagation(); unlinkLifecycle.mutate(sl.id); }}>
+                          <Unlink className="w-2.5 h-2.5 text-destructive" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    className="w-full text-[10px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1 rounded hover:bg-muted/50 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setLinkingLifecycleStageId(stage.id); setSelectedLifecycleToLink(""); }}
+                  >
+                    <Heart className="w-2.5 h-2.5" />Linkitä elinkaari
+                  </button>
                 </div>
               </div>
             );
