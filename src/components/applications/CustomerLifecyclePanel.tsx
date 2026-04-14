@@ -466,7 +466,6 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     const fy = from.position_y + NODE_H_BASE / 2;
     const tx = to.position_x + NODE_W / 2;
     const ty = to.position_y + NODE_H_BASE / 2;
-    // Determine best connection points
     const dx = tx - fx;
     const dy = ty - fy;
     let sx: number, sy: number, ex: number, ey: number;
@@ -483,7 +482,8 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     }
     const midX = (sx + ex) / 2;
     const midY = (sy + ey) / 2;
-    return { path: `M ${sx} ${sy} Q ${midX} ${sy}, ${midX} ${midY} Q ${midX} ${ey}, ${ex} ${ey}`, midX, midY, ex, ey, sx, sy };
+    // Straight line path
+    return { path: `M ${sx} ${sy} L ${ex} ${ey}`, midX, midY, ex, ey, sx, sy };
   };
 
   // No lifecycle selected - show lifecycle list

@@ -45,7 +45,8 @@ export default function Applications() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orgId = searchParams.get("org");
-  const [activeTab, setActiveTab] = useState<ToolTab>("systems");
+  const initialTab = searchParams.get("tab") as ToolTab | null;
+  const [activeTab, setActiveTab] = useState<ToolTab>(initialTab && TOOLS.some(t => t.id === initialTab) ? initialTab : "systems");
   const [exporting, setExporting] = useState(false);
 
   const { data: organizations = [] } = useQuery({
