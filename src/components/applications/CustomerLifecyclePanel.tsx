@@ -954,7 +954,29 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Connection Dialog */}
+      {/* Link Lifecycle Dialog */}
+      <Dialog open={!!linkingLifecycleStageId} onOpenChange={open => !open && setLinkingLifecycleStageId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Linkitä elinkaari</DialogTitle></DialogHeader>
+          <Select value={selectedLifecycleToLink} onValueChange={setSelectedLifecycleToLink}>
+            <SelectTrigger><SelectValue placeholder="Valitse elinkaari..." /></SelectTrigger>
+            <SelectContent>
+              {lifecycles
+                .filter(lc => lc.id !== selectedLifecycleId)
+                .filter(lc => !stageLifecycles.some(sl => sl.stage_id === linkingLifecycleStageId && sl.linked_lifecycle_id === lc.id))
+                .map(lc => (
+                  <SelectItem key={lc.id} value={lc.id}>{lc.name}</SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkingLifecycleStageId(null)}>Peruuta</Button>
+            <Button onClick={() => { if (linkingLifecycleStageId && selectedLifecycleToLink) linkLifecycle.mutate({ stageId: linkingLifecycleStageId, linkedLifecycleId: selectedLifecycleToLink }); }} disabled={!selectedLifecycleToLink}>Linkitä</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={!!editingConnection} onOpenChange={open => !open && setEditingConnection(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Muokkaa yhteyttä</DialogTitle></DialogHeader>
