@@ -295,8 +295,18 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setZoom((z) => Math.max(0.2, Math.min(4, z - e.deltaY * 0.001)));
   }, []);
+
+  // Prevent page scroll when mouse is over the graph container
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const preventScroll = (e: WheelEvent) => { e.preventDefault(); };
+    el.addEventListener("wheel", preventScroll, { passive: false });
+    return () => el.removeEventListener("wheel", preventScroll);
+  }, [selectedCenter]);
 
   // Allow grab-panning from anywhere on the SVG (not just background)
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -573,7 +583,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                       onClick={(e) => {
                         if (node.projectId) {
                           e.stopPropagation();
-                          navigate(`/presentation/${node.projectId}?org=${orgId}`);
+                          navigate(`/presentation/${node.projectId}?org=${orgId}&from=dependency-graph`);
                         }
                       }}
                       style={{
@@ -624,25 +634,6 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
               </div>
             )}
 
-            {/* Legend */}
-            <div className="absolute bottom-3 left-3 bg-card/90 backdrop-blur-sm border rounded-lg px-3 py-2 text-xs space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-3 rounded border-2 border-primary bg-primary/15" />
-                <span>Järjestelmä</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-3 rounded border-2 border-blue-500 bg-blue-500/15" />
-                <span>Prosessi</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-2.5 rounded-sm border border-muted-foreground bg-muted/30" />
-                <span>Tehtävä</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-0.5 bg-destructive rounded" />
-                <span>Kriittinen (&gt;5)</span>
-              </div>
-            </div>
           </div>
         </div>
       )}

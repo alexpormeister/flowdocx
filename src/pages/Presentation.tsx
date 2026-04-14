@@ -89,7 +89,15 @@ export default function Presentation() {
     return () => viewer.destroy();
   }, [project]);
 
-  const handleBack = () => navigate(-1);
+  const handleBack = () => {
+    const fromTab = searchParams.get("from");
+    const orgId = searchParams.get("org") || project?.organization_id;
+    if (fromTab && orgId) {
+      navigate(`/applications?org=${orgId}&tab=${fromTab}`);
+    } else {
+      navigate(-1);
+    }
+  };
 
   if (authLoading || !user || isLoading) {
     return (
