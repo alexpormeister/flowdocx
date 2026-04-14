@@ -377,9 +377,36 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     },
   });
 
+  const linkLifecycle = useMutation({
+    mutationFn: async ({ stageId, linkedLifecycleId }: { stageId: string; linkedLifecycleId: string }) => {
+      const { error } = await supabase
+        .from("customer_lifecycle_stage_lifecycles")
+        .insert({ stage_id: stageId, linked_lifecycle_id: linkedLifecycleId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lifecycle-stage-lifecycles", selectedLifecycleId] });
+      setLinkingLifecycleStageId(null);
+      setSelectedLifecycleToLink("");
+      toast({ title: "Elinkaari linkitetty" });
+    },
+  });
+
+  const unlinkLifecycle = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("customer_lifecycle_stage_lifecycles").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lifecycle-stage-lifecycles", selectedLifecycleId] });
+    },
+  });
+
   // Helpers
   const getStageProcesses = (stageId: string) => stageProcesses.filter(sp => sp.stage_id === stageId);
+  const getStageLinkedLifecycles = (stageId: string) => stageLifecycles.filter(sl => sl.stage_id === stageId);
   const getProject = (projectId: string) => orgProjects.find(p => p.id === projectId);
+  const getLifecycle = (id: string) => lifecycles.find(l => l.id === id);
   const getStage = (id: string) => stages.find(s => s.id === id);
 
   // Compute effective positions: use dragPos for the dragged stage
