@@ -440,9 +440,19 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setZoom(z => Math.min(Math.max(z * delta, 0.3), 3));
   }, []);
+
+  // Prevent page scroll when mouse is over canvas
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const preventScroll = (e: WheelEvent) => { e.preventDefault(); };
+    el.addEventListener("wheel", preventScroll, { passive: false });
+    return () => el.removeEventListener("wheel", preventScroll);
+  }, [selectedLifecycleId]);
 
   const fitView = useCallback(() => {
     if (!stages.length || !canvasRef.current) return;
