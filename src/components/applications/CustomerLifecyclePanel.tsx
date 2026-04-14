@@ -37,6 +37,7 @@ import {
   ChevronDown,
   Share2,
   Copy,
+  Heart,
   ExternalLink,
 } from "lucide-react";
 
@@ -439,9 +440,19 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setZoom(z => Math.min(Math.max(z * delta, 0.3), 3));
   }, []);
+
+  // Prevent page scroll when mouse is over canvas
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const preventScroll = (e: WheelEvent) => { e.preventDefault(); };
+    el.addEventListener("wheel", preventScroll, { passive: false });
+    return () => el.removeEventListener("wheel", preventScroll);
+  }, [selectedLifecycleId]);
 
   const fitView = useCallback(() => {
     if (!stages.length || !canvasRef.current) return;
@@ -466,7 +477,6 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     const fy = from.position_y + NODE_H_BASE / 2;
     const tx = to.position_x + NODE_W / 2;
     const ty = to.position_y + NODE_H_BASE / 2;
-    // Determine best connection points
     const dx = tx - fx;
     const dy = ty - fy;
     let sx: number, sy: number, ex: number, ey: number;
@@ -483,7 +493,8 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     }
     const midX = (sx + ex) / 2;
     const midY = (sy + ey) / 2;
-    return { path: `M ${sx} ${sy} Q ${midX} ${sy}, ${midX} ${midY} Q ${midX} ${ey}, ${ex} ${ey}`, midX, midY, ex, ey, sx, sy };
+    // Straight line path
+    return { path: `M ${sx} ${sy} L ${ex} ${ey}`, midX, midY, ex, ey, sx, sy };
   };
 
   // No lifecycle selected - show lifecycle list
@@ -760,8 +771,34 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
                     className="w-full text-[10px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1 rounded hover:bg-muted/50 transition-colors"
                     onClick={(e) => { e.stopPropagation(); setLinkingStageId(stage.id); setSelectedProjectId(""); }}
                   >
-                    <Link2 className="w-2.5 h-2.5" />Linkitä
+                    <Link2 className="w-2.5 h-2.5" />Linkitä prosessi
                   </button>
+                  {/* Linked lifecycles */}
+                  {(() => {
+                    const linkedLcs = stageProcesses
+                      .filter(sp => sp.stage_id === stage.id)
+                      .map(sp => sp.project_id)
+                      .filter(pid => !orgProjects.find(p => p.id === pid));
+                    return null;
+                  })()}
+                  {lifecycles.filter(lc => lc.id !== selectedLifecycleId).length > 0 && (
+                    <Select
+                      value=""
+                      onValueChange={(lcId) => {
+                        setSelectedLifecycleId(lcId);
+                      }}
+                    >
+                      <SelectTrigger className="h-6 text-[10px] border-dashed">
+                        <Heart className="w-2.5 h-2.5 mr-1" />
+                        <span className="text-muted-foreground">Avaa elinkaari</span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lifecycles.filter(lc => lc.id !== selectedLifecycleId).map(lc => (
+                          <SelectItem key={lc.id} value={lc.id} className="text-xs">{lc.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             );
