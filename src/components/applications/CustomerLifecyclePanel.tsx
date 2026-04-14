@@ -196,6 +196,21 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     enabled: stages.length > 0,
   });
 
+  const { data: stageLifecycles = [] } = useQuery({
+    queryKey: ["lifecycle-stage-lifecycles", selectedLifecycleId],
+    queryFn: async () => {
+      const stageIds = stages.map(s => s.id);
+      if (!stageIds.length) return [];
+      const { data, error } = await supabase
+        .from("customer_lifecycle_stage_lifecycles")
+        .select("*")
+        .in("stage_id", stageIds);
+      if (error) throw error;
+      return data as StageLifecycle[];
+    },
+    enabled: stages.length > 0,
+  });
+
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
     queryFn: getProjects,
