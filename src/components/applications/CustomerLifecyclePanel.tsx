@@ -38,6 +38,7 @@ import {
   Share2,
   Copy,
   Heart,
+  ExternalLink,
 } from "lucide-react";
 
 // Types
