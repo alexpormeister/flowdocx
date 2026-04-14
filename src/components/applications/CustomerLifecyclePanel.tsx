@@ -37,7 +37,7 @@ import {
   ChevronDown,
   Share2,
   Copy,
-  ExternalLink,
+  Heart,
 } from "lucide-react";
 
 // Types
@@ -760,8 +760,34 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
                     className="w-full text-[10px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1 rounded hover:bg-muted/50 transition-colors"
                     onClick={(e) => { e.stopPropagation(); setLinkingStageId(stage.id); setSelectedProjectId(""); }}
                   >
-                    <Link2 className="w-2.5 h-2.5" />Linkitä
+                    <Link2 className="w-2.5 h-2.5" />Linkitä prosessi
                   </button>
+                  {/* Linked lifecycles */}
+                  {(() => {
+                    const linkedLcs = stageProcesses
+                      .filter(sp => sp.stage_id === stage.id)
+                      .map(sp => sp.project_id)
+                      .filter(pid => !orgProjects.find(p => p.id === pid));
+                    return null;
+                  })()}
+                  {lifecycles.filter(lc => lc.id !== selectedLifecycleId).length > 0 && (
+                    <Select
+                      value=""
+                      onValueChange={(lcId) => {
+                        setSelectedLifecycleId(lcId);
+                      }}
+                    >
+                      <SelectTrigger className="h-6 text-[10px] border-dashed">
+                        <Heart className="w-2.5 h-2.5 mr-1" />
+                        <span className="text-muted-foreground">Avaa elinkaari</span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lifecycles.filter(lc => lc.id !== selectedLifecycleId).map(lc => (
+                          <SelectItem key={lc.id} value={lc.id} className="text-xs">{lc.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             );
