@@ -212,7 +212,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="roles" className="gap-1.5">
             <Users className="w-3.5 h-3.5" />
             Roles
@@ -222,6 +222,10 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
             <UsersRound className="w-3.5 h-3.5" />
             Groups
             <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">{sortedGroups.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="hierarchy" className="gap-1.5">
+            <Network className="w-3.5 h-3.5" />
+            Hierarchy
           </TabsTrigger>
           <TabsTrigger value="other" className="gap-1.5">
             <HelpCircle className="w-3.5 h-3.5" />
