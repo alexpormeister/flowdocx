@@ -326,7 +326,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
 function StatCard({ label, value, icon: Icon, accent }: { label: string; value: number; icon: any; accent?: boolean }) {
   return (
-    <div className={`rounded-xl border bg-card p-4 ${accent ? "border-primary/30 bg-primary/5" : ""}`}>
+    <div className="rounded-xl border bg-card p-4">
       <div className="flex items-center justify-between">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
         <Icon className={`w-3.5 h-3.5 ${accent ? "text-primary" : "text-muted-foreground"}`} />
