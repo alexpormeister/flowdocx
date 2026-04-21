@@ -409,7 +409,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
@@ -423,13 +423,13 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant={showImpactAnalysis ? "default" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={() => setShowImpactAnalysis(!showImpactAnalysis)}
+            onClick={() => setShowImpactAnalysis(true)}
             className="gap-1.5"
           >
             <ShieldAlert className="w-4 h-4" />
-            Impact Analysis
+            <span className="hidden sm:inline">Impact Analysis</span>
           </Button>
           {canEdit && (
             <Button onClick={openCreate} size="sm" className="gap-1.5">
@@ -440,34 +440,83 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         </div>
       </div>
 
+      {/* Stats cards */}
+      {tags.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SystemStatCard label="Total Systems" value={stats.total} icon={Server} accent />
+          <SystemStatCard label="In Use" value={stats.inUse} icon={CheckCircle2} />
+          <SystemStatCard label="With Admin" value={stats.withAdmin} icon={UserCog} />
+          <SystemStatCard label="Unused" value={stats.orphan} icon={AlertTriangle} muted={stats.orphan === 0} />
+        </div>
+      )}
+
       {/* Warning banner */}
       {tags.length > 0 && (warningStats.missingLink > 0 || warningStats.missingAdmin > 0) && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800">Incomplete system data</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-amber-700">
-              {warningStats.missingAdmin > 0 && (
-                <span>{warningStats.missingAdmin} system(s) missing admin</span>
-              )}
-              {warningStats.missingLink > 0 && (
-                <span>{warningStats.missingLink} system(s) missing link</span>
-              )}
-            </div>
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <span className="font-medium text-amber-800">Incomplete data:</span>{" "}
+            <span className="text-amber-700">
+              {warningStats.missingAdmin > 0 && `${warningStats.missingAdmin} missing admin`}
+              {warningStats.missingAdmin > 0 && warningStats.missingLink > 0 && " · "}
+              {warningStats.missingLink > 0 && `${warningStats.missingLink} missing link`}
+            </span>
           </div>
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search systems..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Toolbar: search + filter + view toggle */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search systems..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={adminFilter} onValueChange={setAdminFilter}>
+            <SelectTrigger className="w-[180px] h-9 text-xs">
+              <Filter className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Filter by admin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All admins</SelectItem>
+              <SelectItem value="__none__">No admin</SelectItem>
+              {positions.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center border rounded-md p-0.5 bg-card">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded transition-colors ${viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              title="Grid view"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded transition-colors ${viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              title="List view"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Result count */}
+      {tags.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Showing <span className="font-medium text-foreground">{filtered.length}</span> of {tags.length} systems
+        </p>
+      )}
 
       {/* Impact Analysis Sheet (modal) */}
       <Sheet open={showImpactAnalysis} onOpenChange={setShowImpactAnalysis}>
