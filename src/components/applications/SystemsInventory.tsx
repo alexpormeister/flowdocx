@@ -28,6 +28,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -426,19 +433,32 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         />
       </div>
 
-      {/* Impact Analysis Panel */}
-      {showImpactAnalysis && (
-        <ImpactAnalysisPanel
-          tags={tags}
-          tagProjectMap={tagProjectMap}
-          disabledSystems={disabledSystems}
-          toggleSystem={toggleSystem}
-          affectedDetails={affectedDetails}
-          expandedImpact={expandedImpact}
-          toggleImpactExpand={toggleImpactExpand}
-          orgId={orgId}
-        />
-      )}
+      {/* Impact Analysis Sheet (modal) */}
+      <Sheet open={showImpactAnalysis} onOpenChange={setShowImpactAnalysis}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+          <SheetHeader className="px-6 py-4 border-b shrink-0">
+            <SheetTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-primary" />
+              Impact Analysis
+            </SheetTitle>
+            <SheetDescription>
+              Toggle systems off to simulate outages and see affected processes.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <ImpactAnalysisPanel
+              tags={tags}
+              tagProjectMap={tagProjectMap}
+              disabledSystems={disabledSystems}
+              toggleSystem={toggleSystem}
+              affectedDetails={affectedDetails}
+              expandedImpact={expandedImpact}
+              toggleImpactExpand={toggleImpactExpand}
+              orgId={orgId}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Systems grid */}
       {isLoading ? (
@@ -694,96 +714,117 @@ function ImpactAnalysisPanel({
   }, [tagProjectMap, impactSearch]);
 
   return (
-    <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
-      <h3 className="font-semibold flex items-center gap-2">
-        <ShieldAlert className="w-5 h-5 text-primary" />
-        Impact Analysis
-      </h3>
-      <p className="text-sm text-muted-foreground">
-        Toggle systems off to simulate outages and see affected processes.
-      </p>
+    <div className="space-y-5">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Systems</p>
+          <p className="text-2xl font-bold mt-0.5">{sortedTags.length}</p>
+        </div>
+        <div className={`rounded-lg border p-3 ${disabledSystems.size > 0 ? "border-destructive/40 bg-destructive/5" : "bg-card"}`}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Disabled</p>
+          <p className={`text-2xl font-bold mt-0.5 ${disabledSystems.size > 0 ? "text-destructive" : ""}`}>{disabledSystems.size}</p>
+        </div>
+        <div className={`rounded-lg border p-3 ${affectedDetails.length > 0 ? "border-amber-400/50 bg-amber-50" : "bg-card"}`}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Affected</p>
+          <p className={`text-2xl font-bold mt-0.5 ${affectedDetails.length > 0 ? "text-amber-700" : ""}`}>{affectedDetails.length}</p>
+        </div>
+      </div>
 
-      {/* Impact search */}
-      <div className="relative max-w-sm">
+      {/* Search */}
+      <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Search systems..."
           value={impactSearch}
           onChange={(e) => setImpactSearch(e.target.value)}
-          className="pl-9"
+          className="pl-9 h-9"
         />
       </div>
 
-      {/* System toggles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {sortedTags.map((tagName) => {
-          const isOff = disabledSystems.has(tagName);
-          const processCount = (tagProjectMap[tagName] || []).length;
-          return (
-            <div
-              key={tagName}
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors ${
-                isOff ? "border-destructive/40 bg-destructive/5" : "bg-card"
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-2 h-2 rounded-full ${isOff ? "bg-destructive animate-pulse" : "bg-green-500"}`} />
-                <span className="truncate font-medium">{tagName}</span>
-                <span className="text-[10px] text-muted-foreground shrink-0">({processCount})</span>
-              </div>
-              <Switch checked={!isOff} onCheckedChange={() => toggleSystem(tagName)} />
-            </div>
-          );
-        })}
+      {/* System toggles - compact list */}
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+          Systems ({sortedTags.length})
+        </h4>
+        <div className="rounded-lg border divide-y bg-card max-h-[280px] overflow-y-auto">
+          {sortedTags.length === 0 ? (
+            <p className="p-4 text-xs text-muted-foreground text-center">No systems found</p>
+          ) : (
+            sortedTags.map((tagName) => {
+              const isOff = disabledSystems.has(tagName);
+              const processCount = (tagProjectMap[tagName] || []).length;
+              return (
+                <div
+                  key={tagName}
+                  className={`flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                    isOff ? "bg-destructive/5" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOff ? "bg-destructive" : "bg-emerald-500"}`} />
+                    <span className="truncate font-medium">{tagName}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{processCount} proc.</span>
+                  </div>
+                  <Switch checked={!isOff} onCheckedChange={() => toggleSystem(tagName)} />
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* Impact results */}
+      {/* Affected results */}
       {disabledSystems.size > 0 && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-destructive" />
-            <span className="font-semibold text-destructive">
-              {disabledSystems.size} system(s) disabled — {affectedDetails.length} process(es) affected
-            </span>
-          </div>
-          <div className="space-y-2">
-            {affectedDetails.map((detail) => (
-              <Collapsible
-                key={detail.project.id}
-                open={expandedImpact.has(detail.project.id)}
-                onOpenChange={() => toggleImpactExpand(detail.project.id)}
-              >
-                <CollapsibleTrigger asChild>
-                  <button className="flex items-center gap-2 w-full text-left text-sm px-4 py-3 rounded-lg bg-card border hover:border-destructive/50 transition-colors">
-                    <ChevronDown
-                      className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${
-                        expandedImpact.has(detail.project.id) ? "" : "-rotate-90"
-                      }`}
-                    />
-                    <Workflow className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="font-medium truncate flex-1">{detail.project.name}</span>
-                    <Badge variant="outline" className="text-destructive border-destructive/30 shrink-0">
-                      {detail.steps.length} step(s)
-                    </Badge>
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="ml-10 mt-1 space-y-1 pb-1">
-                    {detail.steps.map((s, i) => (
-                      <div key={i} className="flex items-center gap-3 text-xs px-3 py-2 rounded-md bg-muted/50 text-muted-foreground">
-                        <span className="font-mono text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded">#{s.step}</span>
-                        <span className="flex-1 truncate">{s.task}</span>
-                        {s.performer && <span className="text-[10px] opacity-60">{s.performer}</span>}
-                      </div>
-                    ))}
-                    {detail.steps.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic px-3 py-1">Tagged at project level</p>
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </div>
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-destructive mb-2 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Affected Processes ({affectedDetails.length})
+          </h4>
+          {affectedDetails.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic px-3 py-4 text-center rounded-lg border border-dashed">
+              No processes use the disabled systems.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {affectedDetails.map((detail) => (
+                <Collapsible
+                  key={detail.project.id}
+                  open={expandedImpact.has(detail.project.id)}
+                  onOpenChange={() => toggleImpactExpand(detail.project.id)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <button className="flex items-center gap-2 w-full text-left text-sm px-3 py-2 rounded-lg bg-card border hover:border-destructive/50 transition-colors">
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform ${
+                          expandedImpact.has(detail.project.id) ? "" : "-rotate-90"
+                        }`}
+                      />
+                      <Workflow className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="font-medium truncate flex-1 text-xs">{detail.project.name}</span>
+                      <Badge variant="outline" className="text-destructive border-destructive/30 shrink-0 text-[10px]">
+                        {detail.steps.length}
+                      </Badge>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="ml-7 mt-1 space-y-1 pb-1">
+                      {detail.steps.map((s, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded bg-muted/50 text-muted-foreground">
+                          <span className="font-mono text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded shrink-0">#{s.step}</span>
+                          <span className="flex-1 truncate">{s.task}</span>
+                          {s.performer && <span className="text-[10px] opacity-60 shrink-0">{s.performer}</span>}
+                        </div>
+                      ))}
+                      {detail.steps.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic px-2 py-1">Tagged at project level</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
