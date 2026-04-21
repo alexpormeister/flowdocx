@@ -289,6 +289,11 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
           )}
         </TabsContent>
 
+        {/* Hierarchy */}
+        <TabsContent value="hierarchy" className="m-0">
+          <HierarchyView positions={positions} roleMap={roleMap} />
+        </TabsContent>
+
         {/* Other */}
         <TabsContent value="other" className="space-y-2 m-0">
           {sortedUnmapped.length === 0 ? (
