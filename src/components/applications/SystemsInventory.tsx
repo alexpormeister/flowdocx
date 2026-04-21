@@ -300,14 +300,44 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   });
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return tags;
-    const q = search.toLowerCase();
-    return tags.filter(
-      (t) =>
-        t.tag_name.toLowerCase().includes(q) ||
-        (t as any).description?.toLowerCase().includes(q)
-    );
-  }, [tags, search]);
+    let list = tags;
+    if (adminFilter !== "all") {
+      if (adminFilter === "__none__") {
+        list = list.filter((t) => !(t as any).admin_position_id);
+      } else {
+        list = list.filter((t) => (t as any).admin_position_id === adminFilter);
+      }
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (t) =>
+          t.tag_name.toLowerCase().includes(q) ||
+          (t as any).description?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [tags, search, adminFilter]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const withAdmin = tags.filter((t) => (t as any).admin_position_id).length;
+    const withLink = tags.filter((t) => (t as any).link_url).length;
+    const usedTagNames = new Set<string>();
+    for (const project of orgProjects) {
+      for (const step of (project.process_steps as any[]) || []) {
+        for (const sys of step.system || []) usedTagNames.add(sys);
+      }
+    }
+    const inUse = tags.filter((t) => usedTagNames.has(t.tag_name)).length;
+    return {
+      total: tags.length,
+      withAdmin,
+      withLink,
+      inUse,
+      orphan: tags.length - inUse,
+    };
+  }, [tags, orgProjects]);
 
   // Warning counts
   const warningStats = useMemo(() => {
