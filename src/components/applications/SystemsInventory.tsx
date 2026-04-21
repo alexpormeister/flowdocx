@@ -62,6 +62,10 @@ import {
   Workflow,
   ChevronRight,
   ShieldAlert,
+  LayoutGrid,
+  List,
+  Filter,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -88,6 +92,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [showImpactAnalysis, setShowImpactAnalysis] = useState(false);
   const [disabledSystems, setDisabledSystems] = useState<Set<string>>(new Set());
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [adminFilter, setAdminFilter] = useState<string>("all");
   
 
   const { data: membership } = useQuery({
@@ -294,14 +300,44 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   });
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return tags;
-    const q = search.toLowerCase();
-    return tags.filter(
-      (t) =>
-        t.tag_name.toLowerCase().includes(q) ||
-        (t as any).description?.toLowerCase().includes(q)
-    );
-  }, [tags, search]);
+    let list = tags;
+    if (adminFilter !== "all") {
+      if (adminFilter === "__none__") {
+        list = list.filter((t) => !(t as any).admin_position_id);
+      } else {
+        list = list.filter((t) => (t as any).admin_position_id === adminFilter);
+      }
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (t) =>
+          t.tag_name.toLowerCase().includes(q) ||
+          (t as any).description?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [tags, search, adminFilter]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const withAdmin = tags.filter((t) => (t as any).admin_position_id).length;
+    const withLink = tags.filter((t) => (t as any).link_url).length;
+    const usedTagNames = new Set<string>();
+    for (const project of orgProjects) {
+      for (const step of (project.process_steps as any[]) || []) {
+        for (const sys of step.system || []) usedTagNames.add(sys);
+      }
+    }
+    const inUse = tags.filter((t) => usedTagNames.has(t.tag_name)).length;
+    return {
+      total: tags.length,
+      withAdmin,
+      withLink,
+      inUse,
+      orphan: tags.length - inUse,
+    };
+  }, [tags, orgProjects]);
 
   // Warning counts
   const warningStats = useMemo(() => {
@@ -373,7 +409,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
@@ -387,13 +423,13 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant={showImpactAnalysis ? "default" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={() => setShowImpactAnalysis(!showImpactAnalysis)}
+            onClick={() => setShowImpactAnalysis(true)}
             className="gap-1.5"
           >
             <ShieldAlert className="w-4 h-4" />
-            Impact Analysis
+            <span className="hidden sm:inline">Impact Analysis</span>
           </Button>
           {canEdit && (
             <Button onClick={openCreate} size="sm" className="gap-1.5">
@@ -404,34 +440,83 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         </div>
       </div>
 
+      {/* Stats cards */}
+      {tags.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <SystemStatCard label="Total Systems" value={stats.total} icon={Server} accent />
+          <SystemStatCard label="In Use" value={stats.inUse} icon={CheckCircle2} />
+          <SystemStatCard label="With Admin" value={stats.withAdmin} icon={UserCog} />
+          <SystemStatCard label="Unused" value={stats.orphan} icon={AlertTriangle} muted={stats.orphan === 0} />
+        </div>
+      )}
+
       {/* Warning banner */}
       {tags.length > 0 && (warningStats.missingLink > 0 || warningStats.missingAdmin > 0) && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800">Incomplete system data</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-amber-700">
-              {warningStats.missingAdmin > 0 && (
-                <span>{warningStats.missingAdmin} system(s) missing admin</span>
-              )}
-              {warningStats.missingLink > 0 && (
-                <span>{warningStats.missingLink} system(s) missing link</span>
-              )}
-            </div>
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <span className="font-medium text-amber-800">Incomplete data:</span>{" "}
+            <span className="text-amber-700">
+              {warningStats.missingAdmin > 0 && `${warningStats.missingAdmin} missing admin`}
+              {warningStats.missingAdmin > 0 && warningStats.missingLink > 0 && " · "}
+              {warningStats.missingLink > 0 && `${warningStats.missingLink} missing link`}
+            </span>
           </div>
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search systems..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Toolbar: search + filter + view toggle */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search systems..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={adminFilter} onValueChange={setAdminFilter}>
+            <SelectTrigger className="w-[180px] h-9 text-xs">
+              <Filter className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+              <SelectValue placeholder="Filter by admin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All admins</SelectItem>
+              <SelectItem value="__none__">No admin</SelectItem>
+              {positions.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center border rounded-md p-0.5 bg-card">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded transition-colors ${viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              title="Grid view"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded transition-colors ${viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              title="List view"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Result count */}
+      {tags.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Showing <span className="font-medium text-foreground">{filtered.length}</span> of {tags.length} systems
+        </p>
+      )}
 
       {/* Impact Analysis Sheet (modal) */}
       <Sheet open={showImpactAnalysis} onOpenChange={setShowImpactAnalysis}>
@@ -479,8 +564,113 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </Button>
           )}
         </div>
+      ) : viewMode === "list" ? (
+        /* List view (compact, dense — works well for many systems) */
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b bg-muted/30">
+            <div className="col-span-4">System</div>
+            <div className="col-span-3 hidden md:block">Admin</div>
+            <div className="col-span-3 hidden lg:block">Groups</div>
+            <div className="col-span-2 text-right">Actions</div>
+          </div>
+          <div className="divide-y">
+            {filtered.map((tag) => {
+              const desc = (tag as any).description as string | null;
+              const adminPosId = (tag as any).admin_position_id as string | null;
+              const grpIds = tagGroupsMap[tag.id] || [];
+              const linkUrl = (tag as any).link_url as string | null;
+              const detected = autoDetectedGroups[tag.tag_name] || [];
+              const allGroupIds = [...new Set([...grpIds, ...detected])];
+              return (
+                <div
+                  key={tag.id}
+                  className="grid grid-cols-12 gap-3 px-4 py-2.5 items-center hover:bg-muted/40 transition-colors group"
+                >
+                  <div className="col-span-4 flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Server className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-sm truncate">{tag.tag_name}</span>
+                        {linkUrl && (
+                          <a
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary/80 shrink-0"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        {!adminPosId && (
+                          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                        )}
+                      </div>
+                      {desc && (
+                        <p className="text-[11px] text-muted-foreground truncate">{desc}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-span-3 hidden md:block min-w-0">
+                    {adminPosId ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-foreground truncate">
+                        <UserCog className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <span className="truncate">{getPositionName(adminPosId)}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] italic text-muted-foreground">No admin</span>
+                    )}
+                  </div>
+                  <div className="col-span-3 hidden lg:flex flex-wrap gap-1 min-w-0">
+                    {allGroupIds.length === 0 ? (
+                      <span className="text-[11px] italic text-muted-foreground">—</span>
+                    ) : (
+                      allGroupIds.slice(0, 2).map((gid) => (
+                        <Badge
+                          key={gid}
+                          variant="secondary"
+                          className="text-[10px] gap-1 px-1.5 py-0 font-normal"
+                        >
+                          <UsersRound className="w-2.5 h-2.5" />
+                          {getGroupName(gid)}
+                        </Badge>
+                      ))
+                    )}
+                    {allGroupIds.length > 2 && (
+                      <span className="text-[10px] text-muted-foreground self-center">
+                        +{allGroupIds.length - 2}
+                      </span>
+                    )}
+                  </div>
+                  <div className="col-span-2 flex justify-end gap-1">
+                    {canEdit && (
+                      <>
+                        <button
+                          onClick={() => openEdit(tag)}
+                          className="p-1.5 rounded-md hover:bg-accent transition-colors opacity-0 group-hover:opacity-100"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={() => deleteMutation.mutate(tag.id)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        /* Grid view */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filtered.map((tag) => {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
@@ -493,7 +683,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             return (
               <div
                 key={tag.id}
-                className="group relative rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
+                className="group relative rounded-xl border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all"
               >
                 {canEdit && (
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -679,6 +869,43 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Stat card for systems overview
+function SystemStatCard({
+  label,
+  value,
+  icon: Icon,
+  accent,
+  muted,
+}: {
+  label: string;
+  value: number;
+  icon: any;
+  accent?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          {label}
+        </p>
+        <Icon
+          className={`w-3.5 h-3.5 ${
+            accent ? "text-primary" : muted ? "text-muted-foreground/50" : "text-muted-foreground"
+          }`}
+        />
+      </div>
+      <p
+        className={`text-2xl font-bold mt-1 ${
+          accent ? "text-primary" : muted ? "text-muted-foreground" : ""
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
