@@ -22,15 +22,17 @@ import {
   LayoutGrid,
   Heart,
   Download,
+  Sparkles,
 } from "lucide-react";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
 import SystemsInventory from "@/components/applications/SystemsInventory";
 import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
 import CustomerLifecyclePanel from "@/components/applications/CustomerLifecyclePanel";
+import AutomationProposalPanel from "@/components/applications/AutomationProposalPanel";
 import { toast } from "sonner";
 
-type ToolTab = "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle";
+type ToolTab = "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "systems", label: "Systems", icon: Monitor, description: "Manage systems & impact analysis" },
@@ -38,6 +40,7 @@ const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description:
   { id: "dependency-graph", label: "Dependency Graph", icon: GitBranch, description: "System dependency visualization" },
   { id: "capability-map", label: "Capability Map", icon: LayoutGrid, description: "Business capability overview" },
   { id: "customer-lifecycle", label: "Customer Lifecycle", icon: Heart, description: "Customer lifecycle management" },
+  { id: "automation-proposal", label: "Automation Proposal", icon: Sparkles, description: "Find process steps that could be automated" },
 ];
 
 export default function Applications() {
@@ -158,6 +161,7 @@ export default function Applications() {
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
         {activeTab === "customer-lifecycle" && <CustomerLifecyclePanel orgId={orgId} />}
+        {activeTab === "automation-proposal" && <AutomationProposalPanel orgId={orgId} />}
       </div>
     </div>
   );
