@@ -12,7 +12,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Network } from "lucide-react";
+import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle } from "lucide-react";
 
 interface RoleDetail {
   project: Project;
