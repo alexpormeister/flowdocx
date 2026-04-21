@@ -115,7 +115,7 @@ export default function Applications() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-card shrink-0">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={() => navigate(`/dashboard?org=${orgId}`)} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <AppWindow className="w-5 h-5 text-primary shrink-0 hidden sm:block" />
