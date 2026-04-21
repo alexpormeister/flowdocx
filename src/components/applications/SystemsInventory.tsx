@@ -564,8 +564,113 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </Button>
           )}
         </div>
+      ) : viewMode === "list" ? (
+        /* List view (compact, dense — works well for many systems) */
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b bg-muted/30">
+            <div className="col-span-4">System</div>
+            <div className="col-span-3 hidden md:block">Admin</div>
+            <div className="col-span-3 hidden lg:block">Groups</div>
+            <div className="col-span-2 text-right">Actions</div>
+          </div>
+          <div className="divide-y">
+            {filtered.map((tag) => {
+              const desc = (tag as any).description as string | null;
+              const adminPosId = (tag as any).admin_position_id as string | null;
+              const grpIds = tagGroupsMap[tag.id] || [];
+              const linkUrl = (tag as any).link_url as string | null;
+              const detected = autoDetectedGroups[tag.tag_name] || [];
+              const allGroupIds = [...new Set([...grpIds, ...detected])];
+              return (
+                <div
+                  key={tag.id}
+                  className="grid grid-cols-12 gap-3 px-4 py-2.5 items-center hover:bg-muted/40 transition-colors group"
+                >
+                  <div className="col-span-4 flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Server className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-sm truncate">{tag.tag_name}</span>
+                        {linkUrl && (
+                          <a
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary/80 shrink-0"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        {!adminPosId && (
+                          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                        )}
+                      </div>
+                      {desc && (
+                        <p className="text-[11px] text-muted-foreground truncate">{desc}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="col-span-3 hidden md:block min-w-0">
+                    {adminPosId ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-foreground truncate">
+                        <UserCog className="w-3 h-3 text-muted-foreground shrink-0" />
+                        <span className="truncate">{getPositionName(adminPosId)}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] italic text-muted-foreground">No admin</span>
+                    )}
+                  </div>
+                  <div className="col-span-3 hidden lg:flex flex-wrap gap-1 min-w-0">
+                    {allGroupIds.length === 0 ? (
+                      <span className="text-[11px] italic text-muted-foreground">—</span>
+                    ) : (
+                      allGroupIds.slice(0, 2).map((gid) => (
+                        <Badge
+                          key={gid}
+                          variant="secondary"
+                          className="text-[10px] gap-1 px-1.5 py-0 font-normal"
+                        >
+                          <UsersRound className="w-2.5 h-2.5" />
+                          {getGroupName(gid)}
+                        </Badge>
+                      ))
+                    )}
+                    {allGroupIds.length > 2 && (
+                      <span className="text-[10px] text-muted-foreground self-center">
+                        +{allGroupIds.length - 2}
+                      </span>
+                    )}
+                  </div>
+                  <div className="col-span-2 flex justify-end gap-1">
+                    {canEdit && (
+                      <>
+                        <button
+                          onClick={() => openEdit(tag)}
+                          className="p-1.5 rounded-md hover:bg-accent transition-colors opacity-0 group-hover:opacity-100"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={() => deleteMutation.mutate(tag.id)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        /* Grid view */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filtered.map((tag) => {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
@@ -578,7 +683,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             return (
               <div
                 key={tag.id}
-                className="group relative rounded-xl border bg-card p-4 hover:shadow-md transition-shadow"
+                className="group relative rounded-xl border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all"
               >
                 {canEdit && (
                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
