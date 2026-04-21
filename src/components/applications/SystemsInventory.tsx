@@ -62,6 +62,10 @@ import {
   Workflow,
   ChevronRight,
   ShieldAlert,
+  LayoutGrid,
+  List,
+  Filter,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 
