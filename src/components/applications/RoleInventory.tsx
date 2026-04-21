@@ -434,3 +434,117 @@ function RoleCard({
     </Collapsible>
   );
 }
+
+// ============================================================
+// Hierarchical org chart (top-down tree)
+// ============================================================
+type TreeNode = {
+  position: OrganizationPosition;
+  children: TreeNode[];
+  stepCount: number;
+  processCount: number;
+};
+
+function HierarchyView({
+  positions,
+  roleMap,
+}: {
+  positions: OrganizationPosition[];
+  roleMap: Record<string, { position: OrganizationPosition; details: RoleDetail[] }>;
+}) {
+  const tree = useMemo(() => {
+    const byParent: Record<string, OrganizationPosition[]> = {};
+    for (const p of positions) {
+      const key = p.parent_position_id || "__root__";
+      if (!byParent[key]) byParent[key] = [];
+      byParent[key].push(p);
+    }
+    for (const k of Object.keys(byParent)) {
+      byParent[k].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0) || a.name.localeCompare(b.name));
+    }
+
+    const build = (pos: OrganizationPosition): TreeNode => {
+      const children = (byParent[pos.id] || []).map(build);
+      const entry = roleMap[pos.name.toLowerCase()];
+      const details = entry?.details || [];
+      return {
+        position: pos,
+        children,
+        processCount: details.length,
+        stepCount: details.reduce((s, d) => s + d.steps.length, 0),
+      };
+    };
+
+    return (byParent["__root__"] || []).map(build);
+  }, [positions, roleMap]);
+
+  if (positions.length === 0) {
+    return <EmptyState icon={Network} text="No positions defined yet" />;
+  }
+
+  return (
+    <div className="rounded-xl border bg-card p-6 overflow-x-auto">
+      <div className="flex flex-col items-center gap-8 min-w-fit">
+        {tree.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No top-level positions found.</p>
+        ) : (
+          tree.map((node) => <TreeBranch key={node.position.id} node={node} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TreeBranch({ node }: { node: TreeNode }) {
+  const hasChildren = node.children.length > 0;
+  return (
+    <div className="flex flex-col items-center">
+      <NodeBox node={node} />
+      {hasChildren && (
+        <>
+          {/* vertical line down from parent */}
+          <div className="w-px h-6 bg-border" />
+          {/* horizontal connector for multiple children */}
+          {node.children.length > 1 && (
+            <div className="relative w-full flex justify-center">
+              <div
+                className="absolute top-0 h-px bg-border"
+                style={{
+                  left: `calc(100% / ${node.children.length} / 2)`,
+                  right: `calc(100% / ${node.children.length} / 2)`,
+                }}
+              />
+            </div>
+          )}
+          <div className="flex items-start gap-6">
+            {node.children.map((child) => (
+              <div key={child.position.id} className="flex flex-col items-center">
+                {node.children.length > 1 && <div className="w-px h-6 bg-border" />}
+                <TreeBranch node={child} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function NodeBox({ node }: { node: TreeNode }) {
+  const isActive = node.processCount > 0;
+  return (
+    <div
+      className={`rounded-lg border px-4 py-3 min-w-[160px] text-center shadow-sm bg-card ${
+        isActive ? "border-primary/40" : "border-border"
+      }`}
+    >
+      <div className="flex items-center justify-center gap-1.5 mb-1">
+        <UserCircle2 className={`w-3.5 h-3.5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+        <span className="text-sm font-semibold truncate max-w-[180px]">{node.position.name}</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        {node.processCount} process{node.processCount !== 1 ? "es" : ""} · {node.stepCount} step{node.stepCount !== 1 ? "s" : ""}
+      </p>
+    </div>
+  );
+}
