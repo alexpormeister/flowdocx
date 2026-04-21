@@ -873,6 +873,43 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   );
 }
 
+// Stat card for systems overview
+function SystemStatCard({
+  label,
+  value,
+  icon: Icon,
+  accent,
+  muted,
+}: {
+  label: string;
+  value: number;
+  icon: any;
+  accent?: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+          {label}
+        </p>
+        <Icon
+          className={`w-3.5 h-3.5 ${
+            accent ? "text-primary" : muted ? "text-muted-foreground/50" : "text-muted-foreground"
+          }`}
+        />
+      </div>
+      <p
+        className={`text-2xl font-bold mt-1 ${
+          accent ? "text-primary" : muted ? "text-muted-foreground" : ""
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 // Impact Analysis sub-component
 function ImpactAnalysisPanel({
   tags,
