@@ -15,7 +15,12 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Minimize2,
   Download,
+  GitBranch,
+  AlertTriangle,
+  Network,
+  X,
 } from "lucide-react";
 
 interface GraphNode {
