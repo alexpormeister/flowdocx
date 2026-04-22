@@ -313,6 +313,14 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     setPan({ x: w / 2 - cx * scale, y: h / 2 - cy * scale });
   }, [nodes]);
 
+  // Re-fit on fullscreen toggle (after layout settles)
+  useEffect(() => {
+    if (!selectedCenter) return;
+    const t = setTimeout(() => fitView(), 50);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFullscreen]);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     e.stopPropagation();
