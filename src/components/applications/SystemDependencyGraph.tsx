@@ -459,212 +459,367 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     return { lines, lineHeight, textH, boxW, boxH, fontSize };
   };
 
-  return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-4">
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant={searchMode === "system" ? "default" : "outline"} size="sm"
-          onClick={() => { setSearchMode("system"); setSelectedCenter(null); }}>
-          <Server className="w-4 h-4 mr-1" /> Järjestelmähaku
-        </Button>
-        <Button variant={searchMode === "process" ? "default" : "outline"} size="sm"
-          onClick={() => { setSearchMode("process"); setSelectedCenter(null); }}>
-          <Workflow className="w-4 h-4 mr-1" /> Prosessihaku
-        </Button>
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder={searchMode === "system" ? "Hae järjestelmää..." : "Hae prosessia..."}
-            value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="pl-10"
-          />
-        </div>
-        {selectedCenter && (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={fitView}><Maximize2 className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setZoom((z) => Math.min(4, z + 0.2))}><ZoomIn className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}><ZoomOut className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadPng}>
-              <Download className="w-4 h-4" /> PNG
-            </Button>
-          </div>
-        )}
-      </div>
+  // Stats for hero
+  const stats = useMemo(() => {
+    const totalSystems = allSystems.length;
+    const totalProcesses = allProcesses.length;
+    let criticalCount = 0;
+    let totalLinks = 0;
+    for (const sys of allSystems) {
+      const details = systemProcessMap[sys] || [];
+      const taskCount = details.reduce((s, d) => s + d.steps.length, 0);
+      if (taskCount > 5) criticalCount++;
+      totalLinks += details.length;
+    }
+    return { totalSystems, totalProcesses, criticalCount, totalLinks };
+  }, [allSystems, allProcesses, systemProcessMap]);
 
-      {/* Selection list */}
-      {!selectedCenter && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {(searchMode === "system" ? (filteredItems as string[]) : []).map((sys) => {
-            const details = systemProcessMap[sys] || [];
-            const taskCount = details.reduce((s, d) => s + d.steps.length, 0);
-            const isCritical = taskCount > 5;
+  // Reusable graph viewport (used both inline and in fullscreen)
+  const renderGraphViewport = (heightClass: string) => (
+    <div ref={containerRef} className={`relative bg-card overflow-hidden ${heightClass}`}>
+      <svg
+        ref={svgRef}
+        width="100%" height="100%"
+        className={isPanning ? "cursor-grabbing" : "cursor-grab"}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ userSelect: "none" }}
+      >
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <circle cx="20" cy="20" r="0.5" fill="hsl(var(--muted-foreground))" opacity="0.15" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+          {edges.map((edge, i) => {
+            const src = getNodeById(edge.source);
+            const tgt = getNodeById(edge.target);
+            if (!src || !tgt) return null;
+            const isConnected = hoveredNode?.id === edge.source || hoveredNode?.id === edge.target;
+            const isCriticalEdge = searchMode === "system" && totalTaskCount > 5 && edge.source.startsWith("sys-");
+            const dimmed = hoveredNode && !isConnected;
             return (
-              <button key={sys} onClick={() => selectItem(sys)}
-                className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all hover:shadow-md ${
-                  isCritical ? "border-destructive/30 hover:border-destructive/60" : "border-border hover:border-primary/40"
-                }`}>
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isCritical ? "bg-destructive/10" : "bg-primary/10"}`}>
-                  <Server className={`w-5 h-5 ${isCritical ? "text-destructive" : "text-primary"}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate">{sys}</p>
-                  <p className="text-xs text-muted-foreground">{details.length} prosessi(a) · {taskCount} tehtävä(ä)</p>
-                </div>
-                {isCritical && <Badge variant="destructive" className="shrink-0 text-[10px]">Kriittinen</Badge>}
-              </button>
+              <path key={i} d={getEdgePath(src, tgt)} fill="none"
+                stroke={isConnected ? "hsl(var(--primary))" : isCriticalEdge ? "hsl(0, 60%, 65%)" : "hsl(var(--muted-foreground))"}
+                strokeWidth={isConnected ? 2.5 : isCriticalEdge ? 2 : 1.2}
+                strokeOpacity={dimmed ? 0.1 : isConnected ? 0.9 : 0.25}
+                strokeLinecap="round" className="transition-opacity duration-200"
+              />
             );
           })}
-          {searchMode === "process" &&
-            (filteredItems as Project[]).map((proj) => {
-              const systems = processSystemMap[proj.id] || [];
-              return (
-                <button key={proj.id} onClick={() => selectItem(proj.id)}
-                  className="flex items-center gap-3 p-4 rounded-xl border border-border text-left transition-all hover:shadow-md hover:border-primary/40">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Workflow className="w-5 h-5 text-primary" />
+
+          {nodes.map((node) => {
+            const isHovered = hoveredNode?.id === node.id;
+            const isConnected = hoveredNode && edges.some(
+              (e) => (e.source === hoveredNode.id && e.target === node.id) || (e.target === hoveredNode.id && e.source === node.id)
+            );
+            const dimmed = hoveredNode && !isHovered && !isConnected;
+
+            const { lines, lineHeight, boxW, boxH, fontSize } = getNodeRect(node);
+            const fontWeight = node.type === "system" ? 700 : node.type === "process" ? 600 : 400;
+            const fillOpacity = node.type === "task" ? 0.08 : 0.14;
+            const rx = node.type === "task" ? 6 : 10;
+
+            return (
+              <g key={node.id} transform={`translate(${node.x}, ${node.y})`}
+                onMouseEnter={() => setHoveredNode(node)}
+                onMouseLeave={() => setHoveredNode(null)}
+                onClick={(e) => {
+                  if (node.projectId) {
+                    e.stopPropagation();
+                    navigate(`/presentation/${node.projectId}?org=${orgId}&from=dependency-graph`);
+                  }
+                }}
+                style={{
+                  cursor: node.projectId ? "pointer" : "default",
+                  opacity: dimmed ? 0.15 : 1,
+                  transition: "opacity 0.2s",
+                }}>
+                {(isHovered || isConnected) && (
+                  <rect x={-boxW / 2 - 4} y={-boxH / 2 - 4} width={boxW + 8} height={boxH + 8}
+                    rx={rx + 2} fill="none" stroke={node.color} strokeWidth={2} strokeOpacity={0.35} />
+                )}
+                <rect x={-boxW / 2} y={-boxH / 2} width={boxW} height={boxH} rx={rx}
+                  fill={node.color} fillOpacity={fillOpacity}
+                  stroke={node.color} strokeWidth={isHovered ? 2.5 : 1.5} />
+                <rect x={-boxW / 2 + 2} y={-boxH / 2 + 2} width={boxW - 4} height={boxH - 4}
+                  rx={rx - 1} fill="white" fillOpacity={0.88} />
+                <text textAnchor="middle" dominantBaseline="central" fill="hsl(var(--foreground))" fontSize={fontSize} fontWeight={fontWeight}>
+                  {lines.map((line, li) => (
+                    <tspan key={li} x={0} dy={li === 0 ? -(lines.length - 1) * lineHeight / 2 : lineHeight}>
+                      {line}
+                    </tspan>
+                  ))}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      {/* Floating zoom controls (bottom-right) */}
+      <div className="absolute bottom-4 right-4 flex flex-col gap-1 bg-card/90 backdrop-blur-sm border rounded-lg shadow-md p-1">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.min(4, z + 0.2))} title="Zoom in">
+          <ZoomIn className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))} title="Zoom out">
+          <ZoomOut className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fitView} title="Fit to view">
+          <Maximize2 className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Zoom level indicator */}
+      <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-sm border rounded-md px-2 py-1 text-[10px] font-mono text-muted-foreground">
+        {Math.round(zoom * 100)}%
+      </div>
+
+      {hoveredNode && !isPanning && (
+        <div className="absolute pointer-events-none bg-popover border rounded-lg shadow-lg px-3 py-2 text-sm z-50 max-w-[300px]"
+          style={{
+            left: Math.min(
+              mousePos.x - (containerRef.current?.getBoundingClientRect().left || 0) + 12,
+              (containerRef.current?.clientWidth || 400) - 310
+            ),
+            top: mousePos.y - (containerRef.current?.getBoundingClientRect().top || 0) - 40,
+          }}>
+          <p className="font-medium break-words">{hoveredNode.label}</p>
+          <p className="text-xs text-muted-foreground capitalize">{hoveredNode.type}</p>
+          {hoveredNode.performer && <p className="text-xs text-muted-foreground">Rooli: {hoveredNode.performer}</p>}
+          {hoveredNode.projectId && <p className="text-xs text-primary mt-1">Klikkaa avataksesi →</p>}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+        {/* Hero header with stats — only when no selection */}
+        {!selectedCenter && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Network className="w-6 h-6 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight">Dependency Graph</h1>
+                <p className="text-sm text-muted-foreground">
+                  Visualisoi järjestelmien ja prosessien väliset riippuvuudet. Valitse kohde alla.
+                </p>
+              </div>
+            </div>
+
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { icon: Server, label: "Järjestelmiä", value: stats.totalSystems, tone: "primary" },
+                { icon: Workflow, label: "Prosesseja", value: stats.totalProcesses, tone: "primary" },
+                { icon: GitBranch, label: "Linkkejä", value: stats.totalLinks, tone: "primary" },
+                { icon: AlertTriangle, label: "Kriittisiä", value: stats.criticalCount, tone: stats.criticalCount > 0 ? "destructive" : "muted" },
+              ].map(({ icon: Icon, label, value, tone }) => (
+                <div key={label} className="border rounded-xl p-4 bg-card hover:shadow-sm transition-shadow">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Icon className={`w-3.5 h-3.5 ${tone === "destructive" ? "text-destructive" : "text-muted-foreground"}`} />
+                    {label}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{proj.name}</p>
-                    <p className="text-xs text-muted-foreground">{systems.length} järjestelmä(ä)</p>
+                  <div className={`text-2xl font-semibold tabular-nums ${tone === "destructive" ? "text-destructive" : ""}`}>
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Segmented toggle + search */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="inline-flex p-1 bg-muted rounded-lg shrink-0">
+                <button
+                  onClick={() => { setSearchMode("system"); setSearchFilter(""); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                    searchMode === "system"
+                      ? "bg-card shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Server className="w-4 h-4" /> Järjestelmät
+                </button>
+                <button
+                  onClick={() => { setSearchMode("process"); setSearchFilter(""); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                    searchMode === "process"
+                      ? "bg-card shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Workflow className="w-4 h-4" /> Prosessit
+                </button>
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder={searchMode === "system" ? "Hae järjestelmää..." : "Hae prosessia..."}
+                  value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} className="pl-10 h-10"
+                />
+                {searchFilter && (
+                  <button
+                    onClick={() => setSearchFilter("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground shrink-0 sm:ml-auto">
+                {filteredItems.length} {filteredItems.length === 1 ? "tulos" : "tulosta"}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Selection grid — modernized cards */}
+        {!selectedCenter && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(searchMode === "system" ? (filteredItems as string[]) : []).map((sys) => {
+              const details = systemProcessMap[sys] || [];
+              const taskCount = details.reduce((s, d) => s + d.steps.length, 0);
+              const isCritical = taskCount > 5;
+              return (
+                <button key={sys} onClick={() => selectItem(sys)}
+                  className={`group relative flex flex-col gap-3 p-4 rounded-xl border bg-card text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${
+                    isCritical ? "border-destructive/30 hover:border-destructive/60" : "border-border hover:border-primary/40"
+                  }`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isCritical ? "bg-destructive/10" : "bg-primary/10"}`}>
+                      <Server className={`w-5 h-5 ${isCritical ? "text-destructive" : "text-primary"}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{sys}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Järjestelmä</p>
+                    </div>
+                    {isCritical && (
+                      <Badge variant="destructive" className="shrink-0 text-[10px] gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Kriittinen
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/60">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Prosessit</p>
+                      <p className="text-sm font-semibold tabular-nums">{details.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Tehtävät</p>
+                      <p className={`text-sm font-semibold tabular-nums ${isCritical ? "text-destructive" : ""}`}>{taskCount}</p>
+                    </div>
                   </div>
                 </button>
               );
             })}
-          {filteredItems.length === 0 && (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              <ArrowLeftRight className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Ei tuloksia</p>
-            </div>
-          )}
-        </div>
-      )}
+            {searchMode === "process" &&
+              (filteredItems as Project[]).map((proj) => {
+                const systems = processSystemMap[proj.id] || [];
+                const taskCount = systems.reduce((s, d) => s + d.steps.length, 0);
+                return (
+                  <button key={proj.id} onClick={() => selectItem(proj.id)}
+                    className="group relative flex flex-col gap-3 p-4 rounded-xl border border-border bg-card text-left transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Workflow className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{proj.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Prosessi</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/60">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Järjestelmät</p>
+                        <p className="text-sm font-semibold tabular-nums">{systems.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Tehtävät</p>
+                        <p className="text-sm font-semibold tabular-nums">{taskCount}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            {filteredItems.length === 0 && (
+              <div className="col-span-full text-center py-16 text-muted-foreground border-2 border-dashed rounded-xl">
+                <ArrowLeftRight className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">Ei tuloksia</p>
+                <p className="text-xs mt-1">Kokeile toista hakusanaa tai vaihda hakutyyppiä.</p>
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Graph view */}
-      {selectedCenter && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => setSelectedCenter(null)}>← Takaisin</Button>
-            <h2 className="font-semibold text-lg">
+        {/* Graph view (inline) */}
+        {selectedCenter && !isFullscreen && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => setSelectedCenter(null)}>← Takaisin</Button>
+              <h2 className="font-semibold text-lg truncate">
+                {searchMode === "system" ? selectedCenter : orgProjects.find((p) => p.id === selectedCenter)?.name}
+              </h2>
+              {searchMode === "system" && totalTaskCount > 5 && (
+                <Badge variant="destructive" className="gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Kriittinen · {totalTaskCount} tehtävää
+                </Badge>
+              )}
+              <div className="flex items-center gap-1 ml-auto">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadPng}>
+                  <Download className="w-4 h-4" /> PNG
+                </Button>
+                <Button variant="default" size="sm" className="gap-1.5" onClick={() => setIsFullscreen(true)}>
+                  <Maximize2 className="w-4 h-4" /> Full screen
+                </Button>
+              </div>
+            </div>
+            <div className="border rounded-xl overflow-hidden">
+              {renderGraphViewport("h-[650px]")}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Fullscreen overlay */}
+      {selectedCenter && isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in duration-150">
+          <div className="h-14 border-b flex items-center gap-3 px-4 bg-card shrink-0">
+            <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(false)}>← Sulje</Button>
+            <Network className="w-5 h-5 text-primary shrink-0" />
+            <h2 className="font-semibold text-base truncate">
               {searchMode === "system" ? selectedCenter : orgProjects.find((p) => p.id === selectedCenter)?.name}
             </h2>
             {searchMode === "system" && totalTaskCount > 5 && (
-              <Badge variant="destructive">Kriittinen · {totalTaskCount} tehtävää</Badge>
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Kriittinen · {totalTaskCount} tehtävää
+              </Badge>
             )}
+            <div className="flex items-center gap-1 ml-auto">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadPng}>
+                <Download className="w-4 h-4" /> PNG
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(false)} title="Sulje (Esc)">
+                <Minimize2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-
-          <div ref={containerRef} className="relative border rounded-xl bg-card overflow-hidden" style={{ height: "650px" }}>
-            <svg
-              ref={svgRef}
-              width="100%" height="100%"
-              className={isPanning ? "cursor-grabbing" : "cursor-grab"}
-              onWheel={handleWheel}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              style={{ userSelect: "none" }}
-            >
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <circle cx="20" cy="20" r="0.5" fill="hsl(var(--muted-foreground))" opacity="0.15" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-
-              <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-                {/* Edges */}
-                {edges.map((edge, i) => {
-                  const src = getNodeById(edge.source);
-                  const tgt = getNodeById(edge.target);
-                  if (!src || !tgt) return null;
-                  const isConnected = hoveredNode?.id === edge.source || hoveredNode?.id === edge.target;
-                  const isCriticalEdge = searchMode === "system" && totalTaskCount > 5 && edge.source.startsWith("sys-");
-                  const dimmed = hoveredNode && !isConnected;
-                  return (
-                    <path key={i} d={getEdgePath(src, tgt)} fill="none"
-                      stroke={isConnected ? "hsl(var(--primary))" : isCriticalEdge ? "hsl(0, 60%, 65%)" : "hsl(var(--muted-foreground))"}
-                      strokeWidth={isConnected ? 2.5 : isCriticalEdge ? 2 : 1.2}
-                      strokeOpacity={dimmed ? 0.1 : isConnected ? 0.9 : 0.25}
-                      strokeLinecap="round" className="transition-opacity duration-200"
-                    />
-                  );
-                })}
-
-                {/* Nodes as rounded rectangles */}
-                {nodes.map((node) => {
-                  const isHovered = hoveredNode?.id === node.id;
-                  const isConnected = hoveredNode && edges.some(
-                    (e) => (e.source === hoveredNode.id && e.target === node.id) || (e.target === hoveredNode.id && e.source === node.id)
-                  );
-                  const dimmed = hoveredNode && !isHovered && !isConnected;
-
-                  const { lines, lineHeight, textH, boxW, boxH, fontSize } = getNodeRect(node);
-                  const fontWeight = node.type === "system" ? 700 : node.type === "process" ? 600 : 400;
-
-                  // Colors for rectangle fill
-                  const fillOpacity = node.type === "task" ? 0.08 : 0.14;
-                  const rx = node.type === "task" ? 6 : 10;
-
-                  return (
-                    <g key={node.id} transform={`translate(${node.x}, ${node.y})`}
-                      onMouseEnter={() => setHoveredNode(node)}
-                      onMouseLeave={() => setHoveredNode(null)}
-                      onClick={(e) => {
-                        if (node.projectId) {
-                          e.stopPropagation();
-                          navigate(`/presentation/${node.projectId}?org=${orgId}&from=dependency-graph`);
-                        }
-                      }}
-                      style={{
-                        cursor: node.projectId ? "pointer" : "default",
-                        opacity: dimmed ? 0.15 : 1,
-                        transition: "opacity 0.2s",
-                      }}>
-                      {/* Glow on hover */}
-                      {(isHovered || isConnected) && (
-                        <rect x={-boxW / 2 - 4} y={-boxH / 2 - 4} width={boxW + 8} height={boxH + 8}
-                          rx={rx + 2} fill="none" stroke={node.color} strokeWidth={2} strokeOpacity={0.35} />
-                      )}
-                      {/* Main rectangle background */}
-                      <rect x={-boxW / 2} y={-boxH / 2} width={boxW} height={boxH} rx={rx}
-                        fill={node.color} fillOpacity={fillOpacity}
-                        stroke={node.color} strokeWidth={isHovered ? 2.5 : 1.5} />
-                      {/* White label background */}
-                      <rect x={-boxW / 2 + 2} y={-boxH / 2 + 2} width={boxW - 4} height={boxH - 4}
-                        rx={rx - 1} fill="white" fillOpacity={0.88} />
-                      {/* Label text */}
-                      <text textAnchor="middle" dominantBaseline="central" fill="hsl(var(--foreground))" fontSize={fontSize} fontWeight={fontWeight}>
-                        {lines.map((line, li) => (
-                          <tspan key={li} x={0} dy={li === 0 ? -(lines.length - 1) * lineHeight / 2 : lineHeight}>
-                            {line}
-                          </tspan>
-                        ))}
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
-            </svg>
-
-            {/* Tooltip */}
-            {hoveredNode && !isPanning && (
-              <div className="absolute pointer-events-none bg-popover border rounded-lg shadow-lg px-3 py-2 text-sm z-50 max-w-[300px]"
-                style={{
-                  left: Math.min(
-                    mousePos.x - (containerRef.current?.getBoundingClientRect().left || 0) + 12,
-                    (containerRef.current?.clientWidth || 400) - 310
-                  ),
-                  top: mousePos.y - (containerRef.current?.getBoundingClientRect().top || 0) - 40,
-                }}>
-                <p className="font-medium break-words">{hoveredNode.label}</p>
-                <p className="text-xs text-muted-foreground capitalize">{hoveredNode.type}</p>
-                {hoveredNode.performer && <p className="text-xs text-muted-foreground">Rooli: {hoveredNode.performer}</p>}
-                {hoveredNode.projectId && <p className="text-xs text-primary mt-1">Klikkaa avataksesi →</p>}
-              </div>
-            )}
-
+          <div className="flex-1 min-h-0">
+            {renderGraphViewport("h-full")}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
