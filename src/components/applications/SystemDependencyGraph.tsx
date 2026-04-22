@@ -279,6 +279,20 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     if (selectedCenter) { setZoom(1); setPan({ x: 0, y: 0 }); }
   }, [selectedCenter]);
 
+  // ESC to exit fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    // Lock body scroll while fullscreen
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isFullscreen]);
+
   useEffect(() => {
     if (nodes.length === 0 || !containerRef.current) return;
     const container = containerRef.current;
