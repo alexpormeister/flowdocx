@@ -7,8 +7,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
 import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions, getCurrentUserMembership } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
-import { createProcessChangeRequest } from "@/lib/processChangeApi";
-import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink } from "lucide-react";
+import { createProcessChangeDraft, createProcessChangeRequest, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
+import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -67,6 +67,21 @@ export default function Editor() {
 
   const canEditProject = !project?.organization_id || membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
   const canSubmitChangeRequest = !!project?.organization_id && !!membership;
+
+  const { data: orgChangeRequests = [] } = useQuery({
+    queryKey: ["process-change-requests", project?.organization_id],
+    queryFn: () => getProcessChangeRequests(project!.organization_id!),
+    enabled: !!user && !!project?.organization_id,
+  });
+
+  const activeDraftRequest = useMemo(
+    () => orgChangeRequests.find((request) => request.review_project_id === id && request.submitted_by === user?.id && request.status === "draft"),
+    [orgChangeRequests, id, user?.id],
+  );
+
+  const isOwnChangeDraft = !!activeDraftRequest;
+  const canEditCurrentProject = canEditProject || isOwnChangeDraft;
+  const canCreateChangeDraft = !!project?.organization_id && membership?.role === "viewer" && !isOwnChangeDraft;
 
   // Org tags for system tag suggestions
   const { data: orgTags = [] } = useQuery({
@@ -175,6 +190,31 @@ export default function Editor() {
     onError: (error) => toast.error((error as Error).message),
   });
 
+  const createDraftMutation = useMutation({
+    mutationFn: () => createProcessChangeDraft({
+      organizationId: project!.organization_id!,
+      sourceProjectId: id!,
+      projectName: projectName,
+    }),
+    onSuccess: (request) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["process-change-requests", project?.organization_id] });
+      toast.success("Muutosehdotusversio luotu. Voit nyt muokata kopiokaaviota.");
+      if (request.review_project_id) navigate(`/editor/${request.review_project_id}?org=${project!.organization_id}`);
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+
+  const submitDraftMutation = useMutation({
+    mutationFn: () => submitProcessChangeDraft(activeDraftRequest!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["process-change-requests", project?.organization_id] });
+      toast.success("Muutosehdotus lähetetty adminpaneeliin tarkastettavaksi.");
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+
   useEffect(() => {
     if (project) {
       setProjectName(project.name);
@@ -197,7 +237,7 @@ export default function Editor() {
   }, [project, modeler]);
 
   const triggerAutoSave = useCallback(async () => {
-    if (!modeler || !id || !canEditProject) return;
+    if (!modeler || !id || !canEditCurrentProject) return;
 
     try {
       const { xml } = await modeler.saveXML({ format: true });
@@ -221,7 +261,7 @@ export default function Editor() {
       console.error("Auto-save failed:", err);
       setIsSaving(false);
     }
-  }, [modeler, id, canEditProject, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
+  }, [modeler, id, canEditCurrentProject, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
 
   useEffect(() => {
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
