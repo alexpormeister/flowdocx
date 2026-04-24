@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProjects, type Project } from "@/lib/api";
+import { getProjects } from "@/lib/api";
 import { getCurrentUserMembership } from "@/lib/organizationApi";
 import {
-  approveProcessChangeRequest,
+  closeProcessChangeRequest,
   getProcessChangeRequests,
   rejectProcessChangeRequest,
   type ProcessChangeRequest,
@@ -24,6 +24,7 @@ import { CheckCircle2, ClipboardCheck, GitPullRequest, XCircle, Eye } from "luci
 import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
+  draft: "Työn alla",
   pending: "Odottaa käsittelyä",
   approved: "Hyväksytty",
   rejected: "Hylätty",
@@ -53,17 +54,6 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
 
   const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
 
-  const approveMutation = useMutation({
-    mutationFn: (request: ProcessChangeRequest) => approveProcessChangeRequest(request, projects),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["process-change-requests", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setSelected(null);
-      toast.success("Muutosehdotus hyväksytty ja virallinen malli päivitetty.");
-    },
-    onError: (error) => toast.error((error as Error).message),
-  });
-
   const rejectMutation = useMutation({
     mutationFn: (request: ProcessChangeRequest) => rejectProcessChangeRequest(request.id, rejectComment),
     onSuccess: () => {
@@ -71,6 +61,18 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
       setSelected(null);
       setRejectComment("");
       toast.success("Muutosehdotus hylätty.");
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (request: ProcessChangeRequest) => closeProcessChangeRequest(request, rejectComment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["process-change-requests", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setSelected(null);
+      setRejectComment("");
+      toast.success("Muutosehdotus kuitattu ja ehdotusversio poistettu.");
     },
     onError: (error) => toast.error((error as Error).message),
   });
@@ -143,7 +145,7 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
             <div className="rounded-md border bg-muted/20 p-3 text-sm">
               <p className="font-medium">Vaikutus</p>
               <p className="mt-1 text-muted-foreground">
-                Hyväksyntä päivittää alkuperäisen prosessin vaihedataan ehdotetun version tiedot. Automaattisesti luotu tarkastusversio säilyy historiassa.
+                Admin tekee tarvittavat muutokset vanhaan viralliseen kaavioon ehdotusversion perusteella. Kuittaus poistaa ehdotusversion ja jättää virallisen kaavion talteen.
               </p>
             </div>
             {canReview && selected?.status === "pending" && (
@@ -158,7 +160,7 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
             {canReview && selected?.status === "pending" && (
               <>
                 <Button variant="outline" onClick={() => rejectMutation.mutate(selected)} disabled={rejectMutation.isPending}>Hylkää</Button>
-                <Button onClick={() => approveMutation.mutate(selected)} disabled={approveMutation.isPending}>Hyväksy ja päivitä malli</Button>
+                <Button onClick={() => closeMutation.mutate(selected)} disabled={closeMutation.isPending}>Kuittaa ja poista ehdotusversio</Button>
               </>
             )}
           </DialogFooter>

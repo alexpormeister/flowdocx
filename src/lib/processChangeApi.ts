@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { updateProject, type Project } from "@/lib/api";
+import { deleteProject, updateProject, type Project } from "@/lib/api";
 
 export interface ProcessChangeRequest {
   id: string;
@@ -48,6 +48,33 @@ export async function createProcessChangeRequest(input: {
   return data as ProcessChangeRequest;
 }
 
+export async function createProcessChangeDraft(input: {
+  organizationId: string;
+  sourceProjectId: string;
+  projectName: string;
+}): Promise<ProcessChangeRequest> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Kirjaudu sisään luodaksesi muutosehdotuksen.");
+
+  const { data, error } = await supabase
+    .from("process_change_requests")
+    .insert({
+      organization_id: input.organizationId,
+      source_project_id: input.sourceProjectId,
+      step_id: "process",
+      step_name: input.projectName,
+      current_description: null,
+      proposed_description: "",
+      status: "draft",
+      submitted_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as ProcessChangeRequest;
+}
+
 export async function getProcessChangeRequests(orgId: string): Promise<ProcessChangeRequest[]> {
   const { data, error } = await supabase
     .from("process_change_requests")
@@ -69,6 +96,10 @@ export async function updateProcessChangeRequest(
     .eq("id", id);
 
   if (error) throw error;
+}
+
+export async function submitProcessChangeDraft(id: string): Promise<void> {
+  await updateProcessChangeRequest(id, { status: "pending" });
 }
 
 export async function approveProcessChangeRequest(request: ProcessChangeRequest, projects: Project[]): Promise<void> {
@@ -101,6 +132,22 @@ export async function rejectProcessChangeRequest(id: string, comment?: string): 
 
   await updateProcessChangeRequest(id, {
     status: "rejected",
+    review_comment: comment || null,
+    reviewed_by: user.id,
+    reviewed_at: new Date().toISOString(),
+  });
+}
+
+export async function closeProcessChangeRequest(request: ProcessChangeRequest, comment?: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Kirjaudu sisään käsitelläksesi ehdotuksen.");
+
+  if (request.review_project_id) {
+    await deleteProject(request.review_project_id);
+  }
+
+  await updateProcessChangeRequest(request.id, {
+    status: "approved",
     review_comment: comment || null,
     reviewed_by: user.id,
     reviewed_at: new Date().toISOString(),
