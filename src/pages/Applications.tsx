@@ -35,6 +35,7 @@ import CustomerLifecyclePanel from "@/components/applications/CustomerLifecycleP
 import AutomationProposalPanel from "@/components/applications/AutomationProposalPanel";
 import ProcessIntelligencePanel from "@/components/applications/ProcessIntelligencePanel";
 import { toast } from "sonner";
+import { hexToContrastHslString, hexToHslString } from "@/lib/utils";
 
 type ToolTab = "dashboard" | "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal" | "process-intelligence";
 
@@ -87,6 +88,36 @@ export default function Applications() {
     () => orgProjects.reduce((sum, project) => sum + ((project.process_steps as any[]) || []).length, 0),
     [orgProjects],
   );
+
+  const orgThemeStyle = useMemo(() => {
+    if (!selectedOrg) return undefined;
+    const primary = selectedOrg.primary_color || "#0f172a";
+    const accent = selectedOrg.accent_color || "#0891b2";
+    const primaryHsl = hexToHslString(primary);
+    const accentHsl = hexToHslString(accent);
+    if (!primaryHsl && !accentHsl) return undefined;
+
+    return {
+      ...(primaryHsl
+        ? {
+            "--primary": primaryHsl,
+            "--ring": primaryHsl,
+            "--primary-foreground": hexToContrastHslString(primary),
+            "--sidebar-primary": primaryHsl,
+            "--sidebar-ring": primaryHsl,
+          }
+        : {}),
+      ...(accentHsl
+        ? {
+            "--accent": accentHsl,
+            "--accent-foreground": hexToContrastHslString(accent),
+            "--tag": accentHsl,
+            "--tag-foreground": hexToContrastHslString(accent),
+            "--sidebar-accent": accentHsl,
+          }
+        : {}),
+    } as React.CSSProperties;
+  }, [selectedOrg]);
 
   const handleExportOrg = async () => {
     if (!orgId || !selectedOrg) return;
@@ -141,12 +172,12 @@ export default function Applications() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-card shrink-0">
+    <div className="min-h-screen bg-background flex flex-col" style={orgThemeStyle} data-org-theme>
+      <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-primary text-primary-foreground shrink-0">
         <Button variant="ghost" size="icon" onClick={() => navigate(`/dashboard?org=${orgId}`)} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <AppWindow className="w-5 h-5 text-primary shrink-0 hidden sm:block" />
+        <AppWindow className="w-5 h-5 text-accent shrink-0 hidden sm:block" />
         <h1 className="text-sm sm:text-lg font-semibold truncate flex-1">{selectedOrg.name} — Sovellukset ja työkalut</h1>
         <Button
           variant="outline"
@@ -176,16 +207,16 @@ export default function Applications() {
                 onClick={() => setActiveTab(tool.id)}
                 className={`flex min-w-[150px] items-center gap-3 rounded-lg border px-3 py-3 text-left text-sm transition-colors lg:min-w-0 ${
                   isActive
-                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-primary"}`}>
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium truncate">{tool.label}</span>
-                  <span className="hidden text-xs text-muted-foreground lg:block lg:truncate">{tool.description}</span>
+                  <span className={`hidden text-xs lg:block lg:truncate ${isActive ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{tool.description}</span>
                 </span>
                 <ChevronRight className="hidden h-4 w-4 shrink-0 lg:block" />
               </button>
@@ -232,12 +263,12 @@ function ApplicationsDashboard({
 }) {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
-      <section className="rounded-lg border bg-card p-5 md:p-6">
+      <section className="rounded-lg border bg-primary p-5 text-primary-foreground md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-primary">Sovellukset ja työkalut</p>
+            <p className="text-sm font-medium text-accent">Sovellukset ja työkalut</p>
             <h2 className="mt-1 text-2xl font-bold md:text-3xl">Organisaation prosessien ohjauskeskus</h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">
               Yleiskuva kokoaa tärkeimmät työkalut, järjestelmät ja prosessidatan yhteen selkeään näkymään.
             </p>
           </div>
@@ -259,7 +290,7 @@ function ApplicationsDashboard({
               className="group rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
             >
               <div className="flex items-start justify-between gap-4">
-                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-muted text-primary">
+                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
                 </span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
@@ -276,9 +307,9 @@ function ApplicationsDashboard({
 
 function DashboardStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border bg-background p-3 text-center">
+    <div className="rounded-md border border-primary-foreground/20 bg-primary-foreground/10 p-3 text-center">
       <p className="text-xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xs text-primary-foreground/75">{label}</p>
     </div>
   );
 }
