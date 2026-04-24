@@ -641,6 +641,7 @@ export default function Editor() {
             value={projectName}
             onChange={(e) => handleNameChange(e.target.value)}
             className="h-8 w-32 sm:w-48 text-sm font-medium border-none bg-transparent focus-visible:bg-background"
+            readOnly={!canEditProject}
           />
           <StatusBadge status={status} />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
@@ -685,10 +686,12 @@ export default function Editor() {
               <span className="hidden sm:inline">Present</span>
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
-            <Save className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t("common.save")}</span>
-          </Button>
+          {canEditProject && (
+            <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
+              <Save className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("common.save")}</span>
+            </Button>
+          )}
           <ExportMenu onExport={handleExport} />
           <Button
             variant="ghost"
@@ -704,7 +707,7 @@ export default function Editor() {
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 relative">
-          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} />
+          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} readOnly={!canEditProject} />
         </div>
 
         {!isMobile && panelOpen && (
