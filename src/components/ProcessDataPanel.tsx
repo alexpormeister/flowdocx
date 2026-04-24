@@ -186,20 +186,23 @@ export default function ProcessDataPanel({
                     <MessageSquarePlus className="w-3.5 h-3.5" />
                   </button>
                 )}
-                <button
-                  onClick={() => removeStep(step.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => removeStep(step.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
             <Input
-              placeholder="Task name..."
+              placeholder="Vaiheen nimi..."
               value={step.task}
               onChange={(e) => updateStep(step.id, "task", e.target.value)}
               className="h-8 text-sm bg-background"
+              readOnly={readOnly}
             />
 
             <div className="grid grid-cols-1 gap-2">
@@ -207,6 +210,7 @@ export default function ProcessDataPanel({
                 value={step.performer}
                 onChange={(val) => updateStep(step.id, "performer", val)}
                 positions={availablePositions}
+                readOnly={readOnly}
               />
             </div>
 
@@ -214,7 +218,7 @@ export default function ProcessDataPanel({
             {isGateway && step.gatewayPaths && step.gatewayPaths.length > 0 && (
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Decision Paths
+                  Päätöspolut
                 </label>
                 <div className="space-y-1">
                   {step.gatewayPaths.map((path, idx) => (
@@ -237,7 +241,7 @@ export default function ProcessDataPanel({
 
             {isGateway && (!step.gatewayPaths || step.gatewayPaths.length === 0) && (
               <div className="px-2 py-1.5 rounded bg-amber-50 border border-amber-200 text-[10px] text-amber-600">
-                Sync to detect decision paths from diagram
+                Synkronoi kaaviosta päätöspolkujen tunnistamiseksi
               </div>
             )}
 
