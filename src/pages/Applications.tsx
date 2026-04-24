@@ -35,6 +35,7 @@ import CustomerLifecyclePanel from "@/components/applications/CustomerLifecycleP
 import AutomationProposalPanel from "@/components/applications/AutomationProposalPanel";
 import ProcessIntelligencePanel from "@/components/applications/ProcessIntelligencePanel";
 import { toast } from "sonner";
+import { hexToContrastHslString, hexToHslString } from "@/lib/utils";
 
 type ToolTab = "dashboard" | "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal" | "process-intelligence";
 
@@ -87,6 +88,36 @@ export default function Applications() {
     () => orgProjects.reduce((sum, project) => sum + ((project.process_steps as any[]) || []).length, 0),
     [orgProjects],
   );
+
+  const orgThemeStyle = useMemo(() => {
+    if (!selectedOrg) return undefined;
+    const primary = selectedOrg.primary_color || "#0f172a";
+    const accent = selectedOrg.accent_color || "#0891b2";
+    const primaryHsl = hexToHslString(primary);
+    const accentHsl = hexToHslString(accent);
+    if (!primaryHsl && !accentHsl) return undefined;
+
+    return {
+      ...(primaryHsl
+        ? {
+            "--primary": primaryHsl,
+            "--ring": primaryHsl,
+            "--primary-foreground": hexToContrastHslString(primary),
+            "--sidebar-primary": primaryHsl,
+            "--sidebar-ring": primaryHsl,
+          }
+        : {}),
+      ...(accentHsl
+        ? {
+            "--accent": accentHsl,
+            "--accent-foreground": hexToContrastHslString(accent),
+            "--tag": accentHsl,
+            "--tag-foreground": hexToContrastHslString(accent),
+            "--sidebar-accent": accentHsl,
+          }
+        : {}),
+    } as React.CSSProperties;
+  }, [selectedOrg]);
 
   const handleExportOrg = async () => {
     if (!orgId || !selectedOrg) return;
@@ -141,12 +172,12 @@ export default function Applications() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-card shrink-0">
+    <div className="min-h-screen bg-background flex flex-col" style={orgThemeStyle} data-org-theme>
+      <header className="h-14 border-b flex items-center gap-2 sm:gap-3 px-3 md:px-6 bg-primary text-primary-foreground shrink-0">
         <Button variant="ghost" size="icon" onClick={() => navigate(`/dashboard?org=${orgId}`)} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <AppWindow className="w-5 h-5 text-primary shrink-0 hidden sm:block" />
+        <AppWindow className="w-5 h-5 text-accent shrink-0 hidden sm:block" />
         <h1 className="text-sm sm:text-lg font-semibold truncate flex-1">{selectedOrg.name} — Sovellukset ja työkalut</h1>
         <Button
           variant="outline"
