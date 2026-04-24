@@ -491,16 +491,18 @@ export default function Editor() {
           <h2 className="text-xs font-semibold text-panel-header-foreground tracking-wide uppercase">
             {t("editor.processSteps")}
           </h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={syncStepsFromBpmn}
-            className="h-6 text-[10px] gap-1 px-2"
-            title="Sync steps from BPMN diagram"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Sync
-          </Button>
+          {canEditProject && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={syncStepsFromBpmn}
+              className="h-6 text-[10px] gap-1 px-2"
+              title="Synkronoi vaiheet BPMN-kaaviosta"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Synkronoi
+            </Button>
+          )}
         </div>
         <div className="flex-1 overflow-hidden">
           <ProcessDataPanel
@@ -510,17 +512,18 @@ export default function Editor() {
             availableTags={availableTags}
             availablePositions={availablePerformers}
             description={projectDescription}
-            onDescriptionChange={handleDescriptionChange}
-            onAddOrgTag={project.organization_id ? handleAddOrgTag : undefined}
+            onDescriptionChange={canEditProject ? handleDescriptionChange : undefined}
+            onAddOrgTag={canEditProject && project.organization_id ? handleAddOrgTag : undefined}
             onSubmitChangeRequest={project.organization_id ? async (step, proposedDescription) => {
               await changeRequestMutation.mutateAsync({ step, proposedDescription });
             } : undefined}
+            readOnly={!canEditProject}
           />
         </div>
       </div>
 
       {/* Lane/Participant Name Editor */}
-      {selectedElement && modeler && project.organization_id && (
+      {selectedElement && modeler && project.organization_id && canEditProject && (
         <LaneNameEditor
           element={selectedElement}
           modeler={modeler}
@@ -529,7 +532,7 @@ export default function Editor() {
       )}
 
       {/* Element Link Section */}
-      {selectedElement && project.organization_id && (
+      {selectedElement && project.organization_id && canEditProject && (
         <div className="border-t px-3 py-3 space-y-2">
           <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
             <Link2 className="w-3 h-3" />
@@ -586,7 +589,7 @@ export default function Editor() {
       )}
 
       {/* Process Settings */}
-      <div className="border-t px-3 py-3 space-y-3">
+      {canEditProject && <div className="border-t px-3 py-3 space-y-3">
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Process Settings</h3>
         <div className="space-y-2">
           <div>
@@ -621,7 +624,7 @@ export default function Editor() {
             />
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 
