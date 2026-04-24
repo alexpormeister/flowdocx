@@ -879,8 +879,8 @@ export type Database = {
           reviewed_by: string | null
           source_project_id: string
           status: string
-          step_id: string
-          step_name: string
+          step_id: string | null
+          step_name: string | null
           submitted_by: string
           updated_at: string
         }
@@ -889,15 +889,15 @@ export type Database = {
           current_description?: string | null
           id?: string
           organization_id: string
-          proposed_description: string
+          proposed_description?: string
           review_comment?: string | null
           review_project_id?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source_project_id: string
           status?: string
-          step_id: string
-          step_name: string
+          step_id?: string | null
+          step_name?: string | null
           submitted_by: string
           updated_at?: string
         }
@@ -913,8 +913,8 @@ export type Database = {
           reviewed_by?: string | null
           source_project_id?: string
           status?: string
-          step_id?: string
-          step_name?: string
+          step_id?: string | null
+          step_name?: string | null
           submitted_by?: string
           updated_at?: string
         }
@@ -1195,6 +1195,10 @@ export type Database = {
       }
       is_folder_restricted_for_user: {
         Args: { _folder_id: string; _organization_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_process_change_review_project: {
+        Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
