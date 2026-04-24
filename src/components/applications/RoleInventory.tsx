@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
-import { getOrganizationPositions, getOrganizationGroupsWithPositions, type OrganizationPosition, type OrganizationGroup } from "@/lib/organizationApi";
+import { getOrganizationPositions, getOrganizationGroupsWithPositions, getOrganizationTags, type OrganizationPosition, type OrganizationGroup } from "@/lib/organizationApi";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -12,12 +12,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle } from "lucide-react";
+import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Server, GitBranch } from "lucide-react";
 
 interface RoleDetail {
   project: Project;
   steps: { step: number; task: string; viaGroup?: string }[];
 }
+
+type StepRow = { project: Project; performer: string; systems: string[] };
 
 type GroupWithPositions = OrganizationGroup & { position_ids: string[] };
 
@@ -44,6 +46,12 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     queryKey: ["projects"],
     queryFn: getProjects,
     enabled: !!user,
+  });
+
+  const { data: systems = [] } = useQuery({
+    queryKey: ["org-tags", orgId],
+    queryFn: () => getOrganizationTags(orgId),
+    enabled: !!user && !!orgId,
   });
 
   const orgProjects = useMemo(
@@ -158,6 +166,35 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
       0
     );
   }, [roleMap]);
+
+  const allSteps = useMemo<StepRow[]>(() => orgProjects.flatMap((project) =>
+    ((project.process_steps as any[]) || [])
+      .filter((step) => step.performer || (step.system || []).length > 0)
+      .map((step) => ({ project, performer: step.performer || "Määrittämätön", systems: step.system || [] })),
+  ), [orgProjects]);
+
+  const topRoles = useMemo(() => sortedMapped.slice(0, 6).map(([, value]) => [value.position.name, value.details.reduce((sum, detail) => sum + detail.steps.length, 0)] as [string, number]), [sortedMapped]);
+  const topSystems = useMemo(() => {
+    const counts = new Map<string, number>();
+    allSteps.forEach((step) => step.systems.forEach((system) => counts.set(system, (counts.get(system) || 0) + 1)));
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [allSteps]);
+  const dependencyCount = useMemo(() => {
+    const shared = new Map<string, Set<string>>();
+    allSteps.forEach((step) => {
+      if (step.performer && step.performer !== "Määrittämätön") {
+        const key = `role:${step.performer.toLowerCase()}`;
+        if (!shared.has(key)) shared.set(key, new Set());
+        shared.get(key)!.add(step.project.id);
+      }
+      step.systems.forEach((system) => {
+        const key = `system:${system.toLowerCase()}`;
+        if (!shared.has(key)) shared.set(key, new Set());
+        shared.get(key)!.add(step.project.id);
+      });
+    });
+    return Array.from(shared.values()).filter((projectIds) => projectIds.size > 1).length;
+  }, [allSteps]);
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
