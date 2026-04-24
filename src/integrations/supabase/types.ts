@@ -866,6 +866,60 @@ export type Database = {
           },
         ]
       }
+      process_change_requests: {
+        Row: {
+          created_at: string
+          current_description: string | null
+          id: string
+          organization_id: string
+          proposed_description: string
+          review_comment: string | null
+          review_project_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_project_id: string
+          status: string
+          step_id: string
+          step_name: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_description?: string | null
+          id?: string
+          organization_id: string
+          proposed_description: string
+          review_comment?: string | null
+          review_project_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_project_id: string
+          status?: string
+          step_id: string
+          step_name: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_description?: string | null
+          id?: string
+          organization_id?: string
+          proposed_description?: string
+          review_comment?: string | null
+          review_project_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_project_id?: string
+          status?: string
+          step_id?: string
+          step_name?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
