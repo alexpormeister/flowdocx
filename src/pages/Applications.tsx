@@ -307,9 +307,9 @@ function ApplicationsDashboard({
 
 function DashboardStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border bg-background p-3 text-center">
+    <div className="rounded-md border border-primary-foreground/20 bg-primary-foreground/10 p-3 text-center">
       <p className="text-xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xs text-primary-foreground/75">{label}</p>
     </div>
   );
 }
