@@ -386,6 +386,25 @@ function StatCard({ label, value, icon: Icon, accent }: { label: string; value: 
   );
 }
 
+function InsightCard({ title, icon: Icon, items }: { title: string; icon: any; items: [string, number][] }) {
+  const max = Math.max(...items.map(([, count]) => count), 1);
+  return (
+    <div className="space-y-3 rounded-xl border bg-card p-4">
+      <h3 className="flex items-center gap-2 font-semibold"><Icon className="h-4 w-4 text-primary" />{title}</h3>
+      {items.length === 0 ? <p className="text-sm text-muted-foreground">Dataa ei ole vielä.</p> : items.map(([label, count]) => (
+        <div key={label} className="space-y-1">
+          <div className="flex items-center justify-between gap-3 text-sm"><span className="truncate">{label}</span><span className="text-muted-foreground">{count}</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.max((count / max) * 100, 8)}%` }} /></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-md bg-muted/50 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold">{value}</p></div>;
+}
+
 function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
   return (
     <div className="text-center py-12 text-muted-foreground rounded-xl border border-dashed">
