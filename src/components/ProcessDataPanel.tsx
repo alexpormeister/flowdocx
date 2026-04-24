@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, Tag, ChevronDown, Search, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Tag, ChevronDown, Search, ArrowRight, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import SystemTagBadge from "./SystemTagBadge";
 
 export type BpmnElementType = "task" | "event" | "gateway" | "subprocess" | "other";
@@ -32,6 +41,7 @@ interface ProcessDataPanelProps {
   description?: string;
   onDescriptionChange?: (description: string) => void;
   onAddOrgTag?: (tag: string) => void;
+  onSubmitChangeRequest?: (step: ProcessStep, proposedDescription: string) => Promise<void>;
 }
 
 export default function ProcessDataPanel({ 
@@ -43,9 +53,13 @@ export default function ProcessDataPanel({
   description = "",
   onDescriptionChange,
   onAddOrgTag,
+  onSubmitChangeRequest,
 }: ProcessDataPanelProps) {
   const [newSystemTag, setNewSystemTag] = useState<{ stepId: string; value: string } | null>(null);
   const [customTagInput, setCustomTagInput] = useState("");
+  const [feedbackStep, setFeedbackStep] = useState<ProcessStep | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const addStep = () => {
     const newStep: ProcessStep = {
@@ -82,6 +96,18 @@ export default function ProcessDataPanel({
     const step = steps.find(s => s.id === stepId);
     if (step) {
       updateStep(stepId, "system", step.system.filter(t => t !== tag));
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackStep || !onSubmitChangeRequest || !feedbackText.trim()) return;
+    setSubmittingFeedback(true);
+    try {
+      await onSubmitChangeRequest(feedbackStep, feedbackText.trim());
+      setFeedbackStep(null);
+      setFeedbackText("");
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -140,12 +166,23 @@ export default function ProcessDataPanel({
                   #{step.step}
                 </span>
               </div>
-              <button
-                onClick={() => removeStep(step.id)}
-                className="text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-1">
+                {onSubmitChangeRequest && (
+                  <button
+                    onClick={() => { setFeedbackStep(step); setFeedbackText(""); }}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    title="Ilmoita muutoksesta"
+                  >
+                    <MessageSquarePlus className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => removeStep(step.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             <Input
@@ -228,6 +265,33 @@ export default function ProcessDataPanel({
           );
         })}
       </div>
+
+      <Dialog open={!!feedbackStep} onOpenChange={(open) => !open && setFeedbackStep(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ilmoita muutoksesta</DialogTitle>
+            <DialogDescription>
+              Kuvaa, miten tämä vaihe menee todellisuudessa. Ehdotuksesta luodaan tarkastettava prosessiversio.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border bg-muted/30 p-3 text-sm">
+              <p className="font-medium">{feedbackStep?.task || "Nimetön vaihe"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Nykyinen vastuu: {feedbackStep?.performer || "Ei määritetty"}</p>
+            </div>
+            <Textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="Miten tämä vaihe menee todellisuudessa?"
+              className="min-h-32"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeedbackStep(null)}>Peruuta</Button>
+            <Button onClick={submitFeedback} disabled={!feedbackText.trim() || submittingFeedback}>Lähetä ehdotus</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
