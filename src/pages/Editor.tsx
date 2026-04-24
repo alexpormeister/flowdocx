@@ -65,8 +65,8 @@ export default function Editor() {
     enabled: !!user && !!project?.organization_id,
   });
 
-  const isViewerOnly = project?.organization_id && membership?.role === "viewer";
-  const canEditProject = !isViewerOnly;
+  const canEditProject = !project?.organization_id || membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
+  const canSubmitChangeRequest = !!project?.organization_id && !!membership;
 
   // Org tags for system tag suggestions
   const { data: orgTags = [] } = useQuery({
@@ -514,7 +514,7 @@ export default function Editor() {
             description={projectDescription}
             onDescriptionChange={canEditProject ? handleDescriptionChange : undefined}
             onAddOrgTag={canEditProject && project.organization_id ? handleAddOrgTag : undefined}
-            onSubmitChangeRequest={project.organization_id ? async (step, proposedDescription) => {
+            onSubmitChangeRequest={canSubmitChangeRequest ? async (step, proposedDescription) => {
               await changeRequestMutation.mutateAsync({ step, proposedDescription });
             } : undefined}
             readOnly={!canEditProject}
