@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProjects, type Project } from "@/lib/api";
+import { getProjects } from "@/lib/api";
 import { getCurrentUserMembership } from "@/lib/organizationApi";
 import {
   closeProcessChangeRequest,
