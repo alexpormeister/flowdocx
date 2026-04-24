@@ -42,6 +42,7 @@ interface ProcessDataPanelProps {
   onDescriptionChange?: (description: string) => void;
   onAddOrgTag?: (tag: string) => void;
   onSubmitChangeRequest?: (step: ProcessStep, proposedDescription: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export default function ProcessDataPanel({ 
@@ -54,11 +55,13 @@ export default function ProcessDataPanel({
   onDescriptionChange,
   onAddOrgTag,
   onSubmitChangeRequest,
+  readOnly = false,
 }: ProcessDataPanelProps) {
   const [newSystemTag, setNewSystemTag] = useState<{ stepId: string; value: string } | null>(null);
   const [customTagInput, setCustomTagInput] = useState("");
   const [feedbackStep, setFeedbackStep] = useState<ProcessStep | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSystems, setFeedbackSystems] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const addStep = () => {
@@ -101,11 +104,16 @@ export default function ProcessDataPanel({
 
   const submitFeedback = async () => {
     if (!feedbackStep || !onSubmitChangeRequest || !feedbackText.trim()) return;
+    const proposedDescription = [
+      feedbackText.trim(),
+      feedbackSystems.trim() ? `\n\nJärjestelmät mainittu ehdotuksessa:\n${feedbackSystems.trim()}` : "",
+    ].join("");
     setSubmittingFeedback(true);
     try {
-      await onSubmitChangeRequest(feedbackStep, feedbackText.trim());
+      await onSubmitChangeRequest(feedbackStep, proposedDescription);
       setFeedbackStep(null);
       setFeedbackText("");
+      setFeedbackSystems("");
     } finally {
       setSubmittingFeedback(false);
     }
