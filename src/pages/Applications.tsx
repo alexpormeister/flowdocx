@@ -288,8 +288,9 @@ function ApplicationsDashboard({
             <button
               key={tool.id}
               onClick={() => setActiveTab(tool.id)}
-              className="group rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+              className="group relative overflow-hidden rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
             >
+              <span className="absolute inset-x-0 top-0 h-1 bg-accent" />
               <div className="flex items-start justify-between gap-4">
                 <span className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
