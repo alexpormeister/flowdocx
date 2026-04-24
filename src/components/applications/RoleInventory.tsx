@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
-import { getOrganizationPositions, getOrganizationGroupsWithPositions, type OrganizationPosition, type OrganizationGroup } from "@/lib/organizationApi";
+import { getOrganizationPositions, getOrganizationGroupsWithPositions, getOrganizationTags, type OrganizationPosition, type OrganizationGroup } from "@/lib/organizationApi";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -12,12 +12,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle } from "lucide-react";
+import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Server, GitBranch } from "lucide-react";
 
 interface RoleDetail {
   project: Project;
   steps: { step: number; task: string; viaGroup?: string }[];
 }
+
+type StepRow = { project: Project; performer: string; systems: string[] };
 
 type GroupWithPositions = OrganizationGroup & { position_ids: string[] };
 
@@ -44,6 +46,12 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     queryKey: ["projects"],
     queryFn: getProjects,
     enabled: !!user,
+  });
+
+  const { data: systems = [] } = useQuery({
+    queryKey: ["org-tags", orgId],
+    queryFn: () => getOrganizationTags(orgId),
+    enabled: !!user && !!orgId,
   });
 
   const orgProjects = useMemo(
@@ -159,34 +167,75 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     );
   }, [roleMap]);
 
+  const allSteps = useMemo<StepRow[]>(() => orgProjects.flatMap((project) =>
+    ((project.process_steps as any[]) || [])
+      .filter((step) => step.performer || (step.system || []).length > 0)
+      .map((step) => ({ project, performer: step.performer || "Määrittämätön", systems: step.system || [] })),
+  ), [orgProjects]);
+
+  const topRoles = useMemo(() => sortedMapped.slice(0, 6).map(([, value]) => [value.position.name, value.details.reduce((sum, detail) => sum + detail.steps.length, 0)] as [string, number]), [sortedMapped]);
+  const topSystems = useMemo(() => {
+    const counts = new Map<string, number>();
+    allSteps.forEach((step) => step.systems.forEach((system) => counts.set(system, (counts.get(system) || 0) + 1)));
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [allSteps]);
+  const dependencyCount = useMemo(() => {
+    const shared = new Map<string, Set<string>>();
+    allSteps.forEach((step) => {
+      if (step.performer && step.performer !== "Määrittämätön") {
+        const key = `role:${step.performer.toLowerCase()}`;
+        if (!shared.has(key)) shared.set(key, new Set());
+        shared.get(key)!.add(step.project.id);
+      }
+      step.systems.forEach((system) => {
+        const key = `system:${system.toLowerCase()}`;
+        if (!shared.has(key)) shared.set(key, new Set());
+        shared.get(key)!.add(step.project.id);
+      });
+    });
+    return Array.from(shared.values()).filter((projectIds) => projectIds.size > 1).length;
+  }, [allSteps]);
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Users className="w-5 h-5 text-primary" />
-          Role Inventory
+          Roolit
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Who does what — across all processes in this organization.
+          Roolien, vastuiden ja prosessien yhteenveto koko organisaatiossa.
         </p>
       </div>
 
-      {/* Stats cards */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard title="Roolien kattavuus" icon={Users} items={topRoles} />
+        <InsightCard title="Järjestelmien käyttö" icon={Server} items={topSystems} />
+        <div className="rounded-xl border bg-card p-4 lg:col-span-2">
+          <h3 className="flex items-center gap-2 font-semibold"><GitBranch className="h-4 w-4 text-primary" />Organisaation laajuus</h3>
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <MiniStat label="Määritellyt roolit" value={positions.length} />
+            <MiniStat label="Määritellyt järjestelmät" value={systems.length} />
+            <MiniStat label="Käytössä olevat järjestelmät" value={new Set(allSteps.flatMap((step) => step.systems)).size} />
+            <MiniStat label="Kytkökset" value={dependencyCount} />
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Positions" value={positions.length} icon={UserCircle2} />
-        <StatCard label="Active Roles" value={sortedMapped.length} icon={Users} accent />
-        <StatCard label="Groups" value={sortedGroups.length} icon={UsersRound} />
-        <StatCard label="Process Steps" value={totalSteps} icon={Workflow} />
+        <StatCard label="Roolit" value={positions.length} icon={UserCircle2} />
+        <StatCard label="Aktiiviset roolit" value={sortedMapped.length} icon={Users} accent />
+        <StatCard label="Ryhmät" value={sortedGroups.length} icon={UsersRound} />
+        <StatCard label="Prosessivaiheet" value={totalSteps} icon={Workflow} />
       </div>
 
       {/* Unused positions warning */}
       {emptyPositions.length > 0 && (
-        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4">
+        <div className="rounded-xl border bg-accent/10 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-            <span className="text-sm font-medium text-amber-800">
-              {emptyPositions.length} unused position{emptyPositions.length !== 1 ? "s" : ""} — not linked to any process
+            <AlertTriangle className="w-4 h-4 text-accent-foreground" />
+            <span className="text-sm font-medium text-foreground">
+              {emptyPositions.length} käyttämätöntä roolia — ei liitetty prosessivaiheisiin
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -203,7 +252,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search roles, groups or performers..."
+          placeholder="Hae roolia, ryhmää tai suorittajaa..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -335,6 +384,25 @@ function StatCard({ label, value, icon: Icon, accent }: { label: string; value: 
       <p className={`text-2xl font-bold mt-1 ${accent ? "text-primary" : ""}`}>{value}</p>
     </div>
   );
+}
+
+function InsightCard({ title, icon: Icon, items }: { title: string; icon: any; items: [string, number][] }) {
+  const max = Math.max(...items.map(([, count]) => count), 1);
+  return (
+    <div className="space-y-3 rounded-xl border bg-card p-4">
+      <h3 className="flex items-center gap-2 font-semibold"><Icon className="h-4 w-4 text-primary" />{title}</h3>
+      {items.length === 0 ? <p className="text-sm text-muted-foreground">Dataa ei ole vielä.</p> : items.map(([label, count]) => (
+        <div key={label} className="space-y-1">
+          <div className="flex items-center justify-between gap-3 text-sm"><span className="truncate">{label}</span><span className="text-muted-foreground">{count}</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.max((count / max) * 100, 8)}%` }} /></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-md bg-muted/50 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold">{value}</p></div>;
 }
 
 function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {

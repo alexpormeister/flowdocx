@@ -8,6 +8,7 @@ import {
   getOrganizationPositions,
   getOrganizationMembers,
   getOrganizationGroupsWithPositions,
+  getCurrentUserMembership,
 } from "@/lib/organizationApi";
 import { getProjects, getFolders } from "@/lib/api";
 import { getAllSystemTagGroups } from "@/lib/presentationApi";
@@ -24,10 +25,8 @@ import {
   Heart,
   Download,
   Sparkles,
-  Activity,
   ChevronRight,
-  ServerCog,
-  ClipboardCheck,
+  ShieldCheck,
 } from "lucide-react";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
@@ -37,23 +36,20 @@ import ProcessReviewQueue from "@/components/applications/ProcessReviewQueue";
 import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
 import CustomerLifecyclePanel from "@/components/applications/CustomerLifecyclePanel";
 import AutomationProposalPanel from "@/components/applications/AutomationProposalPanel";
-import ProcessIntelligencePanel from "@/components/applications/ProcessIntelligencePanel";
 import { toast } from "sonner";
 import { hexToContrastHslString, hexToHslString } from "@/lib/utils";
 
-type ToolTab = "dashboard" | "systems" | "global-system-manager" | "review-queue" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal" | "process-intelligence";
+type ToolTab = "dashboard" | "systems" | "admin-panel" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "dashboard", label: "Yleiskuva", icon: BarChart3, description: "Työkalujen koontinäkymä" },
   { id: "systems", label: "Järjestelmät", icon: Monitor, description: "Järjestelmät ja vaikutusanalyysi" },
-  { id: "global-system-manager", label: "Massahallinta", icon: ServerCog, description: "Päivitä järjestelmät kaikkiin vaiheisiin" },
-  { id: "review-queue", label: "Muutosehdotukset", icon: ClipboardCheck, description: "Prosessipäällikön hyväksyntäjono" },
+  { id: "admin-panel", label: "Admin-paneeli", icon: ShieldCheck, description: "Massahallinta ja muutosehdotukset" },
   { id: "role-inventory", label: "Roolit", icon: Users, description: "RACI ja roolien kattavuus" },
   { id: "dependency-graph", label: "Riippuvuuskartta", icon: GitBranch, description: "Järjestelmien riippuvuudet" },
   { id: "capability-map", label: "Kyvykkyyskartta", icon: LayoutGrid, description: "Liiketoimintakyvykkyydet" },
   { id: "customer-lifecycle", label: "Asiakaspolku", icon: Heart, description: "Asiakaselinkaaren hallinta" },
   { id: "automation-proposal", label: "Automaatio", icon: Sparkles, description: "Automatisoitavat prosessivaiheet" },
-  { id: "process-intelligence", label: "Prosessiäly", icon: Activity, description: "RACI ja prosessien analytiikka" },
 ];
 
 export default function Applications() {
@@ -84,6 +80,18 @@ export default function Applications() {
     queryFn: () => getOrganizationTags(orgId!),
     enabled: !!user && !!orgId,
   });
+
+  const { data: membership } = useQuery({
+    queryKey: ["org-membership", orgId],
+    queryFn: () => getCurrentUserMembership(orgId!),
+    enabled: !!user && !!orgId,
+  });
+
+  const canUseAdminPanel = membership?.role === "owner" || membership?.role === "admin";
+  const visibleTools = useMemo(
+    () => TOOLS.filter((tool) => tool.id !== "admin-panel" || canUseAdminPanel),
+    [canUseAdminPanel],
+  );
 
   const orgProjects = useMemo(
     () => projects.filter((project) => project.organization_id === orgId && !project.is_template),
@@ -205,7 +213,7 @@ export default function Applications() {
             <p className="mt-1 text-sm text-muted-foreground">Valitse näkymä tai aloita yleiskuvasta.</p>
           </div>
           <nav className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-          {TOOLS.map((tool) => {
+          {visibleTools.map((tool) => {
             const Icon = tool.icon;
             const isActive = activeTab === tool.id;
             return (
@@ -235,7 +243,7 @@ export default function Applications() {
       <div className="flex-1 overflow-auto border-t-4 border-accent lg:border-t-0">
         {activeTab === "dashboard" && (
           <ApplicationsDashboard
-            tools={TOOLS.filter((tool) => tool.id !== "dashboard")}
+            tools={visibleTools.filter((tool) => tool.id !== "dashboard")}
             setActiveTab={setActiveTab}
             projectCount={orgProjects.length}
             stepCount={processStepCount}
@@ -243,16 +251,40 @@ export default function Applications() {
           />
         )}
         {activeTab === "systems" && <SystemsInventory orgId={orgId} />}
-        {activeTab === "global-system-manager" && <GlobalSystemManager orgId={orgId} />}
-        {activeTab === "review-queue" && <ProcessReviewQueue orgId={orgId} />}
+        {activeTab === "admin-panel" && canUseAdminPanel && <AdminPanel orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
         {activeTab === "customer-lifecycle" && <CustomerLifecyclePanel orgId={orgId} />}
         {activeTab === "automation-proposal" && <AutomationProposalPanel orgId={orgId} />}
-        {activeTab === "process-intelligence" && <ProcessIntelligencePanel orgId={orgId} />}
       </div>
       </div>
+    </div>
+  );
+}
+
+function AdminPanel({ orgId }: { orgId: string }) {
+  const [section, setSection] = useState<"systems" | "changes">("systems");
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Ylläpitäjän työkalut
+          </div>
+          <h2 className="mt-1 text-2xl font-bold">Admin-paneeli</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Hallitse järjestelmien massapäivityksiä ja prosessien muutosehdotuksia samasta näkymästä.
+          </p>
+        </div>
+        <div className="grid w-full grid-cols-2 gap-2 rounded-lg border bg-card p-1 sm:w-auto">
+          <Button variant={section === "systems" ? "default" : "ghost"} onClick={() => setSection("systems")}>Massahallinta</Button>
+          <Button variant={section === "changes" ? "default" : "ghost"} onClick={() => setSection("changes")}>Muutosehdotukset</Button>
+        </div>
+      </div>
+      {section === "systems" ? <GlobalSystemManager orgId={orgId} /> : <ProcessReviewQueue orgId={orgId} />}
     </div>
   );
 }
