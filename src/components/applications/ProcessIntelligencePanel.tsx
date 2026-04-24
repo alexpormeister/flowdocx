@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
@@ -208,31 +207,12 @@ function MetricCard({ icon: Icon, label, value }: { icon: React.ElementType; lab
   );
 }
 
-function StepList({ rows, orgId, navigate }: { rows: StepRow[]; orgId: string; navigate: ReturnType<typeof useNavigate> }) {
-  return (
-    <div className="rounded-lg border bg-card overflow-hidden">
-      {rows.length === 0 ? <EmptyState text="No matching process steps found." /> : rows.slice(0, 250).map((row) => (
-        <button key={`${row.project.id}-${row.step}-${row.task}`} onClick={() => navigate(`/editor/${row.project.id}?org=${orgId}`)} className="w-full grid grid-cols-12 gap-3 px-4 py-3 border-b last:border-b-0 text-left hover:bg-muted/30 transition-colors">
-          <div className="col-span-12 md:col-span-4 min-w-0">
-            <p className="font-medium truncate">{row.task}</p>
-            <p className="text-xs text-muted-foreground truncate">#{row.step} · {row.project.name}</p>
-          </div>
-          <div className="col-span-6 md:col-span-3 text-sm truncate">{row.performer}</div>
-          <div className="col-span-6 md:col-span-5 flex flex-wrap gap-1 justify-start md:justify-end">
-            {row.systems.length === 0 ? <span className="text-xs text-muted-foreground">No systems</span> : row.systems.slice(0, 4).map((system) => <Badge key={system} variant="outline">{system}</Badge>)}
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function InsightCard({ title, icon: Icon, items }: { title: string; icon: React.ElementType; items: [string, number][] }) {
   const max = Math.max(...items.map(([, count]) => count), 1);
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
       <h3 className="font-semibold flex items-center gap-2"><Icon className="w-4 h-4 text-primary" />{title}</h3>
-      {items.length === 0 ? <p className="text-sm text-muted-foreground">No data yet.</p> : items.map(([label, count]) => (
+      {items.length === 0 ? <p className="text-sm text-muted-foreground">Dataa ei ole vielä.</p> : items.map(([label, count]) => (
         <div key={label} className="space-y-1">
           <div className="flex items-center justify-between gap-3 text-sm"><span className="truncate">{label}</span><span className="text-muted-foreground">{count}</span></div>
           <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${Math.max((count / max) * 100, 8)}%` }} /></div>
