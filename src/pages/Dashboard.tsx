@@ -576,8 +576,6 @@ export default function Dashboard() {
       projectsToShow = rootProjects;
     } else if (selectedFolder) {
       projectsToShow = projectsToShow.filter((p) => p.folder_id === selectedFolder);
-    } else if (selectedOrgId) {
-      projectsToShow = [];
     }
 
     if (search) {
@@ -656,12 +654,12 @@ export default function Dashboard() {
 
     if (folderId) {
       params.set("folder", folderId);
-      setShowRootProjects(false);
     } else {
       params.delete("folder");
     }
 
     setSelectedFolder(folderId);
+    setShowRootProjects(false);
     setSearchParams(params, { replace: true });
   };
 
@@ -676,7 +674,7 @@ export default function Dashboard() {
   useEffect(() => {
     const hasValidFolder = !!selectedFolderParam && filteredFolders.some((folder) => folder.id === selectedFolderParam);
     setSelectedFolder(hasValidFolder ? selectedFolderParam : null);
-    setShowRootProjects(!hasValidFolder);
+    setShowRootProjects(false);
   }, [selectedFolderParam, filteredFolders]);
 
   // Background style
