@@ -207,16 +207,16 @@ export default function Applications() {
                 onClick={() => setActiveTab(tool.id)}
                 className={`flex min-w-[150px] items-center gap-3 rounded-lg border px-3 py-3 text-left text-sm transition-colors lg:min-w-0 ${
                   isActive
-                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
                     : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-primary"}`}>
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium truncate">{tool.label}</span>
-                  <span className="hidden text-xs text-muted-foreground lg:block lg:truncate">{tool.description}</span>
+                  <span className={`hidden text-xs lg:block lg:truncate ${isActive ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{tool.description}</span>
                 </span>
                 <ChevronRight className="hidden h-4 w-4 shrink-0 lg:block" />
               </button>
@@ -263,12 +263,12 @@ function ApplicationsDashboard({
 }) {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
-      <section className="rounded-lg border bg-card p-5 md:p-6">
+      <section className="rounded-lg border bg-primary p-5 text-primary-foreground md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-primary">Sovellukset ja työkalut</p>
+            <p className="text-sm font-medium text-accent">Sovellukset ja työkalut</p>
             <h2 className="mt-1 text-2xl font-bold md:text-3xl">Organisaation prosessien ohjauskeskus</h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">
               Yleiskuva kokoaa tärkeimmät työkalut, järjestelmät ja prosessidatan yhteen selkeään näkymään.
             </p>
           </div>
@@ -290,7 +290,7 @@ function ApplicationsDashboard({
               className="group rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
             >
               <div className="flex items-start justify-between gap-4">
-                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-muted text-primary">
+                <span className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
                 </span>
                 <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
