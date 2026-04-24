@@ -531,7 +531,7 @@ export default function Editor() {
           <h2 className="text-xs font-semibold text-panel-header-foreground tracking-wide uppercase">
             {t("editor.processSteps")}
           </h2>
-          {canEditProject && (
+          {canEditCurrentProject && (
             <Button
               size="sm"
               variant="outline"
@@ -552,18 +552,18 @@ export default function Editor() {
             availableTags={availableTags}
             availablePositions={availablePerformers}
             description={projectDescription}
-            onDescriptionChange={canEditProject ? handleDescriptionChange : undefined}
+            onDescriptionChange={canEditCurrentProject ? handleDescriptionChange : undefined}
             onAddOrgTag={canEditProject && project.organization_id ? handleAddOrgTag : undefined}
             onSubmitChangeRequest={canSubmitChangeRequest ? async (step, proposedDescription) => {
               await changeRequestMutation.mutateAsync({ step, proposedDescription });
             } : undefined}
-            readOnly={!canEditProject}
+            readOnly={!canEditCurrentProject}
           />
         </div>
       </div>
 
       {/* Lane/Participant Name Editor */}
-      {selectedElement && modeler && project.organization_id && canEditProject && (
+      {selectedElement && modeler && project.organization_id && canEditCurrentProject && (
         <LaneNameEditor
           element={selectedElement}
           modeler={modeler}
@@ -572,7 +572,7 @@ export default function Editor() {
       )}
 
       {/* Element Link Section */}
-      {selectedElement && project.organization_id && canEditProject && (
+      {selectedElement && project.organization_id && canEditCurrentProject && (
         <div className="border-t px-3 py-3 space-y-2">
           <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
             <Link2 className="w-3 h-3" />
@@ -629,7 +629,7 @@ export default function Editor() {
       )}
 
       {/* Process Settings */}
-      {canEditProject && <div className="border-t px-3 py-3 space-y-3">
+      {canEditCurrentProject && <div className="border-t px-3 py-3 space-y-3">
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Process Settings</h3>
         <div className="space-y-2">
           <div>
