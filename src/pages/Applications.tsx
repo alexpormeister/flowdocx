@@ -26,10 +26,14 @@ import {
   Sparkles,
   Activity,
   ChevronRight,
+  ServerCog,
+  ClipboardCheck,
 } from "lucide-react";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
 import SystemsInventory from "@/components/applications/SystemsInventory";
+import GlobalSystemManager from "@/components/applications/GlobalSystemManager";
+import ProcessReviewQueue from "@/components/applications/ProcessReviewQueue";
 import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
 import CustomerLifecyclePanel from "@/components/applications/CustomerLifecyclePanel";
 import AutomationProposalPanel from "@/components/applications/AutomationProposalPanel";
@@ -37,11 +41,13 @@ import ProcessIntelligencePanel from "@/components/applications/ProcessIntellige
 import { toast } from "sonner";
 import { hexToContrastHslString, hexToHslString } from "@/lib/utils";
 
-type ToolTab = "dashboard" | "systems" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal" | "process-intelligence";
+type ToolTab = "dashboard" | "systems" | "global-system-manager" | "review-queue" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal" | "process-intelligence";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "dashboard", label: "Yleiskuva", icon: BarChart3, description: "Työkalujen koontinäkymä" },
   { id: "systems", label: "Järjestelmät", icon: Monitor, description: "Järjestelmät ja vaikutusanalyysi" },
+  { id: "global-system-manager", label: "Massahallinta", icon: ServerCog, description: "Päivitä järjestelmät kaikkiin vaiheisiin" },
+  { id: "review-queue", label: "Muutosehdotukset", icon: ClipboardCheck, description: "Prosessipäällikön hyväksyntäjono" },
   { id: "role-inventory", label: "Roolit", icon: Users, description: "RACI ja roolien kattavuus" },
   { id: "dependency-graph", label: "Riippuvuuskartta", icon: GitBranch, description: "Järjestelmien riippuvuudet" },
   { id: "capability-map", label: "Kyvykkyyskartta", icon: LayoutGrid, description: "Liiketoimintakyvykkyydet" },
@@ -237,6 +243,8 @@ export default function Applications() {
           />
         )}
         {activeTab === "systems" && <SystemsInventory orgId={orgId} />}
+        {activeTab === "global-system-manager" && <GlobalSystemManager orgId={orgId} />}
+        {activeTab === "review-queue" && <ProcessReviewQueue orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
