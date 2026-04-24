@@ -244,16 +244,19 @@ export default function Editor() {
   }, [modeler, canEditProject]);
 
   const handleStepsChange = (newSteps: ProcessStep[]) => {
+    if (!canEditProject) return;
     setSteps(newSteps);
     setHasUnsavedChanges(true);
   };
 
   const handleNameChange = (newName: string) => {
+    if (!canEditProject) return;
     setProjectName(newName);
     setHasUnsavedChanges(true);
   };
 
   const handleDescriptionChange = (newDescription: string) => {
+    if (!canEditProject) return;
     setProjectDescription(newDescription);
     setHasUnsavedChanges(true);
   };
@@ -268,7 +271,7 @@ export default function Editor() {
 
   // Sync process steps from BPMN diagram
   const syncStepsFromBpmn = useCallback(() => {
-    if (!modeler) return;
+    if (!modeler || !canEditProject) return;
     const elementRegistry = modeler.get("elementRegistry") as any;
     const elements = elementRegistry.getAll();
 
@@ -377,7 +380,7 @@ export default function Editor() {
     setSteps(newSteps);
     setHasUnsavedChanges(true);
     toast.success(`Synced ${newSteps.length} elements from diagram`);
-  }, [modeler, steps]);
+  }, [modeler, steps, canEditProject]);
 
   const handleExport = useCallback(async (format: "png" | "svg" | "bpmn") => {
     if (!modeler) return;
@@ -420,6 +423,7 @@ export default function Editor() {
   }, [modeler, projectName]);
 
   const handleManualSave = () => {
+    if (!canEditProject) return;
     triggerAutoSave();
     toast.success(t("common.saved"));
   };
