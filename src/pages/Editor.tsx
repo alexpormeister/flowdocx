@@ -274,29 +274,29 @@ export default function Editor() {
   useEffect(() => {
     if (!modeler) return;
     const eventBus = modeler.get("eventBus") as any;
-    const handleChange = () => { if (canEditProject) setHasUnsavedChanges(true); };
+    const handleChange = () => { if (canEditCurrentProject) setHasUnsavedChanges(true); };
     eventBus.on("commandStack.changed", handleChange);
     eventBus.on("element.changed", handleChange);
     return () => {
       eventBus.off("commandStack.changed", handleChange);
       eventBus.off("element.changed", handleChange);
     };
-  }, [modeler, canEditProject]);
+  }, [modeler, canEditCurrentProject]);
 
   const handleStepsChange = (newSteps: ProcessStep[]) => {
-    if (!canEditProject) return;
+    if (!canEditCurrentProject) return;
     setSteps(newSteps);
     setHasUnsavedChanges(true);
   };
 
   const handleNameChange = (newName: string) => {
-    if (!canEditProject) return;
+    if (!canEditCurrentProject) return;
     setProjectName(newName);
     setHasUnsavedChanges(true);
   };
 
   const handleDescriptionChange = (newDescription: string) => {
-    if (!canEditProject) return;
+    if (!canEditCurrentProject) return;
     setProjectDescription(newDescription);
     setHasUnsavedChanges(true);
   };
@@ -311,7 +311,7 @@ export default function Editor() {
 
   // Sync process steps from BPMN diagram
   const syncStepsFromBpmn = useCallback(() => {
-    if (!modeler || !canEditProject) return;
+    if (!modeler || !canEditCurrentProject) return;
     const elementRegistry = modeler.get("elementRegistry") as any;
     const elements = elementRegistry.getAll();
 
@@ -420,7 +420,7 @@ export default function Editor() {
     setSteps(newSteps);
     setHasUnsavedChanges(true);
     toast.success(`Synced ${newSteps.length} elements from diagram`);
-  }, [modeler, steps, canEditProject]);
+  }, [modeler, steps, canEditCurrentProject]);
 
   const handleExport = useCallback(async (format: "png" | "svg" | "bpmn") => {
     if (!modeler) return;
@@ -463,7 +463,7 @@ export default function Editor() {
   }, [modeler, projectName]);
 
   const handleManualSave = () => {
-    if (!canEditProject) return;
+    if (!canEditCurrentProject) return;
     triggerAutoSave();
     toast.success(t("common.saved"));
   };
