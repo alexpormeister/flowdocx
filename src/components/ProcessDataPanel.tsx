@@ -122,24 +122,26 @@ export default function ProcessDataPanel({
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 flex items-center justify-end">
-        <Button
-          size="sm"
-          onClick={addStep}
-          className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 text-xs"
-        >
-          <Plus className="w-3 h-3 mr-1" />
-          Add Step
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            onClick={addStep}
+            className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 text-xs"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Lisää vaihe
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
-        {onDescriptionChange && (
+        {onDescriptionChange && !readOnly && (
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Description</label>
+            <label className="text-xs font-medium text-muted-foreground">Kuvaus</label>
             <textarea
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
-              placeholder="Add a description for this project..."
+              placeholder="Lisää prosessin kuvaus..."
               className="w-full h-16 px-2 py-1.5 text-xs border rounded-md bg-background resize-none focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
@@ -148,8 +150,8 @@ export default function ProcessDataPanel({
         {steps.length === 0 && (
           <div className="text-center py-12 text-muted-foreground text-sm">
             <Tag className="w-8 h-8 mx-auto mb-3 opacity-40" />
-            <p>No process steps yet.</p>
-            <p className="text-xs mt-1">Click "Add Step" to begin mapping.</p>
+            <p>Prosessivaiheita ei ole vielä.</p>
+            {!readOnly && <p className="text-xs mt-1">Lisää vaihe aloittaaksesi kartoituksen.</p>}
           </div>
         )}
 
