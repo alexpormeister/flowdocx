@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
 import { getCurrentUserMembership } from "@/lib/organizationApi";
 import {
-  approveProcessChangeRequest,
   closeProcessChangeRequest,
   getProcessChangeRequests,
   rejectProcessChangeRequest,
@@ -54,17 +53,6 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
   const pendingRequests = requests.filter((request) => request.status === "pending");
 
   const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
-
-  const approveMutation = useMutation({
-    mutationFn: (request: ProcessChangeRequest) => approveProcessChangeRequest(request, projects),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["process-change-requests", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setSelected(null);
-      toast.success("Muutosehdotus hyväksytty ja virallinen malli päivitetty.");
-    },
-    onError: (error) => toast.error((error as Error).message),
-  });
 
   const rejectMutation = useMutation({
     mutationFn: (request: ProcessChangeRequest) => rejectProcessChangeRequest(request.id, rejectComment),
@@ -172,7 +160,6 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
             {canReview && selected?.status === "pending" && (
               <>
                 <Button variant="outline" onClick={() => rejectMutation.mutate(selected)} disabled={rejectMutation.isPending}>Hylkää</Button>
-                <Button variant="outline" onClick={() => approveMutation.mutate(selected)} disabled={approveMutation.isPending}>Korvaa virallinen ehdotuksella</Button>
                 <Button onClick={() => closeMutation.mutate(selected)} disabled={closeMutation.isPending}>Kuittaa ja poista ehdotusversio</Button>
               </>
             )}
