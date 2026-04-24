@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
-import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions } from "@/lib/organizationApi";
+import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions, getCurrentUserMembership } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { createProcessChangeRequest } from "@/lib/processChangeApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink } from "lucide-react";
@@ -58,6 +58,15 @@ export default function Editor() {
     queryFn: () => getProject(id!),
     enabled: !!id && !!user,
   });
+
+  const { data: membership } = useQuery({
+    queryKey: ["org-membership", project?.organization_id],
+    queryFn: () => getCurrentUserMembership(project!.organization_id!),
+    enabled: !!user && !!project?.organization_id,
+  });
+
+  const isViewerOnly = project?.organization_id && membership?.role === "viewer";
+  const canEditProject = !isViewerOnly;
 
   // Org tags for system tag suggestions
   const { data: orgTags = [] } = useQuery({
@@ -188,7 +197,7 @@ export default function Editor() {
   }, [project, modeler]);
 
   const triggerAutoSave = useCallback(async () => {
-    if (!modeler || !id) return;
+    if (!modeler || !id || !canEditProject) return;
 
     try {
       const { xml } = await modeler.saveXML({ format: true });
@@ -212,7 +221,7 @@ export default function Editor() {
       console.error("Auto-save failed:", err);
       setIsSaving(false);
     }
-  }, [modeler, id, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
+  }, [modeler, id, canEditProject, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
 
   useEffect(() => {
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
@@ -225,14 +234,14 @@ export default function Editor() {
   useEffect(() => {
     if (!modeler) return;
     const eventBus = modeler.get("eventBus") as any;
-    const handleChange = () => setHasUnsavedChanges(true);
+    const handleChange = () => { if (canEditProject) setHasUnsavedChanges(true); };
     eventBus.on("commandStack.changed", handleChange);
     eventBus.on("element.changed", handleChange);
     return () => {
       eventBus.off("commandStack.changed", handleChange);
       eventBus.off("element.changed", handleChange);
     };
-  }, [modeler]);
+  }, [modeler, canEditProject]);
 
   const handleStepsChange = (newSteps: ProcessStep[]) => {
     setSteps(newSteps);
