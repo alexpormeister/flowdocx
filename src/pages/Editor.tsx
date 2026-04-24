@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
 import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions, getCurrentUserMembership } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
-import { createProcessChangeDraft, createProcessChangeRequest, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
+import { createProcessChangeDraft, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,8 +66,6 @@ export default function Editor() {
   });
 
   const canEditProject = !project?.organization_id || membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
-  const canSubmitChangeRequest = !!project?.organization_id && !!membership;
-
   const { data: orgChangeRequests = [] } = useQuery({
     queryKey: ["process-change-requests", project?.organization_id],
     queryFn: () => getProcessChangeRequests(project!.organization_id!),
@@ -170,24 +168,6 @@ export default function Editor() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-tags", project?.organization_id] });
     },
-  });
-
-  const changeRequestMutation = useMutation({
-    mutationFn: ({ step, proposedDescription }: { step: ProcessStep; proposedDescription: string }) =>
-      createProcessChangeRequest({
-        organizationId: project!.organization_id!,
-        sourceProjectId: id!,
-        stepId: step.id,
-        stepName: step.task || `Vaihe ${step.step}`,
-        currentDescription: step.decision || null,
-        proposedDescription,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["process-change-requests", project?.organization_id] });
-      toast.success("Muutosehdotus lähetetty tarkastettavaksi.");
-    },
-    onError: (error) => toast.error((error as Error).message),
   });
 
   const createDraftMutation = useMutation({
@@ -554,9 +534,6 @@ export default function Editor() {
             description={projectDescription}
             onDescriptionChange={canEditCurrentProject ? handleDescriptionChange : undefined}
             onAddOrgTag={canEditProject && project.organization_id ? handleAddOrgTag : undefined}
-            onSubmitChangeRequest={canSubmitChangeRequest ? async (step, proposedDescription) => {
-              await changeRequestMutation.mutateAsync({ step, proposedDescription });
-            } : undefined}
             readOnly={!canEditCurrentProject}
           />
         </div>
