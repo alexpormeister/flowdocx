@@ -5,6 +5,7 @@ import { getProjects, type Project } from "@/lib/api";
 import { getCurrentUserMembership } from "@/lib/organizationApi";
 import {
   approveProcessChangeRequest,
+  closeProcessChangeRequest,
   getProcessChangeRequests,
   rejectProcessChangeRequest,
   type ProcessChangeRequest,
@@ -24,6 +25,7 @@ import { CheckCircle2, ClipboardCheck, GitPullRequest, XCircle, Eye } from "luci
 import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
+  draft: "Työn alla",
   pending: "Odottaa käsittelyä",
   approved: "Hyväksytty",
   rejected: "Hylätty",
@@ -71,6 +73,18 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
       setSelected(null);
       setRejectComment("");
       toast.success("Muutosehdotus hylätty.");
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (request: ProcessChangeRequest) => closeProcessChangeRequest(request, rejectComment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["process-change-requests", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setSelected(null);
+      setRejectComment("");
+      toast.success("Muutosehdotus kuitattu ja ehdotusversio poistettu.");
     },
     onError: (error) => toast.error((error as Error).message),
   });
