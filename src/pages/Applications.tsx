@@ -8,6 +8,7 @@ import {
   getOrganizationPositions,
   getOrganizationMembers,
   getOrganizationGroupsWithPositions,
+  getCurrentUserMembership,
 } from "@/lib/organizationApi";
 import { getProjects, getFolders } from "@/lib/api";
 import { getAllSystemTagGroups } from "@/lib/presentationApi";
@@ -24,10 +25,8 @@ import {
   Heart,
   Download,
   Sparkles,
-  Activity,
   ChevronRight,
-  ServerCog,
-  ClipboardCheck,
+  ShieldCheck,
 } from "lucide-react";
 import RoleInventory from "@/components/applications/RoleInventory";
 import SystemDependencyGraph from "@/components/applications/SystemDependencyGraph";
@@ -37,23 +36,20 @@ import ProcessReviewQueue from "@/components/applications/ProcessReviewQueue";
 import CapabilityMapPanel from "@/components/applications/CapabilityMapPanel";
 import CustomerLifecyclePanel from "@/components/applications/CustomerLifecyclePanel";
 import AutomationProposalPanel from "@/components/applications/AutomationProposalPanel";
-import ProcessIntelligencePanel from "@/components/applications/ProcessIntelligencePanel";
 import { toast } from "sonner";
 import { hexToContrastHslString, hexToHslString } from "@/lib/utils";
 
-type ToolTab = "dashboard" | "systems" | "global-system-manager" | "review-queue" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal" | "process-intelligence";
+type ToolTab = "dashboard" | "systems" | "admin-panel" | "role-inventory" | "dependency-graph" | "capability-map" | "customer-lifecycle" | "automation-proposal";
 
 const TOOLS: { id: ToolTab; label: string; icon: React.ElementType; description: string }[] = [
   { id: "dashboard", label: "Yleiskuva", icon: BarChart3, description: "Työkalujen koontinäkymä" },
   { id: "systems", label: "Järjestelmät", icon: Monitor, description: "Järjestelmät ja vaikutusanalyysi" },
-  { id: "global-system-manager", label: "Massahallinta", icon: ServerCog, description: "Päivitä järjestelmät kaikkiin vaiheisiin" },
-  { id: "review-queue", label: "Muutosehdotukset", icon: ClipboardCheck, description: "Prosessipäällikön hyväksyntäjono" },
+  { id: "admin-panel", label: "Admin-paneeli", icon: ShieldCheck, description: "Massahallinta ja muutosehdotukset" },
   { id: "role-inventory", label: "Roolit", icon: Users, description: "RACI ja roolien kattavuus" },
   { id: "dependency-graph", label: "Riippuvuuskartta", icon: GitBranch, description: "Järjestelmien riippuvuudet" },
   { id: "capability-map", label: "Kyvykkyyskartta", icon: LayoutGrid, description: "Liiketoimintakyvykkyydet" },
   { id: "customer-lifecycle", label: "Asiakaspolku", icon: Heart, description: "Asiakaselinkaaren hallinta" },
   { id: "automation-proposal", label: "Automaatio", icon: Sparkles, description: "Automatisoitavat prosessivaiheet" },
-  { id: "process-intelligence", label: "Prosessiäly", icon: Activity, description: "RACI ja prosessien analytiikka" },
 ];
 
 export default function Applications() {
