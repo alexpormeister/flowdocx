@@ -251,7 +251,7 @@ export default function ProcessDataPanel({
                 <SystemTagBadge
                   key={tag}
                   tag={tag}
-                  onRemove={() => removeSystemTag(step.id, tag)}
+                  onRemove={!readOnly ? () => removeSystemTag(step.id, tag) : undefined}
                 />
               ))}
 
