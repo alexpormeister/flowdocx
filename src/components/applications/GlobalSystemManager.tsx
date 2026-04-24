@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProjects, updateProject, type Project } from "@/lib/api";
-import { getOrganizationTags, updateOrganizationTag, type OrganizationSystemTag } from "@/lib/organizationApi";
+import { getOrganizationTags, removeOrganizationTag, updateOrganizationTag, type OrganizationSystemTag } from "@/lib/organizationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,19 +89,24 @@ export default function GlobalSystemManager({ orgId }: { orgId: string }) {
       if (!selected) return;
       const cleanName = newName.trim();
       if (!cleanName) throw new Error("Järjestelmän nimi ei voi olla tyhjä.");
+      const targetTag = tags.find((tag) => tag.tag_name.toLowerCase() === cleanName.toLowerCase());
+      const isMergingToExistingTag = !!targetTag && targetTag.id !== selected.tag?.id;
 
       await Promise.all(
         selected.projects.map(({ project }) => {
           const nextSteps = project.process_steps.map((step) => ({
             ...step,
-            system: (step.system || []).map((system) => (system === selected.name ? cleanName : system)),
+            system: Array.from(new Set((step.system || []).map((system) => (system === selected.name ? cleanName : system)))),
           }));
           const nextTags = Array.from(new Set((project.system_tags || []).map((system) => (system === selected.name ? cleanName : system))));
           return updateProject(project.id, { process_steps: nextSteps, system_tags: nextTags });
         }),
       );
 
-      if (selected.tag) {
+      if (isMergingToExistingTag) {
+        if (description.trim()) await updateOrganizationTag(targetTag.id, { description: description.trim() });
+        if (selected.tag) await removeOrganizationTag(selected.tag.id);
+      } else if (selected.tag) {
         await updateOrganizationTag(selected.tag.id, { tag_name: cleanName, description: description.trim() || null });
       }
     },
@@ -165,7 +170,7 @@ export default function GlobalSystemManager({ orgId }: { orgId: string }) {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Vahvista järjestelmän massapäivitys</DialogTitle>
             <DialogDescription>
@@ -173,19 +178,25 @@ export default function GlobalSystemManager({ orgId }: { orgId: string }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="min-w-0 space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Nykyinen nimi</label>
                 <Input value={selected?.name || ""} disabled />
               </div>
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Uusi nimi</label>
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} list="existing-systems" />
+                <datalist id="existing-systems">
+                  {systems.filter((system) => system.name !== selected?.name).map((system) => <option key={system.name} value={system.name} />)}
+                </datalist>
+                {systems.some((system) => system.name.toLowerCase() === newName.trim().toLowerCase() && system.name !== selected?.name) && (
+                  <p className="text-xs text-muted-foreground">Olemassa oleva järjestelmä: osumat yhdistetään tähän ilman duplikaatteja.</p>
+                )}
               </div>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Järjestelmän tiedot</label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kuvaus, linkki tai muu lisätieto..." />
+              <Textarea className="min-h-24 resize-y" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kuvaus, linkki tai muu lisätieto..." />
             </div>
             <div className="max-h-56 overflow-auto rounded-md border bg-muted/20 p-3">
               <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Vaikutusalue</p>
@@ -204,7 +215,7 @@ export default function GlobalSystemManager({ orgId }: { orgId: string }) {
               </div>
             </div>
           </div>
-          <DialogFooter>
+           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setSelected(null)}>Peruuta</Button>
             <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>Vahvista päivitys</Button>
           </DialogFooter>
