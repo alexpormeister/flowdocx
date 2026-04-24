@@ -182,7 +182,7 @@ export default function Applications() {
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 shrink-0"
+          className="gap-1.5 shrink-0 border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
           onClick={handleExportOrg}
           disabled={exporting}
         >
@@ -193,6 +193,7 @@ export default function Applications() {
 
       <div className="flex-1 overflow-hidden bg-muted/20 lg:flex">
         <aside className="border-b bg-card/80 p-3 lg:w-72 lg:shrink-0 lg:border-b-0 lg:border-r lg:p-4">
+          <div className="mb-3 h-1.5 rounded-full bg-accent" />
           <div className="mb-3 hidden lg:block">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Työkalukeskus</p>
             <p className="mt-1 text-sm text-muted-foreground">Valitse näkymä tai aloita yleiskuvasta.</p>
@@ -225,7 +226,7 @@ export default function Applications() {
           </nav>
         </aside>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto border-t-4 border-accent lg:border-t-0">
         {activeTab === "dashboard" && (
           <ApplicationsDashboard
             tools={TOOLS.filter((tool) => tool.id !== "dashboard")}
@@ -287,8 +288,9 @@ function ApplicationsDashboard({
             <button
               key={tool.id}
               onClick={() => setActiveTab(tool.id)}
-              className="group rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+              className="group relative overflow-hidden rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
             >
+              <span className="absolute inset-x-0 top-0 h-1 bg-accent" />
               <div className="flex items-start justify-between gap-4">
                 <span className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
