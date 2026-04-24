@@ -243,7 +243,7 @@ export default function Applications() {
       <div className="flex-1 overflow-auto border-t-4 border-accent lg:border-t-0">
         {activeTab === "dashboard" && (
           <ApplicationsDashboard
-            tools={TOOLS.filter((tool) => tool.id !== "dashboard")}
+            tools={visibleTools.filter((tool) => tool.id !== "dashboard")}
             setActiveTab={setActiveTab}
             projectCount={orgProjects.length}
             stepCount={processStepCount}
