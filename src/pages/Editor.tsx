@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getProject, getProjects, updateProject, type Project } from "@/lib/api";
-import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions } from "@/lib/organizationApi";
+import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions, getCurrentUserMembership } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { createProcessChangeRequest } from "@/lib/processChangeApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink } from "lucide-react";
@@ -58,6 +58,15 @@ export default function Editor() {
     queryFn: () => getProject(id!),
     enabled: !!id && !!user,
   });
+
+  const { data: membership } = useQuery({
+    queryKey: ["org-membership", project?.organization_id],
+    queryFn: () => getCurrentUserMembership(project!.organization_id!),
+    enabled: !!user && !!project?.organization_id,
+  });
+
+  const canEditProject = !project?.organization_id || membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
+  const canSubmitChangeRequest = !!project?.organization_id && !!membership;
 
   // Org tags for system tag suggestions
   const { data: orgTags = [] } = useQuery({
@@ -188,7 +197,7 @@ export default function Editor() {
   }, [project, modeler]);
 
   const triggerAutoSave = useCallback(async () => {
-    if (!modeler || !id) return;
+    if (!modeler || !id || !canEditProject) return;
 
     try {
       const { xml } = await modeler.saveXML({ format: true });
@@ -212,7 +221,7 @@ export default function Editor() {
       console.error("Auto-save failed:", err);
       setIsSaving(false);
     }
-  }, [modeler, id, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
+  }, [modeler, id, canEditProject, projectName, projectDescription, steps, hasUnsavedChanges, updateMutation, ownerName, ownerEmail, status]);
 
   useEffect(() => {
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
@@ -225,26 +234,29 @@ export default function Editor() {
   useEffect(() => {
     if (!modeler) return;
     const eventBus = modeler.get("eventBus") as any;
-    const handleChange = () => setHasUnsavedChanges(true);
+    const handleChange = () => { if (canEditProject) setHasUnsavedChanges(true); };
     eventBus.on("commandStack.changed", handleChange);
     eventBus.on("element.changed", handleChange);
     return () => {
       eventBus.off("commandStack.changed", handleChange);
       eventBus.off("element.changed", handleChange);
     };
-  }, [modeler]);
+  }, [modeler, canEditProject]);
 
   const handleStepsChange = (newSteps: ProcessStep[]) => {
+    if (!canEditProject) return;
     setSteps(newSteps);
     setHasUnsavedChanges(true);
   };
 
   const handleNameChange = (newName: string) => {
+    if (!canEditProject) return;
     setProjectName(newName);
     setHasUnsavedChanges(true);
   };
 
   const handleDescriptionChange = (newDescription: string) => {
+    if (!canEditProject) return;
     setProjectDescription(newDescription);
     setHasUnsavedChanges(true);
   };
@@ -259,7 +271,7 @@ export default function Editor() {
 
   // Sync process steps from BPMN diagram
   const syncStepsFromBpmn = useCallback(() => {
-    if (!modeler) return;
+    if (!modeler || !canEditProject) return;
     const elementRegistry = modeler.get("elementRegistry") as any;
     const elements = elementRegistry.getAll();
 
@@ -368,7 +380,7 @@ export default function Editor() {
     setSteps(newSteps);
     setHasUnsavedChanges(true);
     toast.success(`Synced ${newSteps.length} elements from diagram`);
-  }, [modeler, steps]);
+  }, [modeler, steps, canEditProject]);
 
   const handleExport = useCallback(async (format: "png" | "svg" | "bpmn") => {
     if (!modeler) return;
@@ -411,6 +423,7 @@ export default function Editor() {
   }, [modeler, projectName]);
 
   const handleManualSave = () => {
+    if (!canEditProject) return;
     triggerAutoSave();
     toast.success(t("common.saved"));
   };
@@ -478,16 +491,18 @@ export default function Editor() {
           <h2 className="text-xs font-semibold text-panel-header-foreground tracking-wide uppercase">
             {t("editor.processSteps")}
           </h2>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={syncStepsFromBpmn}
-            className="h-6 text-[10px] gap-1 px-2"
-            title="Sync steps from BPMN diagram"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Sync
-          </Button>
+          {canEditProject && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={syncStepsFromBpmn}
+              className="h-6 text-[10px] gap-1 px-2"
+              title="Synkronoi vaiheet BPMN-kaaviosta"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Synkronoi
+            </Button>
+          )}
         </div>
         <div className="flex-1 overflow-hidden">
           <ProcessDataPanel
@@ -497,17 +512,18 @@ export default function Editor() {
             availableTags={availableTags}
             availablePositions={availablePerformers}
             description={projectDescription}
-            onDescriptionChange={handleDescriptionChange}
-            onAddOrgTag={project.organization_id ? handleAddOrgTag : undefined}
-            onSubmitChangeRequest={project.organization_id ? async (step, proposedDescription) => {
+            onDescriptionChange={canEditProject ? handleDescriptionChange : undefined}
+            onAddOrgTag={canEditProject && project.organization_id ? handleAddOrgTag : undefined}
+            onSubmitChangeRequest={canSubmitChangeRequest ? async (step, proposedDescription) => {
               await changeRequestMutation.mutateAsync({ step, proposedDescription });
             } : undefined}
+            readOnly={!canEditProject}
           />
         </div>
       </div>
 
       {/* Lane/Participant Name Editor */}
-      {selectedElement && modeler && project.organization_id && (
+      {selectedElement && modeler && project.organization_id && canEditProject && (
         <LaneNameEditor
           element={selectedElement}
           modeler={modeler}
@@ -516,7 +532,7 @@ export default function Editor() {
       )}
 
       {/* Element Link Section */}
-      {selectedElement && project.organization_id && (
+      {selectedElement && project.organization_id && canEditProject && (
         <div className="border-t px-3 py-3 space-y-2">
           <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
             <Link2 className="w-3 h-3" />
@@ -573,7 +589,7 @@ export default function Editor() {
       )}
 
       {/* Process Settings */}
-      <div className="border-t px-3 py-3 space-y-3">
+      {canEditProject && <div className="border-t px-3 py-3 space-y-3">
         <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Process Settings</h3>
         <div className="space-y-2">
           <div>
@@ -608,7 +624,7 @@ export default function Editor() {
             />
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 
@@ -625,6 +641,7 @@ export default function Editor() {
             value={projectName}
             onChange={(e) => handleNameChange(e.target.value)}
             className="h-8 w-32 sm:w-48 text-sm font-medium border-none bg-transparent focus-visible:bg-background"
+            readOnly={!canEditProject}
           />
           <StatusBadge status={status} />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
@@ -669,10 +686,12 @@ export default function Editor() {
               <span className="hidden sm:inline">Present</span>
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
-            <Save className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t("common.save")}</span>
-          </Button>
+          {canEditProject && (
+            <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
+              <Save className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("common.save")}</span>
+            </Button>
+          )}
           <ExportMenu onExport={handleExport} />
           <Button
             variant="ghost"
@@ -688,7 +707,7 @@ export default function Editor() {
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 relative">
-          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} />
+          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} readOnly={!canEditProject} />
         </div>
 
         {!isMobile && panelOpen && (

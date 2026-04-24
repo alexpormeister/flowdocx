@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import BpmnModeler from "bpmn-js/lib/Modeler";
+import BpmnViewer from "bpmn-js/lib/NavigatedViewer";
 import "bpmn-js/dist/assets/diagram-js.css";
 import "bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css";
 import { Button } from "@/components/ui/button";
@@ -35,18 +36,21 @@ const EMPTY_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 </bpmn2:definitions>`;
 
 interface BpmnCanvasProps {
-  onModelerReady?: (modeler: BpmnModeler) => void;
+  onModelerReady?: (modeler: BpmnModeler | BpmnViewer) => void;
   onSelectionChange?: (element: any) => void;
+  readOnly?: boolean;
 }
 
-export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCanvasProps) {
+export default function BpmnCanvas({ onModelerReady, onSelectionChange, readOnly = false }: BpmnCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const modelerRef = useRef<BpmnModeler | null>(null);
+  const modelerRef = useRef<BpmnModeler | BpmnViewer | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const modeler = new BpmnModeler({
+    const modeler = readOnly ? new BpmnViewer({
+      container: containerRef.current,
+    }) : new BpmnModeler({
       container: containerRef.current,
     });
 
@@ -68,7 +72,7 @@ export default function BpmnCanvas({ onModelerReady, onSelectionChange }: BpmnCa
     return () => {
       modeler.destroy();
     };
-  }, []);
+  }, [readOnly]);
 
   const handleZoomIn = () => {
     if (!modelerRef.current) return;

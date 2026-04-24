@@ -42,6 +42,7 @@ interface ProcessDataPanelProps {
   onDescriptionChange?: (description: string) => void;
   onAddOrgTag?: (tag: string) => void;
   onSubmitChangeRequest?: (step: ProcessStep, proposedDescription: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export default function ProcessDataPanel({ 
@@ -54,11 +55,13 @@ export default function ProcessDataPanel({
   onDescriptionChange,
   onAddOrgTag,
   onSubmitChangeRequest,
+  readOnly = false,
 }: ProcessDataPanelProps) {
   const [newSystemTag, setNewSystemTag] = useState<{ stepId: string; value: string } | null>(null);
   const [customTagInput, setCustomTagInput] = useState("");
   const [feedbackStep, setFeedbackStep] = useState<ProcessStep | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSystems, setFeedbackSystems] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const addStep = () => {
@@ -101,11 +104,16 @@ export default function ProcessDataPanel({
 
   const submitFeedback = async () => {
     if (!feedbackStep || !onSubmitChangeRequest || !feedbackText.trim()) return;
+    const proposedDescription = [
+      feedbackText.trim(),
+      feedbackSystems.trim() ? `\n\nJärjestelmät mainittu ehdotuksessa:\n${feedbackSystems.trim()}` : "",
+    ].join("");
     setSubmittingFeedback(true);
     try {
-      await onSubmitChangeRequest(feedbackStep, feedbackText.trim());
+      await onSubmitChangeRequest(feedbackStep, proposedDescription);
       setFeedbackStep(null);
       setFeedbackText("");
+      setFeedbackSystems("");
     } finally {
       setSubmittingFeedback(false);
     }
@@ -114,24 +122,26 @@ export default function ProcessDataPanel({
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 flex items-center justify-end">
-        <Button
-          size="sm"
-          onClick={addStep}
-          className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 text-xs"
-        >
-          <Plus className="w-3 h-3 mr-1" />
-          Add Step
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            onClick={addStep}
+            className="bg-accent text-accent-foreground hover:bg-accent/90 h-7 text-xs"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Lisää vaihe
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto p-3 space-y-3">
-        {onDescriptionChange && (
+        {onDescriptionChange && !readOnly && (
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Description</label>
+            <label className="text-xs font-medium text-muted-foreground">Kuvaus</label>
             <textarea
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
-              placeholder="Add a description for this project..."
+              placeholder="Lisää prosessin kuvaus..."
               className="w-full h-16 px-2 py-1.5 text-xs border rounded-md bg-background resize-none focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
@@ -140,8 +150,8 @@ export default function ProcessDataPanel({
         {steps.length === 0 && (
           <div className="text-center py-12 text-muted-foreground text-sm">
             <Tag className="w-8 h-8 mx-auto mb-3 opacity-40" />
-            <p>No process steps yet.</p>
-            <p className="text-xs mt-1">Click "Add Step" to begin mapping.</p>
+            <p>Prosessivaiheita ei ole vielä.</p>
+            {!readOnly && <p className="text-xs mt-1">Lisää vaihe aloittaaksesi kartoituksen.</p>}
           </div>
         )}
 
@@ -176,20 +186,23 @@ export default function ProcessDataPanel({
                     <MessageSquarePlus className="w-3.5 h-3.5" />
                   </button>
                 )}
-                <button
-                  onClick={() => removeStep(step.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => removeStep(step.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
             <Input
-              placeholder="Task name..."
+              placeholder="Vaiheen nimi..."
               value={step.task}
               onChange={(e) => updateStep(step.id, "task", e.target.value)}
               className="h-8 text-sm bg-background"
+              readOnly={readOnly}
             />
 
             <div className="grid grid-cols-1 gap-2">
@@ -197,6 +210,7 @@ export default function ProcessDataPanel({
                 value={step.performer}
                 onChange={(val) => updateStep(step.id, "performer", val)}
                 positions={availablePositions}
+                readOnly={readOnly}
               />
             </div>
 
@@ -204,7 +218,7 @@ export default function ProcessDataPanel({
             {isGateway && step.gatewayPaths && step.gatewayPaths.length > 0 && (
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  Decision Paths
+                  Päätöspolut
                 </label>
                 <div className="space-y-1">
                   {step.gatewayPaths.map((path, idx) => (
@@ -227,7 +241,7 @@ export default function ProcessDataPanel({
 
             {isGateway && (!step.gatewayPaths || step.gatewayPaths.length === 0) && (
               <div className="px-2 py-1.5 rounded bg-amber-50 border border-amber-200 text-[10px] text-amber-600">
-                Sync to detect decision paths from diagram
+                Synkronoi kaaviosta päätöspolkujen tunnistamiseksi
               </div>
             )}
 
@@ -237,7 +251,7 @@ export default function ProcessDataPanel({
                 <SystemTagBadge
                   key={tag}
                   tag={tag}
-                  onRemove={() => removeSystemTag(step.id, tag)}
+                  onRemove={!readOnly ? () => removeSystemTag(step.id, tag) : undefined}
                 />
               ))}
 
@@ -251,15 +265,15 @@ export default function ProcessDataPanel({
                     setCustomTagInput("");
                   }}
                 />
-              ) : (
+              ) : !readOnly ? (
                 <button
                   onClick={() => setNewSystemTag({ stepId: step.id, value: "" })}
                   className="h-5 px-1.5 text-[10px] rounded bg-tag text-tag-foreground hover:bg-accent/20 transition-colors flex items-center gap-0.5"
                 >
                   <Plus className="w-2.5 h-2.5" />
-                  System
+                  Järjestelmä
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
           );
@@ -271,7 +285,7 @@ export default function ProcessDataPanel({
           <DialogHeader>
             <DialogTitle>Ilmoita muutoksesta</DialogTitle>
             <DialogDescription>
-              Kuvaa, miten tämä vaihe menee todellisuudessa. Ehdotuksesta luodaan tarkastettava prosessiversio.
+              Kirjoita vapaamuotoisesti, miten vaihe menee todellisuudessa. Mainitse myös käytössä olevat järjestelmät tekstinä, ei tageina.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -279,11 +293,19 @@ export default function ProcessDataPanel({
               <p className="font-medium">{feedbackStep?.task || "Nimetön vaihe"}</p>
               <p className="mt-1 text-xs text-muted-foreground">Nykyinen vastuu: {feedbackStep?.performer || "Ei määritetty"}</p>
             </div>
+            <div className="rounded-md border border-accent/30 bg-accent/5 p-3 text-xs text-muted-foreground">
+              Kerro ehdotuksessa mitä muuttuu, miksi käytäntö poikkeaa nykyisestä ja mitä järjestelmänimiä työnkulussa esiintyy.
+            </div>
             <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder="Miten tämä vaihe menee todellisuudessa?"
+              placeholder="Miten tämä vaihe menee todellisuudessa? Esim. kuka tekee, missä järjestyksessä ja mikä muuttuu nykyiseen kuvaukseen verrattuna."
               className="min-h-32"
+            />
+            <Input
+              value={feedbackSystems}
+              onChange={(e) => setFeedbackSystems(e.target.value)}
+              placeholder="Järjestelmänimet vapaana tekstinä, esim. ServiceNow, Teams, SAP"
             />
           </div>
           <DialogFooter>
@@ -391,10 +413,12 @@ function PerformerCombobox({
   value,
   onChange,
   positions,
+  readOnly = false,
 }: {
   value: string;
   onChange: (val: string) => void;
   positions: string[];
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -416,15 +440,17 @@ function PerformerCombobox({
           placeholder="Performer"
           value={inputValue}
           onChange={(e) => {
+            if (readOnly) return;
             setInputValue(e.target.value);
             onChange(e.target.value);
             if (hasPositions) setOpen(true);
           }}
-          onFocus={() => { if (hasPositions) setOpen(true); }}
+          onFocus={() => { if (hasPositions && !readOnly) setOpen(true); }}
           onBlur={() => { setTimeout(() => setOpen(false), 150); }}
           className="h-8 text-xs bg-background pr-6"
+          readOnly={readOnly}
         />
-        {hasPositions && (
+        {hasPositions && !readOnly && (
           <button
             type="button"
             tabIndex={-1}
