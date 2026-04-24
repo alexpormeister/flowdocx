@@ -681,7 +681,7 @@ export default function Editor() {
             value={projectName}
             onChange={(e) => handleNameChange(e.target.value)}
             className="h-8 w-32 sm:w-48 text-sm font-medium border-none bg-transparent focus-visible:bg-background"
-            readOnly={!canEditProject}
+            readOnly={!canEditCurrentProject}
           />
           <StatusBadge status={status} />
           <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
@@ -726,7 +726,19 @@ export default function Editor() {
               <span className="hidden sm:inline">Present</span>
             </Button>
           )}
-          {canEditProject && (
+          {canCreateChangeDraft && (
+            <Button variant="outline" size="sm" onClick={() => createDraftMutation.mutate()} disabled={createDraftMutation.isPending} className="h-8 text-xs gap-1.5">
+              <GitPullRequestCreate className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tee muutosehdotus</span>
+            </Button>
+          )}
+          {isOwnChangeDraft && (
+            <Button size="sm" onClick={() => submitDraftMutation.mutate()} disabled={submitDraftMutation.isPending || hasUnsavedChanges} className="h-8 text-xs gap-1.5">
+              <Send className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Lähetä tarkastettavaksi</span>
+            </Button>
+          )}
+          {canEditCurrentProject && (
             <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
               <Save className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{t("common.save")}</span>
@@ -747,7 +759,7 @@ export default function Editor() {
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
         <div className="flex-1 relative">
-          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} readOnly={!canEditProject} />
+          <BpmnCanvas onModelerReady={setModeler} onSelectionChange={setSelectedElement} readOnly={!canEditCurrentProject} />
         </div>
 
         {!isMobile && panelOpen && (
