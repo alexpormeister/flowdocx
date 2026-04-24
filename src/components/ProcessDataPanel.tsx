@@ -285,7 +285,7 @@ export default function ProcessDataPanel({
           <DialogHeader>
             <DialogTitle>Ilmoita muutoksesta</DialogTitle>
             <DialogDescription>
-              Kuvaa, miten tämä vaihe menee todellisuudessa. Ehdotuksesta luodaan tarkastettava prosessiversio.
+              Kirjoita vapaamuotoisesti, miten vaihe menee todellisuudessa. Mainitse myös käytössä olevat järjestelmät tekstinä, ei tageina.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -293,11 +293,19 @@ export default function ProcessDataPanel({
               <p className="font-medium">{feedbackStep?.task || "Nimetön vaihe"}</p>
               <p className="mt-1 text-xs text-muted-foreground">Nykyinen vastuu: {feedbackStep?.performer || "Ei määritetty"}</p>
             </div>
+            <div className="rounded-md border border-accent/30 bg-accent/5 p-3 text-xs text-muted-foreground">
+              Kerro ehdotuksessa mitä muuttuu, miksi käytäntö poikkeaa nykyisestä ja mitä järjestelmänimiä työnkulussa esiintyy.
+            </div>
             <Textarea
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder="Miten tämä vaihe menee todellisuudessa?"
+              placeholder="Miten tämä vaihe menee todellisuudessa? Esim. kuka tekee, missä järjestyksessä ja mikä muuttuu nykyiseen kuvaukseen verrattuna."
               className="min-h-32"
+            />
+            <Input
+              value={feedbackSystems}
+              onChange={(e) => setFeedbackSystems(e.target.value)}
+              placeholder="Järjestelmänimet vapaana tekstinä, esim. ServiceNow, Teams, SAP"
             />
           </div>
           <DialogFooter>
