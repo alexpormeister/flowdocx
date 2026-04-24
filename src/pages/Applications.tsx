@@ -81,6 +81,18 @@ export default function Applications() {
     enabled: !!user && !!orgId,
   });
 
+  const { data: membership } = useQuery({
+    queryKey: ["org-membership", orgId],
+    queryFn: () => getCurrentUserMembership(orgId!),
+    enabled: !!user && !!orgId,
+  });
+
+  const canUseAdminPanel = membership?.role === "owner" || membership?.role === "admin";
+  const visibleTools = useMemo(
+    () => TOOLS.filter((tool) => tool.id !== "admin-panel" || canUseAdminPanel),
+    [canUseAdminPanel],
+  );
+
   const orgProjects = useMemo(
     () => projects.filter((project) => project.organization_id === orgId && !project.is_template),
     [projects, orgId],
@@ -201,7 +213,7 @@ export default function Applications() {
             <p className="mt-1 text-sm text-muted-foreground">Valitse näkymä tai aloita yleiskuvasta.</p>
           </div>
           <nav className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-          {TOOLS.map((tool) => {
+          {visibleTools.map((tool) => {
             const Icon = tool.icon;
             const isActive = activeTab === tool.id;
             return (
@@ -239,14 +251,12 @@ export default function Applications() {
           />
         )}
         {activeTab === "systems" && <SystemsInventory orgId={orgId} />}
-        {activeTab === "global-system-manager" && <GlobalSystemManager orgId={orgId} />}
-        {activeTab === "review-queue" && <ProcessReviewQueue orgId={orgId} />}
+        {activeTab === "admin-panel" && canUseAdminPanel && <AdminPanel orgId={orgId} />}
         {activeTab === "role-inventory" && <RoleInventory orgId={orgId} />}
         {activeTab === "dependency-graph" && <SystemDependencyGraph orgId={orgId} />}
         {activeTab === "capability-map" && <CapabilityMapPanel orgId={orgId} />}
         {activeTab === "customer-lifecycle" && <CustomerLifecyclePanel orgId={orgId} />}
         {activeTab === "automation-proposal" && <AutomationProposalPanel orgId={orgId} />}
-        {activeTab === "process-intelligence" && <ProcessIntelligencePanel orgId={orgId} />}
       </div>
       </div>
     </div>
