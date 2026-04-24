@@ -157,7 +157,7 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
             <div className="rounded-md border bg-muted/20 p-3 text-sm">
               <p className="font-medium">Vaikutus</p>
               <p className="mt-1 text-muted-foreground">
-                Hyväksyntä päivittää alkuperäisen prosessin vaihedataan ehdotetun version tiedot. Automaattisesti luotu tarkastusversio säilyy historiassa.
+                Admin tekee tarvittavat muutokset vanhaan viralliseen kaavioon ehdotusversion perusteella. Kuittaus poistaa ehdotusversion ja jättää virallisen kaavion talteen.
               </p>
             </div>
             {canReview && selected?.status === "pending" && (
@@ -172,7 +172,8 @@ export default function ProcessReviewQueue({ orgId }: { orgId: string }) {
             {canReview && selected?.status === "pending" && (
               <>
                 <Button variant="outline" onClick={() => rejectMutation.mutate(selected)} disabled={rejectMutation.isPending}>Hylkää</Button>
-                <Button onClick={() => approveMutation.mutate(selected)} disabled={approveMutation.isPending}>Hyväksy ja päivitä malli</Button>
+                <Button variant="outline" onClick={() => approveMutation.mutate(selected)} disabled={approveMutation.isPending}>Korvaa virallinen ehdotuksella</Button>
+                <Button onClick={() => closeMutation.mutate(selected)} disabled={closeMutation.isPending}>Kuittaa ja poista ehdotusversio</Button>
               </>
             )}
           </DialogFooter>
