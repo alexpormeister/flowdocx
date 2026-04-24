@@ -265,15 +265,15 @@ export default function ProcessDataPanel({
                     setCustomTagInput("");
                   }}
                 />
-              ) : (
+              ) : !readOnly ? (
                 <button
                   onClick={() => setNewSystemTag({ stepId: step.id, value: "" })}
                   className="h-5 px-1.5 text-[10px] rounded bg-tag text-tag-foreground hover:bg-accent/20 transition-colors flex items-center gap-0.5"
                 >
                   <Plus className="w-2.5 h-2.5" />
-                  System
+                  Järjestelmä
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
           );
@@ -405,10 +405,12 @@ function PerformerCombobox({
   value,
   onChange,
   positions,
+  readOnly = false,
 }: {
   value: string;
   onChange: (val: string) => void;
   positions: string[];
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -430,15 +432,17 @@ function PerformerCombobox({
           placeholder="Performer"
           value={inputValue}
           onChange={(e) => {
+            if (readOnly) return;
             setInputValue(e.target.value);
             onChange(e.target.value);
             if (hasPositions) setOpen(true);
           }}
-          onFocus={() => { if (hasPositions) setOpen(true); }}
+          onFocus={() => { if (hasPositions && !readOnly) setOpen(true); }}
           onBlur={() => { setTimeout(() => setOpen(false), 150); }}
           className="h-8 text-xs bg-background pr-6"
+          readOnly={readOnly}
         />
-        {hasPositions && (
+        {hasPositions && !readOnly && (
           <button
             type="button"
             tabIndex={-1}
