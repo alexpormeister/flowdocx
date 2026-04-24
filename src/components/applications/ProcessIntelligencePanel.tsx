@@ -5,16 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
 import { getOrganizationTags, getOrganizationPositions } from "@/lib/organizationApi";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity,
-  ArrowRight,
   BarChart3,
   GitBranch,
   Network,
-  Search,
   Server,
   Users,
   Workflow,
@@ -48,8 +44,6 @@ const normalize = (value: string) => value.trim().replace(/^\[|\]$/g, "").trim()
 
 export default function ProcessIntelligencePanel({ orgId }: { orgId: string }) {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState("raci");
 
   const { data: projects = [] } = useQuery({
@@ -125,16 +119,6 @@ export default function ProcessIntelligencePanel({ orgId }: { orgId: string }) {
       .sort((a, b) => b.projects.length - a.projects.length || b.steps.length - a.steps.length);
   }, [allSteps]);
 
-  const filteredSteps = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return allSteps;
-    return allSteps.filter((step) =>
-      [step.performer, step.task, step.project.name, ...step.systems].some((value) =>
-        value.toLowerCase().includes(q),
-      ),
-    );
-  }, [allSteps, query]);
-
   const totalSystemsInUse = useMemo(() => new Set(allSteps.flatMap((step) => step.systems)).size, [allSteps]);
   const connectedProjects = useMemo(() => new Set(dependencyRows.flatMap((row) => row.projects.map((p) => p.id))).size, [dependencyRows]);
   const topRoles = raciRows.slice(0, 6);
@@ -150,104 +134,60 @@ export default function ProcessIntelligencePanel({ orgId }: { orgId: string }) {
         <div>
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Activity className="w-4 h-4 text-primary" />
-            Live process intelligence
+            Reaaliaikainen prosessianalytiikka
           </div>
-          <h2 className="text-2xl font-bold mt-1">Process Intelligence</h2>
+          <h2 className="text-2xl font-bold mt-1">Prosessiäly</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Dynamic overview generated from saved BPMN diagrams, lanes, tasks and system tags.
+            Dynaaminen yhteenveto tallennetuista BPMN-kaavioista, kaistoista, tehtävistä ja järjestelmistä.
           </p>
-        </div>
-        <div className="relative w-full lg:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search role, system or process..."
-            className="pl-9 bg-card"
-          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricCard icon={Workflow} label="Processes" value={orgProjects.length} />
-        <MetricCard icon={BarChart3} label="Process steps" value={allSteps.length} />
-        <MetricCard icon={Users} label="Roles in use" value={raciRows.length} />
-        <MetricCard icon={Network} label="Cross-links" value={dependencyRows.length} />
+        <MetricCard icon={Workflow} label="Prosessit" value={orgProjects.length} />
+        <MetricCard icon={BarChart3} label="Prosessivaiheet" value={allSteps.length} />
+        <MetricCard icon={Users} label="Käytössä olevat roolit" value={raciRows.length} />
+        <MetricCard icon={Network} label="Kytkökset" value={dependencyRows.length} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full lg:w-[620px] grid-cols-4">
+        <TabsList className="grid w-full lg:w-[420px] grid-cols-2">
           <TabsTrigger value="raci">RACI</TabsTrigger>
-          <TabsTrigger value="search">Search</TabsTrigger>
-          <TabsTrigger value="dependencies">Links</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="dashboard">Yhteenveto</TabsTrigger>
         </TabsList>
 
         <TabsContent value="raci" className="m-0 space-y-3">
           <div className="rounded-lg border bg-card overflow-hidden">
             <div className="grid grid-cols-12 gap-3 px-4 py-3 text-xs font-semibold text-muted-foreground bg-muted/40 border-b">
-              <div className="col-span-4">Role / Lane</div>
-              <div className="col-span-2">Responsible</div>
-              <div className="col-span-2">Processes</div>
-              <div className="col-span-2">Systems</div>
-              <div className="col-span-2 text-right">Actions</div>
+              <div className="col-span-5">Rooli / kaista</div>
+              <div className="col-span-2">Vastuu</div>
+              <div className="col-span-2">Prosessit</div>
+              <div className="col-span-3 text-right">Järjestelmät</div>
             </div>
-            {raciRows.length === 0 ? <EmptyState text="No lane or task data found yet." /> : raciRows.map((row) => (
+            {raciRows.length === 0 ? <EmptyState text="Kaista- tai tehtävädataa ei löytynyt vielä." /> : raciRows.map((row) => (
               <div key={row.key} className="grid grid-cols-12 gap-3 px-4 py-3 border-b last:border-b-0 items-center hover:bg-muted/30 transition-colors">
-                <div className="col-span-4 min-w-0">
+                <div className="col-span-5 min-w-0">
                   <p className="font-medium truncate">{row.label}</p>
                   <p className="text-xs text-muted-foreground truncate">{row.steps.slice(0, 2).map((step) => step.task).join(" · ")}</p>
                 </div>
                 <div className="col-span-2"><Badge variant="default">R</Badge></div>
                 <div className="col-span-2 text-sm">{row.projects.size}</div>
-                <div className="col-span-2 text-sm">{row.systems.size}</div>
-                <div className="col-span-2 flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={() => setQuery(row.label)}>Filter</Button>
-                </div>
+                <div className="col-span-3 text-right text-sm">{row.systems.size}</div>
               </div>
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="search" className="m-0 space-y-3">
-          <StepList rows={filteredSteps} orgId={orgId} navigate={navigate} />
-        </TabsContent>
-
-        <TabsContent value="dependencies" className="m-0 grid gap-3 lg:grid-cols-2">
-          {dependencyRows.length === 0 ? <div className="lg:col-span-2"><EmptyState text="No cross-process dependencies found yet." /></div> : dependencyRows.map((row) => (
-            <div key={row.key} className="rounded-lg border bg-card p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Badge variant="secondary" className="mb-2 gap-1">
-                    {row.type === "system" ? <Server className="w-3 h-3" /> : <Users className="w-3 h-3" />}
-                    {row.type === "system" ? "Shared system" : "Shared role"}
-                  </Badge>
-                  <h3 className="font-semibold truncate">{row.label}</h3>
-                </div>
-                <div className="text-right text-sm text-muted-foreground shrink-0">{row.projects.length} processes</div>
-              </div>
-              <div className="space-y-2">
-                {row.projects.slice(0, 4).map((project) => (
-                  <button key={project.id} onClick={() => navigate(`/editor/${project.id}?org=${orgId}`)} className="w-full flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2 text-left hover:bg-muted/50 transition-colors">
-                    <span className="text-sm font-medium truncate">{project.name}</span>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </TabsContent>
-
         <TabsContent value="dashboard" className="m-0 grid gap-4 lg:grid-cols-2">
-          <InsightCard title="Role coverage" icon={Users} items={topRoles.map((row) => [row.label, row.steps.length])} />
-          <InsightCard title="System usage" icon={Server} items={topSystems} />
+          <InsightCard title="Roolien kattavuus" icon={Users} items={topRoles.map((row) => [row.label, row.steps.length])} />
+          <InsightCard title="Järjestelmien käyttö" icon={Server} items={topSystems} />
           <div className="rounded-lg border bg-card p-4 lg:col-span-2">
-            <h3 className="font-semibold flex items-center gap-2"><GitBranch className="w-4 h-4 text-primary" />Organization scope</h3>
+            <h3 className="font-semibold flex items-center gap-2"><GitBranch className="w-4 h-4 text-primary" />Organisaation laajuus</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-              <MiniStat label="Defined roles" value={positions.length} />
-              <MiniStat label="Defined systems" value={systems.length} />
-              <MiniStat label="Systems in use" value={totalSystemsInUse} />
-              <MiniStat label="Connected processes" value={connectedProjects} />
+              <MiniStat label="Määritellyt roolit" value={positions.length} />
+              <MiniStat label="Määritellyt järjestelmät" value={systems.length} />
+              <MiniStat label="Käytössä olevat järjestelmät" value={totalSystemsInUse} />
+              <MiniStat label="Kytkeytyneet prosessit" value={connectedProjects} />
             </div>
           </div>
         </TabsContent>
