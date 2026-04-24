@@ -198,32 +198,44 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-      {/* Header */}
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Users className="w-5 h-5 text-primary" />
-          Role Inventory
+          Roolit
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Who does what — across all processes in this organization.
+          Roolien, vastuiden ja prosessien yhteenveto koko organisaatiossa.
         </p>
       </div>
 
-      {/* Stats cards */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard title="Roolien kattavuus" icon={Users} items={topRoles} />
+        <InsightCard title="Järjestelmien käyttö" icon={Server} items={topSystems} />
+        <div className="rounded-xl border bg-card p-4 lg:col-span-2">
+          <h3 className="flex items-center gap-2 font-semibold"><GitBranch className="h-4 w-4 text-primary" />Organisaation laajuus</h3>
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <MiniStat label="Määritellyt roolit" value={positions.length} />
+            <MiniStat label="Määritellyt järjestelmät" value={systems.length} />
+            <MiniStat label="Käytössä olevat järjestelmät" value={new Set(allSteps.flatMap((step) => step.systems)).size} />
+            <MiniStat label="Kytkökset" value={dependencyCount} />
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Positions" value={positions.length} icon={UserCircle2} />
-        <StatCard label="Active Roles" value={sortedMapped.length} icon={Users} accent />
-        <StatCard label="Groups" value={sortedGroups.length} icon={UsersRound} />
-        <StatCard label="Process Steps" value={totalSteps} icon={Workflow} />
+        <StatCard label="Roolit" value={positions.length} icon={UserCircle2} />
+        <StatCard label="Aktiiviset roolit" value={sortedMapped.length} icon={Users} accent />
+        <StatCard label="Ryhmät" value={sortedGroups.length} icon={UsersRound} />
+        <StatCard label="Prosessivaiheet" value={totalSteps} icon={Workflow} />
       </div>
 
       {/* Unused positions warning */}
       {emptyPositions.length > 0 && (
-        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-4">
+        <div className="rounded-xl border bg-accent/10 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-            <span className="text-sm font-medium text-amber-800">
-              {emptyPositions.length} unused position{emptyPositions.length !== 1 ? "s" : ""} — not linked to any process
+            <AlertTriangle className="w-4 h-4 text-accent-foreground" />
+            <span className="text-sm font-medium text-foreground">
+              {emptyPositions.length} käyttämätöntä roolia — ei liitetty prosessivaiheisiin
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -240,7 +252,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search roles, groups or performers..."
+          placeholder="Hae roolia, ryhmää tai suorittajaa..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
