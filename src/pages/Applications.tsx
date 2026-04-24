@@ -263,6 +263,32 @@ export default function Applications() {
   );
 }
 
+function AdminPanel({ orgId }: { orgId: string }) {
+  const [section, setSection] = useState<"systems" | "changes">("systems");
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Ylläpitäjän työkalut
+          </div>
+          <h2 className="mt-1 text-2xl font-bold">Admin-paneeli</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Hallitse järjestelmien massapäivityksiä ja prosessien muutosehdotuksia samasta näkymästä.
+          </p>
+        </div>
+        <div className="grid w-full grid-cols-2 gap-2 rounded-lg border bg-card p-1 sm:w-auto">
+          <Button variant={section === "systems" ? "default" : "ghost"} onClick={() => setSection("systems")}>Massahallinta</Button>
+          <Button variant={section === "changes" ? "default" : "ghost"} onClick={() => setSection("changes")}>Muutosehdotukset</Button>
+        </div>
+      </div>
+      {section === "systems" ? <GlobalSystemManager orgId={orgId} /> : <ProcessReviewQueue orgId={orgId} />}
+    </div>
+  );
+}
+
 function ApplicationsDashboard({
   tools,
   setActiveTab,
