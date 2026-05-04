@@ -401,11 +401,6 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const getGroupName = (id: string) =>
     groups.find((g) => g.id === id)?.name || "—";
 
-  const toggleGroupId = (gid: string) => {
-    setFormGroupIds((prev) =>
-      prev.includes(gid) ? prev.filter((id) => id !== gid) : [...prev, gid]
-    );
-  };
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
