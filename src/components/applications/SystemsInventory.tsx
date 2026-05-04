@@ -671,8 +671,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           {filtered.map((tag) => {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
-            const grpIds = tagGroupsMap[tag.id] || [];
             const linkUrl = (tag as any).link_url as string | null;
+            const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
             const warnings: string[] = [];
             if (!adminPosId) warnings.push("No admin");
             if (!linkUrl) warnings.push("No link");
