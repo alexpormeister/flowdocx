@@ -569,7 +569,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           <div className="grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b bg-muted/30">
             <div className="col-span-4">System</div>
             <div className="col-span-3 hidden md:block">Admin</div>
-            <div className="col-span-3 hidden lg:block">Groups</div>
+            <div className="col-span-3 hidden lg:block">Käyttäjät</div>
             <div className="col-span-2 text-right">Actions</div>
           </div>
           <div className="divide-y">
