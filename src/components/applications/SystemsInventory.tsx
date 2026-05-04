@@ -823,26 +823,12 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <UsersRound className="w-3.5 h-3.5" /> User Groups
+                <UsersRound className="w-3.5 h-3.5" /> Käyttäjät
               </label>
-              {groups.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No groups created yet</p>
-              ) : (
-                <div className="space-y-1.5 max-h-32 overflow-auto border rounded-md p-2">
-                  {groups.map((g) => (
-                    <label
-                      key={g.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded px-1 py-0.5"
-                    >
-                      <Checkbox
-                        checked={formGroupIds.includes(g.id)}
-                        onCheckedChange={() => toggleGroupId(g.id)}
-                      />
-                      {g.name}
-                    </label>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Käyttäjät tunnistetaan automaattisesti BPMN-kaavioista — niistä radoista,
+                joilla tämä järjestelmä esiintyy. Lista päivittyy itsestään, eikä sitä voi muokata käsin.
+              </p>
             </div>
           </div>
           <DialogFooter>
