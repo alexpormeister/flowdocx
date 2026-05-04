@@ -166,52 +166,33 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     return map;
   }, [tags, orgProjects]);
 
-  // Auto-detect user groups: for each system, collect performers from steps that use it,
-  // then match performers either directly to group names OR via positions → groups they belong to.
-  const autoDetectedGroups = useMemo(() => {
-    const map: Record<string, string[]> = {}; // tag_name -> group_id[]
-    const norm = (s: string) => s.replace(/^\[|\]$/g, "").trim().toLowerCase();
-
-    // Direct: group name -> group id
-    const groupNameToId = new Map(groups.map((g) => [norm(g.name), g.id]));
-
-    // Position id -> position name (normalized)
-    const positionIdToName = new Map(positions.map((p) => [p.id, norm(p.name)]));
-
-    // Position name (normalized) -> group ids (a position can belong to multiple groups)
-    const positionNameToGroupIds = new Map<string, string[]>();
-    for (const g of groups) {
-      const posIds = (g as any).position_ids || [];
-      for (const pid of posIds) {
-        const pname = positionIdToName.get(pid);
-        if (!pname) continue;
-        if (!positionNameToGroupIds.has(pname)) positionNameToGroupIds.set(pname, []);
-        positionNameToGroupIds.get(pname)!.push(g.id);
-      }
-    }
+  // Auto-detect actual users for each system: collect performer names directly from steps
+  // that use the system. Show ONLY who is truly on the lane — no group expansion.
+  const autoDetectedUsers = useMemo(() => {
+    const map: Record<string, string[]> = {}; // tag_name -> display names (deduped)
+    const cleanLabel = (s: string) => s.replace(/^\[|\]$/g, "").trim();
 
     for (const tag of tags) {
-      const performerNames = new Set<string>();
+      const seen = new Map<string, string>(); // lowercased -> original casing
       for (const project of orgProjects) {
         const steps = (project.process_steps as any[]) || [];
         for (const step of steps) {
           if ((step.system || []).includes(tag.tag_name) && step.performer) {
-            const raw = norm(step.performer);
-            if (raw) performerNames.add(raw);
+            const label = cleanLabel(step.performer);
+            if (!label) continue;
+            const key = label.toLowerCase();
+            if (!seen.has(key)) seen.set(key, label);
           }
         }
       }
-      const matchedIds = new Set<string>();
-      for (const name of performerNames) {
-        const direct = groupNameToId.get(name);
-        if (direct) matchedIds.add(direct);
-        const viaPosition = positionNameToGroupIds.get(name);
-        if (viaPosition) viaPosition.forEach((id) => matchedIds.add(id));
+      if (seen.size > 0) {
+        map[tag.tag_name] = Array.from(seen.values()).sort((a, b) =>
+          a.localeCompare(b, "fi", { sensitivity: "base" })
+        );
       }
-      if (matchedIds.size > 0) map[tag.tag_name] = Array.from(matchedIds);
     }
     return map;
-  }, [tags, orgProjects, groups, positions]);
+  }, [tags, orgProjects]);
 
   const toggleSystem = (tagName: string) => {
     setDisabledSystems((prev) => {
