@@ -175,13 +175,18 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     // Direct: group name -> group id
     const groupNameToId = new Map(groups.map((g) => [norm(g.name), g.id]));
 
-    // Position name -> group ids (a position can belong to multiple groups)
+    // Position id -> position name (normalized)
+    const positionIdToName = new Map(positions.map((p) => [p.id, norm(p.name)]));
+
+    // Position name (normalized) -> group ids (a position can belong to multiple groups)
     const positionNameToGroupIds = new Map<string, string[]>();
     for (const g of groups) {
-      for (const pos of (g as any).positions || []) {
-        const key = norm(pos.name);
-        if (!positionNameToGroupIds.has(key)) positionNameToGroupIds.set(key, []);
-        positionNameToGroupIds.get(key)!.push(g.id);
+      const posIds = (g as any).position_ids || [];
+      for (const pid of posIds) {
+        const pname = positionIdToName.get(pid);
+        if (!pname) continue;
+        if (!positionNameToGroupIds.has(pname)) positionNameToGroupIds.set(pname, []);
+        positionNameToGroupIds.get(pname)!.push(g.id);
       }
     }
 
@@ -198,17 +203,15 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       }
       const matchedIds = new Set<string>();
       for (const name of performerNames) {
-        // Direct group name match
         const direct = groupNameToId.get(name);
         if (direct) matchedIds.add(direct);
-        // Position → groups match
         const viaPosition = positionNameToGroupIds.get(name);
         if (viaPosition) viaPosition.forEach((id) => matchedIds.add(id));
       }
       if (matchedIds.size > 0) map[tag.tag_name] = Array.from(matchedIds);
     }
     return map;
-  }, [tags, orgProjects, groups]);
+  }, [tags, orgProjects, groups, positions]);
 
   const toggleSystem = (tagName: string) => {
     setDisabledSystems((prev) => {
