@@ -620,23 +620,23 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                     )}
                   </div>
                   <div className="col-span-3 hidden lg:flex flex-wrap gap-1 min-w-0">
-                    {allGroupIds.length === 0 ? (
+                    {detectedUsers.length === 0 ? (
                       <span className="text-[11px] italic text-muted-foreground">—</span>
                     ) : (
-                      allGroupIds.slice(0, 2).map((gid) => (
+                      detectedUsers.slice(0, 2).map((name) => (
                         <Badge
-                          key={gid}
+                          key={name}
                           variant="secondary"
                           className="text-[10px] gap-1 px-1.5 py-0 font-normal"
                         >
                           <UsersRound className="w-2.5 h-2.5" />
-                          {getGroupName(gid)}
+                          {name}
                         </Badge>
                       ))
                     )}
-                    {allGroupIds.length > 2 && (
+                    {detectedUsers.length > 2 && (
                       <span className="text-[10px] text-muted-foreground self-center">
-                        +{allGroupIds.length - 2}
+                        +{detectedUsers.length - 2}
                       </span>
                     )}
                   </div>
