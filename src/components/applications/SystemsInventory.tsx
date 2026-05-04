@@ -166,52 +166,33 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     return map;
   }, [tags, orgProjects]);
 
-  // Auto-detect user groups: for each system, collect performers from steps that use it,
-  // then match performers either directly to group names OR via positions → groups they belong to.
-  const autoDetectedGroups = useMemo(() => {
-    const map: Record<string, string[]> = {}; // tag_name -> group_id[]
-    const norm = (s: string) => s.replace(/^\[|\]$/g, "").trim().toLowerCase();
-
-    // Direct: group name -> group id
-    const groupNameToId = new Map(groups.map((g) => [norm(g.name), g.id]));
-
-    // Position id -> position name (normalized)
-    const positionIdToName = new Map(positions.map((p) => [p.id, norm(p.name)]));
-
-    // Position name (normalized) -> group ids (a position can belong to multiple groups)
-    const positionNameToGroupIds = new Map<string, string[]>();
-    for (const g of groups) {
-      const posIds = (g as any).position_ids || [];
-      for (const pid of posIds) {
-        const pname = positionIdToName.get(pid);
-        if (!pname) continue;
-        if (!positionNameToGroupIds.has(pname)) positionNameToGroupIds.set(pname, []);
-        positionNameToGroupIds.get(pname)!.push(g.id);
-      }
-    }
+  // Auto-detect actual users for each system: collect performer names directly from steps
+  // that use the system. Show ONLY who is truly on the lane — no group expansion.
+  const autoDetectedUsers = useMemo(() => {
+    const map: Record<string, string[]> = {}; // tag_name -> display names (deduped)
+    const cleanLabel = (s: string) => s.replace(/^\[|\]$/g, "").trim();
 
     for (const tag of tags) {
-      const performerNames = new Set<string>();
+      const seen = new Map<string, string>(); // lowercased -> original casing
       for (const project of orgProjects) {
         const steps = (project.process_steps as any[]) || [];
         for (const step of steps) {
           if ((step.system || []).includes(tag.tag_name) && step.performer) {
-            const raw = norm(step.performer);
-            if (raw) performerNames.add(raw);
+            const label = cleanLabel(step.performer);
+            if (!label) continue;
+            const key = label.toLowerCase();
+            if (!seen.has(key)) seen.set(key, label);
           }
         }
       }
-      const matchedIds = new Set<string>();
-      for (const name of performerNames) {
-        const direct = groupNameToId.get(name);
-        if (direct) matchedIds.add(direct);
-        const viaPosition = positionNameToGroupIds.get(name);
-        if (viaPosition) viaPosition.forEach((id) => matchedIds.add(id));
+      if (seen.size > 0) {
+        map[tag.tag_name] = Array.from(seen.values()).sort((a, b) =>
+          a.localeCompare(b, "fi", { sensitivity: "base" })
+        );
       }
-      if (matchedIds.size > 0) map[tag.tag_name] = Array.from(matchedIds);
     }
     return map;
-  }, [tags, orgProjects, groups, positions]);
+  }, [tags, orgProjects]);
 
   const toggleSystem = (tagName: string) => {
     setDisabledSystems((prev) => {
@@ -387,11 +368,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormName(tag.tag_name);
     setFormDescription((tag as any).description || "");
     setFormAdminPositionId((tag as any).admin_position_id || "");
-    // Merge saved groups with auto-detected groups
-    const saved = tagGroupsMap[tag.id] || [];
-    const detected = autoDetectedGroups[tag.tag_name] || [];
-    const merged = [...new Set([...saved, ...detected])];
-    setFormGroupIds(merged);
+    setFormGroupIds([]);
     setFormLinkUrl((tag as any).link_url || "");
     setDialogOpen(true);
   };
@@ -424,11 +401,6 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const getGroupName = (id: string) =>
     groups.find((g) => g.id === id)?.name || "—";
 
-  const toggleGroupId = (gid: string) => {
-    setFormGroupIds((prev) =>
-      prev.includes(gid) ? prev.filter((id) => id !== gid) : [...prev, gid]
-    );
-  };
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
@@ -592,17 +564,15 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           <div className="grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b bg-muted/30">
             <div className="col-span-4">System</div>
             <div className="col-span-3 hidden md:block">Admin</div>
-            <div className="col-span-3 hidden lg:block">Groups</div>
+            <div className="col-span-3 hidden lg:block">Käyttäjät</div>
             <div className="col-span-2 text-right">Actions</div>
           </div>
           <div className="divide-y">
             {filtered.map((tag) => {
               const desc = (tag as any).description as string | null;
               const adminPosId = (tag as any).admin_position_id as string | null;
-              const grpIds = tagGroupsMap[tag.id] || [];
               const linkUrl = (tag as any).link_url as string | null;
-              const detected = autoDetectedGroups[tag.tag_name] || [];
-              const allGroupIds = [...new Set([...grpIds, ...detected])];
+              const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
               return (
                 <div
                   key={tag.id}
@@ -645,23 +615,23 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                     )}
                   </div>
                   <div className="col-span-3 hidden lg:flex flex-wrap gap-1 min-w-0">
-                    {allGroupIds.length === 0 ? (
+                    {detectedUsers.length === 0 ? (
                       <span className="text-[11px] italic text-muted-foreground">—</span>
                     ) : (
-                      allGroupIds.slice(0, 2).map((gid) => (
+                      detectedUsers.slice(0, 2).map((name) => (
                         <Badge
-                          key={gid}
+                          key={name}
                           variant="secondary"
                           className="text-[10px] gap-1 px-1.5 py-0 font-normal"
                         >
                           <UsersRound className="w-2.5 h-2.5" />
-                          {getGroupName(gid)}
+                          {name}
                         </Badge>
                       ))
                     )}
-                    {allGroupIds.length > 2 && (
+                    {detectedUsers.length > 2 && (
                       <span className="text-[10px] text-muted-foreground self-center">
-                        +{allGroupIds.length - 2}
+                        +{detectedUsers.length - 2}
                       </span>
                     )}
                   </div>
@@ -696,8 +666,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
           {filtered.map((tag) => {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
-            const grpIds = tagGroupsMap[tag.id] || [];
             const linkUrl = (tag as any).link_url as string | null;
+            const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
             const warnings: string[] = [];
             if (!adminPosId) warnings.push("No admin");
             if (!linkUrl) warnings.push("No link");
@@ -771,22 +741,16 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       {getPositionName(adminPosId)}
                     </Badge>
                   )}
-                  {(() => {
-                    const saved = new Set(grpIds);
-                    const detected = autoDetectedGroups[tag.tag_name] || [];
-                    const allIds = [...new Set([...grpIds, ...detected])];
-                    return allIds.map((gid) => (
-                      <Badge
-                        key={gid}
-                        variant={saved.has(gid) ? "secondary" : "outline"}
-                        className={`text-[10px] gap-1 px-1.5 py-0.5 ${!saved.has(gid) ? "border-dashed border-primary/40 text-primary" : ""}`}
-                      >
-                        <UsersRound className="w-3 h-3" />
-                        {getGroupName(gid)}
-                        {!saved.has(gid) && <span className="text-[8px] opacity-60">(auto)</span>}
-                      </Badge>
-                    ));
-                  })()}
+                  {detectedUsers.map((name) => (
+                    <Badge
+                      key={name}
+                      variant="secondary"
+                      className="text-[10px] gap-1 px-1.5 py-0.5"
+                    >
+                      <UsersRound className="w-3 h-3" />
+                      {name}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             );
@@ -854,26 +818,12 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
-                <UsersRound className="w-3.5 h-3.5" /> User Groups
+                <UsersRound className="w-3.5 h-3.5" /> Käyttäjät
               </label>
-              {groups.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No groups created yet</p>
-              ) : (
-                <div className="space-y-1.5 max-h-32 overflow-auto border rounded-md p-2">
-                  {groups.map((g) => (
-                    <label
-                      key={g.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 rounded px-1 py-0.5"
-                    >
-                      <Checkbox
-                        checked={formGroupIds.includes(g.id)}
-                        onCheckedChange={() => toggleGroupId(g.id)}
-                      />
-                      {g.name}
-                    </label>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Käyttäjät tunnistetaan automaattisesti BPMN-kaavioista — niistä radoista,
+                joilla tämä järjestelmä esiintyy. Lista päivittyy itsestään, eikä sitä voi muokata käsin.
+              </p>
             </div>
           </div>
           <DialogFooter>
