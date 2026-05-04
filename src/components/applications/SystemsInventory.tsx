@@ -368,11 +368,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormName(tag.tag_name);
     setFormDescription((tag as any).description || "");
     setFormAdminPositionId((tag as any).admin_position_id || "");
-    // Merge saved groups with auto-detected groups
-    const saved = tagGroupsMap[tag.id] || [];
-    const detected = autoDetectedGroups[tag.tag_name] || [];
-    const merged = [...new Set([...saved, ...detected])];
-    setFormGroupIds(merged);
+    setFormGroupIds([]);
     setFormLinkUrl((tag as any).link_url || "");
     setDialogOpen(true);
   };
