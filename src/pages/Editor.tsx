@@ -719,30 +719,6 @@ export default function Editor() {
             </Button>
           )}
           {canEditCurrentProject && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!modeler) return;
-                try {
-                  reorganizeDiagram(modeler);
-                  const canvas = modeler.get("canvas") as any;
-                  canvas.zoom("fit-viewport");
-                  setHasUnsavedChanges(true);
-                  toast.success("Kaavio järjestelty uudelleen");
-                } catch (err) {
-                  console.error(err);
-                  toast.error("Kaavion järjestäminen epäonnistui");
-                }
-              }}
-              className="h-8 text-xs gap-1.5"
-              title="Reorganize diagram"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reorganize</span>
-            </Button>
-          )}
-          {canEditCurrentProject && (
             <Button variant="outline" size="sm" onClick={handleManualSave} className="h-8 text-xs gap-1.5">
               <Save className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{t("common.save")}</span>
