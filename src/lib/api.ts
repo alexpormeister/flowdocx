@@ -148,9 +148,10 @@ export async function updateProject(id: string, updates: {
     .update(updatePayload)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
   
   if (error) throw error;
+  if (!data) throw new Error("Sinulla ei ole oikeutta tallentaa tätä projektia tai projektia ei löytynyt.");
   return {
     ...data,
     process_steps: parseProcessSteps(data.process_steps),
