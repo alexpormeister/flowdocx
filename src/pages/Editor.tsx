@@ -445,10 +445,9 @@ export default function Editor() {
     }
   }, [modeler, projectName]);
 
-  const handleManualSave = () => {
+  const handleManualSave = async () => {
     if (!canEditCurrentProject) return;
-    triggerAutoSave();
-    toast.success(t("common.saved"));
+    await triggerAutoSave();
   };
 
   const handleBack = () => {
