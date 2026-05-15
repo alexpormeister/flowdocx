@@ -8,7 +8,8 @@ import { getProject, getProjects, updateProject, type Project } from "@/lib/api"
 import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions, getCurrentUserMembership } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { createProcessChangeDraft, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
-import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send, LayoutGrid } from "lucide-react";
+import { layoutProcess } from "bpmn-auto-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -713,6 +714,32 @@ export default function Editor() {
             <Button size="sm" onClick={() => submitDraftMutation.mutate()} disabled={submitDraftMutation.isPending || hasUnsavedChanges} className="h-8 text-xs gap-1.5">
               <Send className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Lähetä tarkastettavaksi</span>
+            </Button>
+          )}
+          {canEditCurrentProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (!modeler) return;
+                try {
+                  const { xml } = await modeler.saveXML({ format: true });
+                  const newXml = await layoutProcess(xml);
+                  await modeler.importXML(newXml);
+                  const canvas = modeler.get("canvas") as any;
+                  canvas.zoom("fit-viewport");
+                  setHasUnsavedChanges(true);
+                  toast.success("Kaavio järjestelty uudelleen");
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Kaavion järjestäminen epäonnistui");
+                }
+              }}
+              className="h-8 text-xs gap-1.5"
+              title="Reorganize diagram"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Reorganize</span>
             </Button>
           )}
           {canEditCurrentProject && (
