@@ -9,7 +9,7 @@ import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getO
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { createProcessChangeDraft, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send, LayoutGrid } from "lucide-react";
-import { layoutProcess } from "bpmn-auto-layout";
+import { reorganizeDiagram } from "@/lib/bpmnAutoLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
