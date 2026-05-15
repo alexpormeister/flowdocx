@@ -8,8 +8,7 @@ import { getProject, getProjects, updateProject, type Project } from "@/lib/api"
 import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getOrganizationGroupsWithPositions, getCurrentUserMembership } from "@/lib/organizationApi";
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { createProcessChangeDraft, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
-import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send, LayoutGrid } from "lucide-react";
-import { reorganizeDiagram } from "@/lib/bpmnAutoLayout";
+import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,7 +65,9 @@ export default function Editor() {
     enabled: !!user && !!project?.organization_id,
   });
 
-  const canEditProject = !project?.organization_id || membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
+  const isPersonalProjectOwner = !!project && !project.organization_id && project.user_id === user?.id;
+  const hasOrgEditRole = membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
+  const canEditProject = isPersonalProjectOwner || hasOrgEditRole;
   const { data: orgChangeRequests = [] } = useQuery({
     queryKey: ["process-change-requests", project?.organization_id],
     queryFn: () => getProcessChangeRequests(project!.organization_id!),
@@ -213,6 +214,7 @@ export default function Editor() {
         const canvas = modeler.get("canvas") as any;
         canvas.zoom("fit-viewport");
         lastSavedRef.current = project.bpmn_xml;
+        setHasUnsavedChanges(false);
       });
     }
   }, [project, modeler]);
