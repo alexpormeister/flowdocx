@@ -9,7 +9,7 @@ import { getOrganizationTags, addOrganizationTag, getOrganizationPositions, getO
 import { getElementLinks, createElementLink, deleteElementLink, type ElementLink } from "@/lib/elementLinksApi";
 import { createProcessChangeDraft, getProcessChangeRequests, submitProcessChangeDraft } from "@/lib/processChangeApi";
 import { PanelRightClose, PanelRightOpen, Workflow, ArrowLeft, Save, Cloud, CloudOff, Presentation, RefreshCw, FileText, Link2, Unlink, GitPullRequestCreate, Send, LayoutGrid } from "lucide-react";
-import { layoutProcess } from "bpmn-auto-layout";
+import { reorganizeDiagram } from "@/lib/bpmnAutoLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -720,12 +720,10 @@ export default function Editor() {
             <Button
               variant="outline"
               size="sm"
-              onClick={async () => {
+              onClick={() => {
                 if (!modeler) return;
                 try {
-                  const { xml } = await modeler.saveXML({ format: true });
-                  const newXml = await layoutProcess(xml);
-                  await modeler.importXML(newXml);
+                  reorganizeDiagram(modeler);
                   const canvas = modeler.get("canvas") as any;
                   canvas.zoom("fit-viewport");
                   setHasUnsavedChanges(true);
