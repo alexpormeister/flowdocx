@@ -720,12 +720,10 @@ export default function Editor() {
             <Button
               variant="outline"
               size="sm"
-              onClick={async () => {
+              onClick={() => {
                 if (!modeler) return;
                 try {
-                  const { xml } = await modeler.saveXML({ format: true });
-                  const newXml = await layoutProcess(xml);
-                  await modeler.importXML(newXml);
+                  reorganizeDiagram(modeler);
                   const canvas = modeler.get("canvas") as any;
                   canvas.zoom("fit-viewport");
                   setHasUnsavedChanges(true);
