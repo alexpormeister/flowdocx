@@ -65,9 +65,7 @@ export default function Editor() {
     enabled: !!user && !!project?.organization_id,
   });
 
-  const isPersonalProjectOwner = !!project && !project.organization_id && project.user_id === user?.id;
-  const hasOrgEditRole = membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
-  const canEditProject = isPersonalProjectOwner || hasOrgEditRole;
+  const canEditProject = !project?.organization_id || membership?.role === "owner" || membership?.role === "admin" || membership?.role === "editor";
   const { data: orgChangeRequests = [] } = useQuery({
     queryKey: ["process-change-requests", project?.organization_id],
     queryFn: () => getProcessChangeRequests(project!.organization_id!),
@@ -214,7 +212,6 @@ export default function Editor() {
         const canvas = modeler.get("canvas") as any;
         canvas.zoom("fit-viewport");
         lastSavedRef.current = project.bpmn_xml;
-        setHasUnsavedChanges(false);
       });
     }
   }, [project, modeler]);
@@ -445,9 +442,10 @@ export default function Editor() {
     }
   }, [modeler, projectName]);
 
-  const handleManualSave = async () => {
+  const handleManualSave = () => {
     if (!canEditCurrentProject) return;
-    await triggerAutoSave();
+    triggerAutoSave();
+    toast.success(t("common.saved"));
   };
 
   const handleBack = () => {
