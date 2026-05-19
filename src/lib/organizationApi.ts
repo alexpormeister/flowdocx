@@ -213,7 +213,15 @@ export async function removeOrganizationTag(tagId: string): Promise<void> {
 
 export async function updateOrganizationTag(
   tagId: string,
-  updates: { tag_name?: string; description?: string | null; admin_position_id?: string | null; group_id?: string | null }
+  updates: {
+    tag_name?: string;
+    description?: string | null;
+    admin_position_id?: string | null;
+    group_id?: string | null;
+    link_url?: string | null;
+    price_amount?: number;
+    billing_cycle?: "monthly" | "yearly";
+  }
 ): Promise<void> {
   const { error } = await supabase
     .from("organization_system_tags")
