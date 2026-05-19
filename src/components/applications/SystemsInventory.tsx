@@ -601,9 +601,29 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                         {!adminPosId && (
                           <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
                         )}
+                        {desc && (
+                          <button
+                            onClick={() =>
+                              setExpandedDescriptions((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(tag.id)) next.delete(tag.id);
+                                else next.add(tag.id);
+                                return next;
+                              })
+                            }
+                            className="p-1 rounded-md hover:bg-accent transition-colors shrink-0"
+                            title={expandedDescriptions.has(tag.id) ? "Hide description" : "Show description"}
+                          >
+                            {expandedDescriptions.has(tag.id) ? (
+                              <EyeOff className="w-3 h-3 text-muted-foreground" />
+                            ) : (
+                              <Eye className="w-3 h-3 text-muted-foreground" />
+                            )}
+                          </button>
+                        )}
                       </div>
-                      {desc && (
-                        <p className="text-[11px] text-muted-foreground truncate">{desc}</p>
+                      {desc && expandedDescriptions.has(tag.id) && (
+                        <p className="text-[11px] text-muted-foreground">{desc}</p>
                       )}
                     </div>
                   </div>
