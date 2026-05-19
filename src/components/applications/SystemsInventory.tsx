@@ -66,6 +66,8 @@ import {
   List,
   Filter,
   CheckCircle2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -94,6 +96,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [adminFilter, setAdminFilter] = useState<string>("all");
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   
 
   const { data: membership } = useQuery({
@@ -598,9 +601,29 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                         {!adminPosId && (
                           <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
                         )}
+                        {desc && (
+                          <button
+                            onClick={() =>
+                              setExpandedDescriptions((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(tag.id)) next.delete(tag.id);
+                                else next.add(tag.id);
+                                return next;
+                              })
+                            }
+                            className="p-1 rounded-md hover:bg-accent transition-colors shrink-0"
+                            title={expandedDescriptions.has(tag.id) ? "Hide description" : "Show description"}
+                          >
+                            {expandedDescriptions.has(tag.id) ? (
+                              <EyeOff className="w-3 h-3 text-muted-foreground" />
+                            ) : (
+                              <Eye className="w-3 h-3 text-muted-foreground" />
+                            )}
+                          </button>
+                        )}
                       </div>
-                      {desc && (
-                        <p className="text-[11px] text-muted-foreground truncate">{desc}</p>
+                      {desc && expandedDescriptions.has(tag.id) && (
+                        <p className="text-[11px] text-muted-foreground">{desc}</p>
                       )}
                     </div>
                   </div>
@@ -712,9 +735,29 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       )}
+                      {desc && (
+                        <button
+                          onClick={() =>
+                            setExpandedDescriptions((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(tag.id)) next.delete(tag.id);
+                              else next.add(tag.id);
+                              return next;
+                            })
+                          }
+                          className="p-1 rounded-md hover:bg-accent transition-colors shrink-0"
+                          title={expandedDescriptions.has(tag.id) ? "Hide description" : "Show description"}
+                        >
+                          {expandedDescriptions.has(tag.id) ? (
+                            <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                          ) : (
+                            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                          )}
+                        </button>
+                      )}
                     </div>
-                    {desc && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{desc}</p>
+                    {desc && expandedDescriptions.has(tag.id) && (
+                      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
                     )}
                   </div>
                 </div>
