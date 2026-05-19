@@ -597,6 +597,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
               const desc = (tag as any).description as string | null;
               const adminPosId = (tag as any).admin_position_id as string | null;
               const linkUrl = (tag as any).link_url as string | null;
+              const priceAmt = Number((tag as any).price_amount ?? 0);
+              const billing = ((tag as any).billing_cycle as "monthly" | "yearly") || "monthly";
+              const priceLabel = formatPrice(priceAmt, billing);
               const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
               return (
                 <div
@@ -608,8 +611,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       <Server className="w-3.5 h-3.5 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-sm truncate">{tag.tag_name}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-sm break-words">{truncateName(tag.tag_name)}</span>
                         {linkUrl && (
                           <a
                             href={linkUrl}
