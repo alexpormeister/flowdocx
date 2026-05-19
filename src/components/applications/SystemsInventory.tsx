@@ -700,60 +700,61 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                 key={tag.id}
                 className="group relative rounded-xl border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all"
               >
-                {canEdit && (
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => openEdit(tag)}
-                      className="p-1.5 rounded-md hover:bg-accent transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => deleteMutation.mutate(tag.id)}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                    </button>
-                  </div>
-                )}
-
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Server className="w-4 h-4 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm truncate">{tag.tag_name}</h3>
-                      {linkUrl && (
-                        <a
-                          href={linkUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:text-primary/80 shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      {desc && (
-                        <button
-                          onClick={() =>
-                            setExpandedDescriptions((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(tag.id)) next.delete(tag.id);
-                              else next.add(tag.id);
-                              return next;
-                            })
-                          }
-                          className="p-1 rounded-md hover:bg-accent transition-colors shrink-0"
-                          title={expandedDescriptions.has(tag.id) ? "Hide description" : "Show description"}
-                        >
-                          {expandedDescriptions.has(tag.id) ? (
-                            <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
-                          ) : (
-                            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                          )}
-                        </button>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="font-semibold text-sm truncate">{tag.tag_name}</h3>
+                        {linkUrl && (
+                          <a
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary/80 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                        {desc && (
+                          <button
+                            onClick={() =>
+                              setExpandedDescriptions((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(tag.id)) next.delete(tag.id);
+                                else next.add(tag.id);
+                                return next;
+                              })
+                            }
+                            className="p-1 rounded-md hover:bg-accent transition-colors shrink-0"
+                            title={expandedDescriptions.has(tag.id) ? "Hide description" : "Show description"}
+                          >
+                            {expandedDescriptions.has(tag.id) ? (
+                              <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      {canEdit && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-0.5">
+                          <button
+                            onClick={() => openEdit(tag)}
+                            className="p-1 rounded-md hover:bg-accent transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={() => deleteMutation.mutate(tag.id)}
+                            className="p-1 rounded-md hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </button>
+                        </div>
                       )}
                     </div>
                     {desc && expandedDescriptions.has(tag.id) && (
