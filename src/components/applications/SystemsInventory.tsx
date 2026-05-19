@@ -647,8 +647,13 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                           </button>
                         )}
                       </div>
-                      {desc && expandedDescriptions.has(tag.id) && (
-                        <p className="text-[11px] text-muted-foreground">{desc}</p>
+                      {desc && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {expandedDescriptions.has(tag.id) ? desc : descPreview(desc, 80)}
+                        </p>
+                      )}
+                      {priceLabel && (
+                        <p className="text-[11px] font-medium text-primary mt-0.5">{priceLabel}</p>
                       )}
                     </div>
                   </div>
