@@ -715,9 +715,29 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       )}
+                      {desc && (
+                        <button
+                          onClick={() =>
+                            setExpandedDescriptions((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(tag.id)) next.delete(tag.id);
+                              else next.add(tag.id);
+                              return next;
+                            })
+                          }
+                          className="p-1 rounded-md hover:bg-accent transition-colors shrink-0"
+                          title={expandedDescriptions.has(tag.id) ? "Hide description" : "Show description"}
+                        >
+                          {expandedDescriptions.has(tag.id) ? (
+                            <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                          ) : (
+                            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                          )}
+                        </button>
+                      )}
                     </div>
-                    {desc && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{desc}</p>
+                    {desc && expandedDescriptions.has(tag.id) && (
+                      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
                     )}
                   </div>
                 </div>
