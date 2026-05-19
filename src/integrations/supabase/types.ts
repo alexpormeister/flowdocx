@@ -725,6 +725,7 @@ export type Database = {
       organization_system_tags: {
         Row: {
           admin_position_id: string | null
+          billing_cycle: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -732,10 +733,12 @@ export type Database = {
           id: string
           link_url: string | null
           organization_id: string
+          price_amount: number
           tag_name: string
         }
         Insert: {
           admin_position_id?: string | null
+          billing_cycle?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -743,10 +746,12 @@ export type Database = {
           id?: string
           link_url?: string | null
           organization_id: string
+          price_amount?: number
           tag_name: string
         }
         Update: {
           admin_position_id?: string | null
+          billing_cycle?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -754,6 +759,7 @@ export type Database = {
           id?: string
           link_url?: string | null
           organization_id?: string
+          price_amount?: number
           tag_name?: string
         }
         Relationships: [

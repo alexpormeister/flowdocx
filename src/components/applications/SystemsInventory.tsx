@@ -91,6 +91,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [formAdminPositionId, setFormAdminPositionId] = useState<string>("");
   const [formGroupIds, setFormGroupIds] = useState<string[]>([]);
   const [formLinkUrl, setFormLinkUrl] = useState("");
+  const [formPriceAmount, setFormPriceAmount] = useState<string>("0");
+  const [formBillingCycle, setFormBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [showImpactAnalysis, setShowImpactAnalysis] = useState(false);
   const [disabledSystems, setDisabledSystems] = useState<Set<string>>(new Set());
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
@@ -242,20 +244,18 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       admin_position_id?: string;
       group_ids: string[];
       link_url?: string;
+      price_amount: number;
+      billing_cycle: "monthly" | "yearly";
     }) => {
       const tag = await addOrganizationTag(orgId, params.name);
       await updateOrganizationTag(tag.id, {
         description: params.description || null,
         admin_position_id: params.admin_position_id || null,
         group_id: params.group_ids[0] || null,
+        link_url: params.link_url || null,
+        price_amount: params.price_amount,
+        billing_cycle: params.billing_cycle,
       });
-      if (params.link_url) {
-        const { supabase } = await import("@/integrations/supabase/client");
-        await supabase
-          .from("organization_system_tags")
-          .update({ link_url: params.link_url } as any)
-          .eq("id", tag.id);
-      }
       if (params.group_ids.length > 0) {
         await setSystemTagGroups(tag.id, params.group_ids);
       }
@@ -276,17 +276,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       admin_position_id?: string | null;
       group_ids: string[];
       link_url?: string | null;
+      price_amount: number;
+      billing_cycle: "monthly" | "yearly";
     }) => {
-      const { id, group_ids, link_url, ...updates } = params;
+      const { id, group_ids, ...updates } = params;
       await updateOrganizationTag(id, {
         ...updates,
         group_id: group_ids[0] || null,
       });
-      const { supabase } = await import("@/integrations/supabase/client");
-      await supabase
-        .from("organization_system_tags")
-        .update({ link_url: link_url || null } as any)
-        .eq("id", id);
       await setSystemTagGroups(id, group_ids);
     },
     onSuccess: () => {
@@ -363,6 +360,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormAdminPositionId("");
     setFormGroupIds([]);
     setFormLinkUrl("");
+    setFormPriceAmount("0");
+    setFormBillingCycle("monthly");
     setDialogOpen(true);
   };
 
@@ -373,11 +372,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormAdminPositionId((tag as any).admin_position_id || "");
     setFormGroupIds([]);
     setFormLinkUrl((tag as any).link_url || "");
+    setFormPriceAmount(String((tag as any).price_amount ?? 0));
+    setFormBillingCycle(((tag as any).billing_cycle as "monthly" | "yearly") || "monthly");
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!formName.trim()) return;
+    const priceNum = Math.max(0, parseFloat(formPriceAmount.replace(",", ".")) || 0);
     if (editingTag) {
       await updateMutation.mutateAsync({
         id: editingTag.id,
@@ -386,6 +388,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         admin_position_id: formAdminPositionId || null,
         group_ids: formGroupIds,
         link_url: formLinkUrl.trim() || null,
+        price_amount: priceNum,
+        billing_cycle: formBillingCycle,
       });
     } else {
       await addMutation.mutateAsync({
@@ -394,6 +398,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         admin_position_id: formAdminPositionId || undefined,
         group_ids: formGroupIds,
         link_url: formLinkUrl.trim() || undefined,
+        price_amount: priceNum,
+        billing_cycle: formBillingCycle,
       });
     }
     setDialogOpen(false);
@@ -403,6 +409,22 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     positions.find((p) => p.id === id)?.name || "—";
   const getGroupName = (id: string) =>
     groups.find((g) => g.id === id)?.name || "—";
+
+  const truncateName = (name: string, max = 60) =>
+    name.length > max ? name.slice(0, max - 1) + "…" : name;
+  const descPreview = (text: string, max = 80) =>
+    text.length > max ? text.slice(0, max).trimEnd() + "…" : text;
+  const formatPrice = (amount: number, cycle: "monthly" | "yearly") => {
+    if (!amount || amount <= 0) return null;
+    const formatted = new Intl.NumberFormat("fi-FI", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+    return `${formatted} / ${cycle === "monthly" ? "kk" : "vuosi"}`;
+  };
+
+
 
 
   return (
@@ -575,6 +597,9 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
               const desc = (tag as any).description as string | null;
               const adminPosId = (tag as any).admin_position_id as string | null;
               const linkUrl = (tag as any).link_url as string | null;
+              const priceAmt = Number((tag as any).price_amount ?? 0);
+              const billing = ((tag as any).billing_cycle as "monthly" | "yearly") || "monthly";
+              const priceLabel = formatPrice(priceAmt, billing);
               const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
               return (
                 <div
@@ -586,8 +611,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                       <Server className="w-3.5 h-3.5 text-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-sm truncate">{tag.tag_name}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-sm break-words">{truncateName(tag.tag_name)}</span>
                         {linkUrl && (
                           <a
                             href={linkUrl}
@@ -622,8 +647,13 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                           </button>
                         )}
                       </div>
-                      {desc && expandedDescriptions.has(tag.id) && (
-                        <p className="text-[11px] text-muted-foreground">{desc}</p>
+                      {desc && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {expandedDescriptions.has(tag.id) ? desc : descPreview(desc, 80)}
+                        </p>
+                      )}
+                      {priceLabel && (
+                        <p className="text-[11px] font-medium text-primary mt-0.5">{priceLabel}</p>
                       )}
                     </div>
                   </div>
@@ -690,10 +720,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
             const linkUrl = (tag as any).link_url as string | null;
+            const priceAmt = Number((tag as any).price_amount ?? 0);
+            const billing = ((tag as any).billing_cycle as "monthly" | "yearly") || "monthly";
+            const priceLabel = formatPrice(priceAmt, billing);
             const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
             const warnings: string[] = [];
             if (!adminPosId) warnings.push("No admin");
             if (!linkUrl) warnings.push("No link");
+
 
             return (
               <div
@@ -706,8 +740,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{tag.tag_name}</h3>
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <h3 className="font-semibold text-sm break-words">{truncateName(tag.tag_name)}</h3>
                         {linkUrl && (
                           <a
                             href={linkUrl}
@@ -757,11 +791,17 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                         </div>
                       )}
                     </div>
-                    {desc && expandedDescriptions.has(tag.id) && (
-                      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                    {desc && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {expandedDescriptions.has(tag.id) ? desc : descPreview(desc, 80)}
+                      </p>
+                    )}
+                    {priceLabel && (
+                      <p className="text-xs font-semibold text-primary mt-1">{priceLabel}</p>
                     )}
                   </div>
                 </div>
+
 
                 {/* Warnings */}
                 {warnings.length > 0 && (
@@ -838,6 +878,34 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                 value={formLinkUrl}
                 onChange={(e) => setFormLinkUrl(e.target.value)}
               />
+            </div>
+            <div className="grid grid-cols-[1fr_140px] gap-2">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Hinta (€)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={formPriceAmount}
+                  onChange={(e) => setFormPriceAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Laskutusväli</label>
+                <Select
+                  value={formBillingCycle}
+                  onValueChange={(v) => setFormBillingCycle(v as "monthly" | "yearly")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Kuukausi</SelectItem>
+                    <SelectItem value="yearly">Vuosi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
