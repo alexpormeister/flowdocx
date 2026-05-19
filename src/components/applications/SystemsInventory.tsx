@@ -96,6 +96,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [adminFilter, setAdminFilter] = useState<string>("all");
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   
 
   const { data: membership } = useQuery({
