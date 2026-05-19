@@ -879,6 +879,33 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                 onChange={(e) => setFormLinkUrl(e.target.value)}
               />
             </div>
+            <div className="grid grid-cols-[1fr_140px] gap-2">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Hinta (€)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={formPriceAmount}
+                  onChange={(e) => setFormPriceAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Laskutusväli</label>
+                <Select
+                  value={formBillingCycle}
+                  onValueChange={(v) => setFormBillingCycle(v as "monthly" | "yearly")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Kuukausi</SelectItem>
+                    <SelectItem value="yearly">Vuosi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
                 <UserCog className="w-3.5 h-3.5" /> System Admin
