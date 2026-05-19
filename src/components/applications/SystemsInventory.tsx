@@ -906,6 +906,7 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium flex items-center gap-1.5">
                 <UserCog className="w-3.5 h-3.5" /> System Admin
