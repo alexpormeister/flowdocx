@@ -360,6 +360,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormAdminPositionId("");
     setFormGroupIds([]);
     setFormLinkUrl("");
+    setFormPriceAmount("0");
+    setFormBillingCycle("monthly");
     setDialogOpen(true);
   };
 
@@ -370,11 +372,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     setFormAdminPositionId((tag as any).admin_position_id || "");
     setFormGroupIds([]);
     setFormLinkUrl((tag as any).link_url || "");
+    setFormPriceAmount(String((tag as any).price_amount ?? 0));
+    setFormBillingCycle(((tag as any).billing_cycle as "monthly" | "yearly") || "monthly");
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!formName.trim()) return;
+    const priceNum = Math.max(0, parseFloat(formPriceAmount.replace(",", ".")) || 0);
     if (editingTag) {
       await updateMutation.mutateAsync({
         id: editingTag.id,
@@ -383,6 +388,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         admin_position_id: formAdminPositionId || null,
         group_ids: formGroupIds,
         link_url: formLinkUrl.trim() || null,
+        price_amount: priceNum,
+        billing_cycle: formBillingCycle,
       });
     } else {
       await addMutation.mutateAsync({
@@ -391,6 +398,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
         admin_position_id: formAdminPositionId || undefined,
         group_ids: formGroupIds,
         link_url: formLinkUrl.trim() || undefined,
+        price_amount: priceNum,
+        billing_cycle: formBillingCycle,
       });
     }
     setDialogOpen(false);
