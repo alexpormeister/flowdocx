@@ -244,20 +244,18 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       admin_position_id?: string;
       group_ids: string[];
       link_url?: string;
+      price_amount: number;
+      billing_cycle: "monthly" | "yearly";
     }) => {
       const tag = await addOrganizationTag(orgId, params.name);
       await updateOrganizationTag(tag.id, {
         description: params.description || null,
         admin_position_id: params.admin_position_id || null,
         group_id: params.group_ids[0] || null,
+        link_url: params.link_url || null,
+        price_amount: params.price_amount,
+        billing_cycle: params.billing_cycle,
       });
-      if (params.link_url) {
-        const { supabase } = await import("@/integrations/supabase/client");
-        await supabase
-          .from("organization_system_tags")
-          .update({ link_url: params.link_url } as any)
-          .eq("id", tag.id);
-      }
       if (params.group_ids.length > 0) {
         await setSystemTagGroups(tag.id, params.group_ids);
       }
@@ -278,17 +276,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       admin_position_id?: string | null;
       group_ids: string[];
       link_url?: string | null;
+      price_amount: number;
+      billing_cycle: "monthly" | "yearly";
     }) => {
-      const { id, group_ids, link_url, ...updates } = params;
+      const { id, group_ids, ...updates } = params;
       await updateOrganizationTag(id, {
         ...updates,
         group_id: group_ids[0] || null,
       });
-      const { supabase } = await import("@/integrations/supabase/client");
-      await supabase
-        .from("organization_system_tags")
-        .update({ link_url: link_url || null } as any)
-        .eq("id", id);
       await setSystemTagGroups(id, group_ids);
     },
     onSuccess: () => {
