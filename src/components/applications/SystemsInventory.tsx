@@ -410,6 +410,22 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const getGroupName = (id: string) =>
     groups.find((g) => g.id === id)?.name || "—";
 
+  const truncateName = (name: string, max = 60) =>
+    name.length > max ? name.slice(0, max - 1) + "…" : name;
+  const descPreview = (text: string, max = 80) =>
+    text.length > max ? text.slice(0, max).trimEnd() + "…" : text;
+  const formatPrice = (amount: number, cycle: "monthly" | "yearly") => {
+    if (!amount || amount <= 0) return null;
+    const formatted = new Intl.NumberFormat("fi-FI", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+    return `${formatted} / ${cycle === "monthly" ? "kk" : "vuosi"}`;
+  };
+
+
+
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
