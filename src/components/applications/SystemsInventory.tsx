@@ -91,6 +91,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [formAdminPositionId, setFormAdminPositionId] = useState<string>("");
   const [formGroupIds, setFormGroupIds] = useState<string[]>([]);
   const [formLinkUrl, setFormLinkUrl] = useState("");
+  const [formPriceAmount, setFormPriceAmount] = useState<string>("0");
+  const [formBillingCycle, setFormBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [showImpactAnalysis, setShowImpactAnalysis] = useState(false);
   const [disabledSystems, setDisabledSystems] = useState<Set<string>>(new Set());
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
