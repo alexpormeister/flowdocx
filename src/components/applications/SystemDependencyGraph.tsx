@@ -388,51 +388,135 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     return `M${src.x},${src.y}Q${midX + nx * curvature},${midY + ny * curvature},${tgt.x},${tgt.y}`;
   };
 
-  // Download graph as PNG
+  const escapeXml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+  // Build a standalone, high-quality SVG of the full graph (no zoom/pan crop)
+  const buildStandaloneSvg = useCallback((): { svg: string; width: number; height: number } | null => {
+    if (nodes.length === 0) return null;
+
+    // Compute bounding box including label rects
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    const nodeRects = nodes.map((n) => {
+      const r = getNodeRect(n);
+      const hw = r.boxW / 2 + 6, hh = r.boxH / 2 + 6;
+      minX = Math.min(minX, n.x - hw);
+      maxX = Math.max(maxX, n.x + hw);
+      minY = Math.min(minY, n.y - hh);
+      maxY = Math.max(maxY, n.y + hh);
+      return r;
+    });
+    const PAD = 60;
+    const FOOTER = 32;
+    minX -= PAD; minY -= PAD; maxX += PAD; maxY += PAD;
+    const width = Math.round(maxX - minX);
+    const height = Math.round(maxY - minY + FOOTER);
+    const tx = -minX, ty = -minY;
+
+    // Resolve theme color tokens to concrete hex for portable SVG
+    const root = document.documentElement;
+    const cs = getComputedStyle(root);
+    const hsl = (token: string, fallback: string) => {
+      const v = cs.getPropertyValue(token).trim();
+      return v ? `hsl(${v})` : fallback;
+    };
+    const primary = hsl("--primary", "#1e3a8a");
+    const foreground = hsl("--foreground", "#0f172a");
+    const muted = hsl("--muted-foreground", "#64748b");
+    const resolveColor = (c: string) => c.replace("hsl(var(--primary))", primary);
+
+    let body = "";
+    // Edges
+    for (const edge of edges) {
+      const src = getNodeById(edge.source);
+      const tgt = getNodeById(edge.target);
+      if (!src || !tgt) continue;
+      const isCriticalEdge = searchMode === "system" && totalTaskCount > 5 && edge.source.startsWith("sys-");
+      const stroke = isCriticalEdge ? "hsl(0, 60%, 65%)" : muted;
+      const sw = isCriticalEdge ? 2 : 1.2;
+      body += `<path d="${getEdgePath(src, tgt)}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-opacity="0.5" stroke-linecap="round"/>`;
+    }
+    // Nodes
+    nodes.forEach((n, i) => {
+      const r = nodeRects[i];
+      const color = resolveColor(n.color);
+      const rx = n.type === "task" ? 6 : 10;
+      const fillOpacity = n.type === "task" ? 0.08 : 0.14;
+      const fontWeight = n.type === "system" ? 700 : n.type === "process" ? 600 : 400;
+      body += `<g transform="translate(${n.x},${n.y})">`;
+      body += `<rect x="${-r.boxW/2}" y="${-r.boxH/2}" width="${r.boxW}" height="${r.boxH}" rx="${rx}" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-width="1.5"/>`;
+      body += `<rect x="${-r.boxW/2+2}" y="${-r.boxH/2+2}" width="${r.boxW-4}" height="${r.boxH-4}" rx="${rx-1}" fill="white" fill-opacity="0.88"/>`;
+      body += `<text text-anchor="middle" dominant-baseline="central" fill="${foreground}" font-size="${r.fontSize}" font-weight="${fontWeight}" font-family="Inter, system-ui, sans-serif">`;
+      r.lines.forEach((line, li) => {
+        const dy = li === 0 ? -(r.lines.length - 1) * r.lineHeight / 2 : r.lineHeight;
+        body += `<tspan x="0" dy="${dy}">${escapeXml(line)}</tspan>`;
+      });
+      body += `</text></g>`;
+    });
+
+    const title = selectedCenter
+      ? (searchMode === "system" ? selectedCenter : orgProjects.find((p) => p.id === selectedCenter)?.name || "")
+      : "";
+
+    const svg =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+      `<rect width="100%" height="100%" fill="#ffffff"/>` +
+      `<g transform="translate(${tx},${ty})">${body}</g>` +
+      `<text x="16" y="${height - 12}" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Nexus OS${title ? ` · ${escapeXml(title)}` : ""}</text>` +
+      `</svg>`;
+    return { svg, width, height };
+  }, [nodes, edges, selectedCenter, searchMode, orgProjects, totalTaskCount]);
+
+  const downloadFilename = (ext: string) => {
+    const name = selectedCenter
+      ? (searchMode === "system" ? selectedCenter : orgProjects.find((p) => p.id === selectedCenter)?.name || "graph")
+      : "graph";
+    return `dependency_${name.replace(/\s+/g, "_")}.${ext}`;
+  };
+
+  const downloadSvg = useCallback(() => {
+    const built = buildStandaloneSvg();
+    if (!built) return;
+    const blob = new Blob([built.svg], { type: "image/svg+xml;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = downloadFilename("svg");
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, [buildStandaloneSvg, selectedCenter, searchMode, orgProjects]);
+
+  // High-resolution PNG of full graph (not just viewport)
   const downloadPng = useCallback(() => {
-    if (!svgRef.current || !containerRef.current) return;
-    const svgEl = svgRef.current;
-    const serializer = new XMLSerializer();
-    const svgString = serializer.serializeToString(svgEl);
-    const w = containerRef.current.clientWidth;
-    const h = containerRef.current.clientHeight;
-    const dpr = 2;
-
+    const built = buildStandaloneSvg();
+    if (!built) return;
+    const { svg, width, height } = built;
+    // Scale so the longer side reaches ~4000px, capped for memory safety
+    const targetLong = 4000;
+    const scale = Math.max(2, Math.min(6, targetLong / Math.max(width, height)));
     const canvas = document.createElement("canvas");
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
     const ctx = canvas.getContext("2d")!;
-    ctx.scale(dpr, dpr);
-
     const img = new window.Image();
-    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     img.onload = () => {
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
-
-      // Add Nexus OS watermark
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "12px Inter, system-ui, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Nexus OS", 16, h - 12);
-
       canvas.toBlob((pngBlob) => {
         if (!pngBlob) return;
         const a = document.createElement("a");
         a.href = URL.createObjectURL(pngBlob);
-        const name = selectedCenter
-          ? (searchMode === "system" ? selectedCenter : orgProjects.find((p) => p.id === selectedCenter)?.name || "graph")
-          : "graph";
-        a.download = `dependency_${name.replace(/\s+/g, "_")}.png`;
+        a.download = downloadFilename("png");
         a.click();
         URL.revokeObjectURL(a.href);
       }, "image/png");
     };
     img.src = url;
-  }, [selectedCenter, searchMode, orgProjects]);
+  }, [buildStandaloneSvg, selectedCenter, searchMode, orgProjects]);
 
   // Compute rectangle dimensions for each node
   const getNodeRect = (node: GraphNode) => {
