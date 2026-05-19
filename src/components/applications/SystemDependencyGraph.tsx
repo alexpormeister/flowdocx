@@ -860,7 +860,10 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                 </Badge>
               )}
               <div className="flex items-center gap-1 ml-auto">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadPng}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadSvg} title="Vektorigrafiikka — paras laatu">
+                  <Download className="w-4 h-4" /> SVG
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadPng} title="Korkearesoluutioinen PNG">
                   <Download className="w-4 h-4" /> PNG
                 </Button>
                 <Button variant="default" size="sm" className="gap-1.5" onClick={() => setIsFullscreen(true)}>
