@@ -720,10 +720,14 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
             const desc = (tag as any).description as string | null;
             const adminPosId = (tag as any).admin_position_id as string | null;
             const linkUrl = (tag as any).link_url as string | null;
+            const priceAmt = Number((tag as any).price_amount ?? 0);
+            const billing = ((tag as any).billing_cycle as "monthly" | "yearly") || "monthly";
+            const priceLabel = formatPrice(priceAmt, billing);
             const detectedUsers = autoDetectedUsers[tag.tag_name] || [];
             const warnings: string[] = [];
             if (!adminPosId) warnings.push("No admin");
             if (!linkUrl) warnings.push("No link");
+
 
             return (
               <div
