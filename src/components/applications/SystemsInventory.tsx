@@ -311,6 +311,17 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     },
   });
 
+  // All unique users across all systems (for filter dropdown)
+  const allUsers = useMemo(() => {
+    const set = new Set<string>();
+    for (const arr of Object.values(autoDetectedUsers)) {
+      for (const u of arr) set.add(u);
+    }
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "fi", { sensitivity: "base" })
+    );
+  }, [autoDetectedUsers]);
+
   const filtered = useMemo(() => {
     let list = tags;
     if (adminFilter !== "all") {
@@ -319,6 +330,20 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       } else {
         list = list.filter((t) => (t as any).admin_position_id === adminFilter);
       }
+    }
+    if (userFilter.length > 0) {
+      const wanted = new Set(userFilter.map((u) => u.toLowerCase()));
+      list = list.filter((t) => {
+        const users = autoDetectedUsers[t.tag_name] || [];
+        return users.some((u) => wanted.has(u.toLowerCase()));
+      });
+    }
+    if (groupFilter.length > 0) {
+      const wanted = new Set(groupFilter);
+      list = list.filter((t) => {
+        const tagGroupIds = tagGroupsMap[t.id] || [];
+        return tagGroupIds.some((gid) => wanted.has(gid));
+      });
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -329,7 +354,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       );
     }
     return list;
-  }, [tags, search, adminFilter]);
+  }, [tags, search, adminFilter, userFilter, groupFilter, autoDetectedUsers, tagGroupsMap]);
+
 
   // Stats
   const stats = useMemo(() => {
