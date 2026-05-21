@@ -546,6 +546,109 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
               ))}
             </SelectContent>
           </Select>
+
+          {/* User multi-select filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
+                <UsersRound className="w-3.5 h-3.5 text-muted-foreground" />
+                {userFilter.length === 0
+                  ? "Käyttäjät"
+                  : `Käyttäjät (${userFilter.length})`}
+                <ChevronDown className="w-3 h-3 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="end">
+              <div className="p-2 border-b flex items-center justify-between">
+                <span className="text-xs font-medium">Suodata käyttäjillä</span>
+                {userFilter.length > 0 && (
+                  <button
+                    onClick={() => setUserFilter([])}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Tyhjennä
+                  </button>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1">
+                {allUsers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">Ei käyttäjiä</p>
+                ) : (
+                  allUsers.map((name) => {
+                    const checked = userFilter.includes(name);
+                    return (
+                      <label
+                        key={name}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-xs"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) =>
+                            setUserFilter((prev) =>
+                              c ? [...prev, name] : prev.filter((n) => n !== name)
+                            )
+                          }
+                        />
+                        <span className="truncate">{name}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Group multi-select filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                {groupFilter.length === 0
+                  ? "Ryhmät"
+                  : `Ryhmät (${groupFilter.length})`}
+                <ChevronDown className="w-3 h-3 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="end">
+              <div className="p-2 border-b flex items-center justify-between">
+                <span className="text-xs font-medium">Suodata ryhmillä</span>
+                {groupFilter.length > 0 && (
+                  <button
+                    onClick={() => setGroupFilter([])}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Tyhjennä
+                  </button>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1">
+                {groups.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">Ei ryhmiä</p>
+                ) : (
+                  groups.map((g) => {
+                    const checked = groupFilter.includes(g.id);
+                    return (
+                      <label
+                        key={g.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-xs"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) =>
+                            setGroupFilter((prev) =>
+                              c ? [...prev, g.id] : prev.filter((id) => id !== g.id)
+                            )
+                          }
+                        />
+                        <span className="truncate">{g.name}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <div className="flex items-center border rounded-md p-0.5 bg-card">
             <button
               onClick={() => setViewMode("grid")}
