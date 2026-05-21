@@ -47,6 +47,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import {
   Search,
   Plus,
   Pencil,
