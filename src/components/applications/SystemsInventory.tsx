@@ -47,6 +47,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+import {
   Search,
   Plus,
   Pencil,
@@ -98,7 +104,10 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
   const [expandedImpact, setExpandedImpact] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [adminFilter, setAdminFilter] = useState<string>("all");
+  const [userFilter, setUserFilter] = useState<string[]>([]);
+  const [groupFilter, setGroupFilter] = useState<string[]>([]);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+
   
 
   const { data: membership } = useQuery({
@@ -302,6 +311,17 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
     },
   });
 
+  // All unique users across all systems (for filter dropdown)
+  const allUsers = useMemo(() => {
+    const set = new Set<string>();
+    for (const arr of Object.values(autoDetectedUsers)) {
+      for (const u of arr) set.add(u);
+    }
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "fi", { sensitivity: "base" })
+    );
+  }, [autoDetectedUsers]);
+
   const filtered = useMemo(() => {
     let list = tags;
     if (adminFilter !== "all") {
@@ -310,6 +330,20 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       } else {
         list = list.filter((t) => (t as any).admin_position_id === adminFilter);
       }
+    }
+    if (userFilter.length > 0) {
+      const wanted = new Set(userFilter.map((u) => u.toLowerCase()));
+      list = list.filter((t) => {
+        const users = autoDetectedUsers[t.tag_name] || [];
+        return users.some((u) => wanted.has(u.toLowerCase()));
+      });
+    }
+    if (groupFilter.length > 0) {
+      const wanted = new Set(groupFilter);
+      list = list.filter((t) => {
+        const tagGroupIds = tagGroupsMap[t.id] || [];
+        return tagGroupIds.some((gid) => wanted.has(gid));
+      });
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -320,7 +354,8 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
       );
     }
     return list;
-  }, [tags, search, adminFilter]);
+  }, [tags, search, adminFilter, userFilter, groupFilter, autoDetectedUsers, tagGroupsMap]);
+
 
   // Stats
   const stats = useMemo(() => {
@@ -511,6 +546,109 @@ export default function SystemsInventory({ orgId }: SystemsInventoryProps) {
               ))}
             </SelectContent>
           </Select>
+
+          {/* User multi-select filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
+                <UsersRound className="w-3.5 h-3.5 text-muted-foreground" />
+                {userFilter.length === 0
+                  ? "Käyttäjät"
+                  : `Käyttäjät (${userFilter.length})`}
+                <ChevronDown className="w-3 h-3 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="end">
+              <div className="p-2 border-b flex items-center justify-between">
+                <span className="text-xs font-medium">Suodata käyttäjillä</span>
+                {userFilter.length > 0 && (
+                  <button
+                    onClick={() => setUserFilter([])}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Tyhjennä
+                  </button>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1">
+                {allUsers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">Ei käyttäjiä</p>
+                ) : (
+                  allUsers.map((name) => {
+                    const checked = userFilter.includes(name);
+                    return (
+                      <label
+                        key={name}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-xs"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) =>
+                            setUserFilter((prev) =>
+                              c ? [...prev, name] : prev.filter((n) => n !== name)
+                            )
+                          }
+                        />
+                        <span className="truncate">{name}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Group multi-select filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                {groupFilter.length === 0
+                  ? "Ryhmät"
+                  : `Ryhmät (${groupFilter.length})`}
+                <ChevronDown className="w-3 h-3 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="end">
+              <div className="p-2 border-b flex items-center justify-between">
+                <span className="text-xs font-medium">Suodata ryhmillä</span>
+                {groupFilter.length > 0 && (
+                  <button
+                    onClick={() => setGroupFilter([])}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Tyhjennä
+                  </button>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1">
+                {groups.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-2">Ei ryhmiä</p>
+                ) : (
+                  groups.map((g) => {
+                    const checked = groupFilter.includes(g.id);
+                    return (
+                      <label
+                        key={g.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-xs"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) =>
+                            setGroupFilter((prev) =>
+                              c ? [...prev, g.id] : prev.filter((id) => id !== g.id)
+                            )
+                          }
+                        />
+                        <span className="truncate">{g.name}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <div className="flex items-center border rounded-md p-0.5 bg-card">
             <button
               onClick={() => setViewMode("grid")}
