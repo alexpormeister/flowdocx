@@ -122,6 +122,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hiddenBranches, setHiddenBranches] = useState<Set<string>>(new Set());
 
   const { data: orgTags = [] } = useQuery({
     queryKey: ["org-tags", orgId],
