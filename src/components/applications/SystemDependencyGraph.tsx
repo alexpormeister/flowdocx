@@ -943,6 +943,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                 </Badge>
               )}
               <div className="flex items-center gap-1 ml-auto">
+                {renderBranchFilter()}
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadSvg} title="Vektorigrafiikka — paras laatu">
                   <Download className="w-4 h-4" /> SVG
                 </Button>
