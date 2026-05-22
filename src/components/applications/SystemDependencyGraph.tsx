@@ -242,7 +242,9 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     } else {
       const project = orgProjects.find((p) => p.id === selectedCenter);
       if (!project) return { nodes: [], edges: [] };
-      const systemsForProcess = processSystemMap[selectedCenter] || [];
+      const systemsForProcess = (processSystemMap[selectedCenter] || []).filter(
+        (s) => !hiddenBranches.has(s.systemName)
+      );
 
       nodes.push({
         id: `proc-${project.id}`, label: project.name, type: "process",
