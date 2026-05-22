@@ -21,7 +21,11 @@ import {
   AlertTriangle,
   Network,
   X,
+  EyeOff,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+
 
 interface GraphNode {
   id: string;
@@ -118,6 +122,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hiddenBranches, setHiddenBranches] = useState<Set<string>>(new Set());
 
   const { data: orgTags = [] } = useQuery({
     queryKey: ["org-tags", orgId],
@@ -196,7 +201,9 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     const cx = 400, cy = 350;
 
     if (searchMode === "system") {
-      const details = systemProcessMap[selectedCenter] || [];
+      const details = (systemProcessMap[selectedCenter] || []).filter(
+        (d) => !hiddenBranches.has(d.project.id)
+      );
       const totalTasks = details.reduce((sum, d) => sum + Math.max(d.steps.length, 1), 0);
       const isCritical = totalTasks > 5;
 
@@ -235,7 +242,9 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     } else {
       const project = orgProjects.find((p) => p.id === selectedCenter);
       if (!project) return { nodes: [], edges: [] };
-      const systemsForProcess = processSystemMap[selectedCenter] || [];
+      const systemsForProcess = (processSystemMap[selectedCenter] || []).filter(
+        (s) => !hiddenBranches.has(s.systemName)
+      );
 
       nodes.push({
         id: `proc-${project.id}`, label: project.name, type: "process",
@@ -273,11 +282,11 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
 
     runForceLayout(nodes, edges, 200);
     return { nodes, edges };
-  }, [selectedCenter, searchMode, systemProcessMap, processSystemMap, orgProjects]);
+  }, [selectedCenter, searchMode, systemProcessMap, processSystemMap, orgProjects, hiddenBranches]);
 
   useEffect(() => {
-    if (selectedCenter) { setZoom(1); setPan({ x: 0, y: 0 }); }
-  }, [selectedCenter]);
+    if (selectedCenter) { setZoom(1); setPan({ x: 0, y: 0 }); setHiddenBranches(new Set()); }
+  }, [selectedCenter, searchMode]);
 
   // ESC to exit fullscreen
   useEffect(() => {
@@ -372,6 +381,80 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
 
   const selectItem = (id: string) => { setSelectedCenter(id); setSearchFilter(""); };
   const getNodeById = (id: string) => nodes.find((n) => n.id === id);
+
+  // Branches available to hide/show for the current selection
+  const branchOptions = useMemo<{ id: string; label: string }[]>(() => {
+    if (!selectedCenter) return [];
+    if (searchMode === "system") {
+      return (systemProcessMap[selectedCenter] || []).map((d) => ({
+        id: d.project.id,
+        label: d.project.name,
+      }));
+    }
+    return (processSystemMap[selectedCenter] || []).map((s) => ({
+      id: s.systemName,
+      label: s.systemName,
+    }));
+  }, [selectedCenter, searchMode, systemProcessMap, processSystemMap]);
+
+  const toggleBranch = (id: string) => {
+    setHiddenBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const renderBranchFilter = () => {
+    if (branchOptions.length === 0) return null;
+    const hiddenCount = branchOptions.filter((b) => hiddenBranches.has(b.id)).length;
+    const branchLabel = searchMode === "system" ? "prosessia" : "järjestelmää";
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <EyeOff className="w-4 h-4" />
+            Suodata haarat
+            {hiddenCount > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                {hiddenCount} piilossa
+              </Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-72 p-0">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <p className="text-xs font-medium text-muted-foreground">
+              Näytä / piilota {branchLabel}
+            </p>
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setHiddenBranches(new Set())}
+                className="text-[11px] text-primary hover:underline"
+              >
+                Näytä kaikki
+              </button>
+            )}
+          </div>
+          <div className="max-h-72 overflow-y-auto p-2 space-y-1">
+            {branchOptions.map((b) => {
+              const checked = !hiddenBranches.has(b.id);
+              return (
+                <label
+                  key={b.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+                >
+                  <Checkbox checked={checked} onCheckedChange={() => toggleBranch(b.id)} />
+                  <span className="truncate">{b.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
 
   const totalTaskCount = useMemo(() => {
     if (!selectedCenter || searchMode !== "system") return 0;
@@ -860,6 +943,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
                 </Badge>
               )}
               <div className="flex items-center gap-1 ml-auto">
+                {renderBranchFilter()}
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadSvg} title="Vektorigrafiikka — paras laatu">
                   <Download className="w-4 h-4" /> SVG
                 </Button>
@@ -894,6 +978,7 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
               </Badge>
             )}
             <div className="flex items-center gap-1 ml-auto">
+              {renderBranchFilter()}
               <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadSvg} title="Vektorigrafiikka — paras laatu">
                 <Download className="w-4 h-4" /> SVG
               </Button>
