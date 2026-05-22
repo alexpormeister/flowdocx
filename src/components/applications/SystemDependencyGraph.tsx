@@ -282,11 +282,11 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
 
     runForceLayout(nodes, edges, 200);
     return { nodes, edges };
-  }, [selectedCenter, searchMode, systemProcessMap, processSystemMap, orgProjects]);
+  }, [selectedCenter, searchMode, systemProcessMap, processSystemMap, orgProjects, hiddenBranches]);
 
   useEffect(() => {
-    if (selectedCenter) { setZoom(1); setPan({ x: 0, y: 0 }); }
-  }, [selectedCenter]);
+    if (selectedCenter) { setZoom(1); setPan({ x: 0, y: 0 }); setHiddenBranches(new Set()); }
+  }, [selectedCenter, searchMode]);
 
   // ESC to exit fullscreen
   useEffect(() => {
