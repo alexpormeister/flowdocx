@@ -201,7 +201,9 @@ export default function SystemDependencyGraph({ orgId }: { orgId: string }) {
     const cx = 400, cy = 350;
 
     if (searchMode === "system") {
-      const details = systemProcessMap[selectedCenter] || [];
+      const details = (systemProcessMap[selectedCenter] || []).filter(
+        (d) => !hiddenBranches.has(d.project.id)
+      );
       const totalTasks = details.reduce((sum, d) => sum + Math.max(d.steps.length, 1), 0);
       const isCritical = totalTasks > 5;
 
