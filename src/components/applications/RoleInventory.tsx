@@ -33,6 +33,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("roles");
+  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
 
   const { data: positions = [] } = useQuery({
     queryKey: ["org-positions", orgId],
