@@ -172,6 +172,46 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     [roleMap]
   );
 
+  // Multi-filter options: roles, groups and unmapped performers combined
+  const filterOptions = useMemo(() => {
+    const roles = Object.values(roleMap)
+      .filter((v) => v.details.length > 0)
+      .map((v) => ({ key: `role:${v.position.name.toLowerCase()}`, label: v.position.name, type: "Rooli" as const }));
+    const grps = Object.values(groupMap)
+      .filter((v) => v.details.length > 0)
+      .map((v) => ({ key: `group:${v.group.id}`, label: v.group.name, type: "Ryhmä" as const }));
+    const others = Object.keys(unmapped).map((k) => ({
+      key: `other:${k}`,
+      label: k.charAt(0).toUpperCase() + k.slice(1),
+      type: "Muu" as const,
+    }));
+    return [...roles, ...grps, ...others].sort((a, b) => a.label.localeCompare(b.label, "fi"));
+  }, [roleMap, groupMap, unmapped]);
+
+  const toggleFilter = (key: string) => {
+    setSelectedFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // AND semantics: project must include ALL selected roles/groups
+  const filteredProjects = useMemo(() => {
+    if (selectedFilters.size === 0) return [];
+    return orgProjects
+      .map((project) => {
+        const keys = projectKeys.get(project.id) || new Set<string>();
+        const matched = Array.from(selectedFilters).filter((f) => keys.has(f));
+        return { project, matched, all: matched.length === selectedFilters.size };
+      })
+      .filter((r) => r.all)
+      .sort((a, b) => a.project.name.localeCompare(b.project.name, "fi"));
+  }, [selectedFilters, orgProjects, projectKeys]);
+
+  const filterLabel = (key: string) => filterOptions.find((o) => o.key === key)?.label || key;
+
   const totalSteps = useMemo(() => {
     return Object.values(roleMap).reduce(
       (acc, v) => acc + v.details.reduce((s, d) => s + d.steps.length, 0),
