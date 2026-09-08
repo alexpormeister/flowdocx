@@ -98,6 +98,8 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
     for (const project of orgProjects) {
       const steps = (project.process_steps as any[]) || [];
+      if (!projectKeys.has(project.id)) projectKeys.set(project.id, new Set());
+      const keys = projectKeys.get(project.id)!;
       for (const step of steps) {
         const performer = (step.performer || "").trim();
         const performerLower = performer.toLowerCase();
@@ -105,6 +107,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
         const groupEntry = groupLookup[performerLower];
         if (groupEntry) {
+          keys.add(`group:${groupEntry.group.id}`);
           const gDetail = groupMap[groupEntry.group.id];
           if (gDetail) {
             const existing = gDetail.details.find((d) => d.project.id === project.id);
@@ -113,11 +116,14 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
             else gDetail.details.push({ project, steps: [entry] });
           }
           for (const posName of groupEntry.positionNames) {
+            keys.add(`role:${posName.toLowerCase()}`);
             addToRole(posName.toLowerCase(), project, step.step, step.task || "[Untitled]", groupEntry.group.name);
           }
         } else if (roleMap[performerLower]) {
+          keys.add(`role:${performerLower}`);
           addToRole(performerLower, project, step.step, step.task || "[Untitled]");
         } else {
+          keys.add(`other:${performerLower}`);
           if (!unmapped[performerLower]) unmapped[performerLower] = [];
           const existing = unmapped[performerLower].find((d) => d.project.id === project.id);
           const entry = { step: step.step, task: step.task || "[Untitled]" };
@@ -127,7 +133,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
       }
     }
 
-    return { roleMap, groupMap, unmapped };
+    return { roleMap, groupMap, unmapped, projectKeys };
   }, [positions, groups, orgProjects, groupLookup]);
 
   const toggleExpand = (key: string) => {
