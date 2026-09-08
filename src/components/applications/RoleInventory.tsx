@@ -5,14 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
 import { getOrganizationPositions, getOrganizationGroupsWithPositions, getOrganizationTags, type OrganizationPosition, type OrganizationGroup } from "@/lib/organizationApi";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Server, GitBranch } from "lucide-react";
+import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Server, GitBranch, Filter, X } from "lucide-react";
 
 interface RoleDetail {
   project: Project;
