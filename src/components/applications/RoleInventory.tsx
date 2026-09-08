@@ -300,16 +300,100 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Hae roolia, ryhmää tai suorittajaa..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + multi-filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Hae roolia, ryhmää tai suorittajaa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2 shrink-0">
+              <Filter className="w-4 h-4" />
+              Suodata prosesseja
+              {selectedFilters.size > 0 && (
+                <Badge variant="default" className="ml-1 h-4 px-1.5 text-[10px]">{selectedFilters.size}</Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-0">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <p className="text-sm font-medium">Näytä prosessit, joissa mukana</p>
+              {selectedFilters.size > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedFilters(new Set())}>
+                  Tyhjennä
+                </Button>
+              )}
+            </div>
+            <ScrollArea className="h-72">
+              <div className="p-2 space-y-0.5">
+                {filterOptions.length === 0 ? (
+                  <p className="px-2 py-4 text-xs text-muted-foreground">Ei suodatettavia rooleja tai ryhmiä.</p>
+                ) : (
+                  filterOptions.map((opt) => (
+                    <label
+                      key={opt.key}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-muted"
+                    >
+                      <Checkbox
+                        checked={selectedFilters.has(opt.key)}
+                        onCheckedChange={() => toggleFilter(opt.key)}
+                      />
+                      <span className="flex-1 truncate">{opt.label}</span>
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{opt.type}</Badge>
+                    </label>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
+
+      {/* Active filter chips + filtered results */}
+      {selectedFilters.size > 0 && (
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground mr-1">Kaikki mukana:</span>
+            {Array.from(selectedFilters).map((key) => (
+              <Badge key={key} variant="default" className="gap-1 pr-1">
+                {filterLabel(key)}
+                <button
+                  onClick={() => toggleFilter(key)}
+                  className="rounded-full p-0.5 hover:bg-primary-foreground/20"
+                  aria-label={`Poista suodatin ${filterLabel(key)}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          {filteredProjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Yhdessäkään prosessissa ei ole kaikkia valittuja.</p>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">
+                {filteredProjects.length} prosessi{filteredProjects.length !== 1 ? "a" : ""} täsmää
+              </p>
+              {filteredProjects.map(({ project }) => (
+                <button
+                  key={project.id}
+                  onClick={() => navigate(`/presentation/${project.id}?org=${orgId}`)}
+                  className="flex items-center gap-2 w-full text-left text-xs px-3 py-2 rounded-md hover:bg-muted transition-colors"
+                >
+                  <Workflow className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate">{project.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
