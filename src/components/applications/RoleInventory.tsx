@@ -75,10 +75,11 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     return map;
   }, [groups, positions]);
 
-  const { roleMap, groupMap, unmapped } = useMemo(() => {
+  const { roleMap, groupMap, unmapped, projectKeys } = useMemo(() => {
     const roleMap: Record<string, { position: OrganizationPosition; details: RoleDetail[] }> = {};
     const groupMap: Record<string, { group: GroupWithPositions; details: RoleDetail[] }> = {};
     const unmapped: Record<string, RoleDetail[]> = {};
+    const projectKeys = new Map<string, Set<string>>();
 
     for (const pos of positions) {
       roleMap[pos.name.toLowerCase()] = { position: pos, details: [] };
