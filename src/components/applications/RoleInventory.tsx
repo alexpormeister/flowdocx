@@ -5,14 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { getProjects, type Project } from "@/lib/api";
 import { getOrganizationPositions, getOrganizationGroupsWithPositions, getOrganizationTags, type OrganizationPosition, type OrganizationGroup } from "@/lib/organizationApi";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Server, GitBranch } from "lucide-react";
+import { Users, ChevronDown, AlertTriangle, Workflow, UsersRound, Search, UserCircle2, HelpCircle, Server, GitBranch, Filter, X } from "lucide-react";
 
 interface RoleDetail {
   project: Project;
@@ -29,6 +33,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("roles");
+  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
 
   const { data: positions = [] } = useQuery({
     queryKey: ["org-positions", orgId],
@@ -70,10 +75,11 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     return map;
   }, [groups, positions]);
 
-  const { roleMap, groupMap, unmapped } = useMemo(() => {
+  const { roleMap, groupMap, unmapped, projectKeys } = useMemo(() => {
     const roleMap: Record<string, { position: OrganizationPosition; details: RoleDetail[] }> = {};
     const groupMap: Record<string, { group: GroupWithPositions; details: RoleDetail[] }> = {};
     const unmapped: Record<string, RoleDetail[]> = {};
+    const projectKeys = new Map<string, Set<string>>();
 
     for (const pos of positions) {
       roleMap[pos.name.toLowerCase()] = { position: pos, details: [] };
@@ -92,6 +98,8 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
     for (const project of orgProjects) {
       const steps = (project.process_steps as any[]) || [];
+      if (!projectKeys.has(project.id)) projectKeys.set(project.id, new Set());
+      const keys = projectKeys.get(project.id)!;
       for (const step of steps) {
         const performer = (step.performer || "").trim();
         const performerLower = performer.toLowerCase();
@@ -99,6 +107,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
 
         const groupEntry = groupLookup[performerLower];
         if (groupEntry) {
+          keys.add(`group:${groupEntry.group.id}`);
           const gDetail = groupMap[groupEntry.group.id];
           if (gDetail) {
             const existing = gDetail.details.find((d) => d.project.id === project.id);
@@ -107,11 +116,14 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
             else gDetail.details.push({ project, steps: [entry] });
           }
           for (const posName of groupEntry.positionNames) {
+            keys.add(`role:${posName.toLowerCase()}`);
             addToRole(posName.toLowerCase(), project, step.step, step.task || "[Untitled]", groupEntry.group.name);
           }
         } else if (roleMap[performerLower]) {
+          keys.add(`role:${performerLower}`);
           addToRole(performerLower, project, step.step, step.task || "[Untitled]");
         } else {
+          keys.add(`other:${performerLower}`);
           if (!unmapped[performerLower]) unmapped[performerLower] = [];
           const existing = unmapped[performerLower].find((d) => d.project.id === project.id);
           const entry = { step: step.step, task: step.task || "[Untitled]" };
@@ -121,7 +133,7 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
       }
     }
 
-    return { roleMap, groupMap, unmapped };
+    return { roleMap, groupMap, unmapped, projectKeys };
   }, [positions, groups, orgProjects, groupLookup]);
 
   const toggleExpand = (key: string) => {
@@ -159,6 +171,46 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
     () => Object.values(roleMap).filter((v) => v.details.length === 0),
     [roleMap]
   );
+
+  // Multi-filter options: roles, groups and unmapped performers combined
+  const filterOptions = useMemo(() => {
+    const roles = Object.values(roleMap)
+      .filter((v) => v.details.length > 0)
+      .map((v) => ({ key: `role:${v.position.name.toLowerCase()}`, label: v.position.name, type: "Rooli" as const }));
+    const grps = Object.values(groupMap)
+      .filter((v) => v.details.length > 0)
+      .map((v) => ({ key: `group:${v.group.id}`, label: v.group.name, type: "Ryhmä" as const }));
+    const others = Object.keys(unmapped).map((k) => ({
+      key: `other:${k}`,
+      label: k.charAt(0).toUpperCase() + k.slice(1),
+      type: "Muu" as const,
+    }));
+    return [...roles, ...grps, ...others].sort((a, b) => a.label.localeCompare(b.label, "fi"));
+  }, [roleMap, groupMap, unmapped]);
+
+  const toggleFilter = (key: string) => {
+    setSelectedFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // AND semantics: project must include ALL selected roles/groups
+  const filteredProjects = useMemo(() => {
+    if (selectedFilters.size === 0) return [];
+    return orgProjects
+      .map((project) => {
+        const keys = projectKeys.get(project.id) || new Set<string>();
+        const matched = Array.from(selectedFilters).filter((f) => keys.has(f));
+        return { project, matched, all: matched.length === selectedFilters.size };
+      })
+      .filter((r) => r.all)
+      .sort((a, b) => a.project.name.localeCompare(b.project.name, "fi"));
+  }, [selectedFilters, orgProjects, projectKeys]);
+
+  const filterLabel = (key: string) => filterOptions.find((o) => o.key === key)?.label || key;
 
   const totalSteps = useMemo(() => {
     return Object.values(roleMap).reduce(
@@ -248,16 +300,100 @@ export default function RoleInventory({ orgId }: { orgId: string }) {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Hae roolia, ryhmää tai suorittajaa..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + multi-filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Hae roolia, ryhmää tai suorittajaa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2 shrink-0">
+              <Filter className="w-4 h-4" />
+              Suodata prosesseja
+              {selectedFilters.size > 0 && (
+                <Badge variant="default" className="ml-1 h-4 px-1.5 text-[10px]">{selectedFilters.size}</Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-0">
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <p className="text-sm font-medium">Näytä prosessit, joissa mukana</p>
+              {selectedFilters.size > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedFilters(new Set())}>
+                  Tyhjennä
+                </Button>
+              )}
+            </div>
+            <ScrollArea className="h-72">
+              <div className="p-2 space-y-0.5">
+                {filterOptions.length === 0 ? (
+                  <p className="px-2 py-4 text-xs text-muted-foreground">Ei suodatettavia rooleja tai ryhmiä.</p>
+                ) : (
+                  filterOptions.map((opt) => (
+                    <label
+                      key={opt.key}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-muted"
+                    >
+                      <Checkbox
+                        checked={selectedFilters.has(opt.key)}
+                        onCheckedChange={() => toggleFilter(opt.key)}
+                      />
+                      <span className="flex-1 truncate">{opt.label}</span>
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{opt.type}</Badge>
+                    </label>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
+
+      {/* Active filter chips + filtered results */}
+      {selectedFilters.size > 0 && (
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground mr-1">Kaikki mukana:</span>
+            {Array.from(selectedFilters).map((key) => (
+              <Badge key={key} variant="default" className="gap-1 pr-1">
+                {filterLabel(key)}
+                <button
+                  onClick={() => toggleFilter(key)}
+                  className="rounded-full p-0.5 hover:bg-primary-foreground/20"
+                  aria-label={`Poista suodatin ${filterLabel(key)}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          {filteredProjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Yhdessäkään prosessissa ei ole kaikkia valittuja.</p>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">
+                {filteredProjects.length} prosessi{filteredProjects.length !== 1 ? "a" : ""} täsmää
+              </p>
+              {filteredProjects.map(({ project }) => (
+                <button
+                  key={project.id}
+                  onClick={() => navigate(`/presentation/${project.id}?org=${orgId}`)}
+                  className="flex items-center gap-2 w-full text-left text-xs px-3 py-2 rounded-md hover:bg-muted transition-colors"
+                >
+                  <Workflow className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate">{project.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
