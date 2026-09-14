@@ -81,6 +81,7 @@ import { Workflow, Plus, Search, LogOut, User, FileText, FolderOpen, Folder as F
 import { toast } from "sonner";
 import { getContrastTextColor } from "@/lib/utils";
 import AdminCreateUserDialog from "@/components/dashboard/AdminCreateUserDialog";
+import { resolveBackgroundUrl } from "@/lib/backgroundImage";
 import { FOLDER_COLORS } from "@/components/dashboard/CreateFolderDialog";
 import { EditFolderDialog } from "@/components/dashboard/EditFolderDialog";
 import { Label } from "@/components/ui/label";
