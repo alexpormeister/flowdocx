@@ -22,7 +22,7 @@ import {
 import {
   Shield, Search, ArrowLeft, UserPlus, Building2, Crown, Trash2, Users,
   Activity, FileText, Settings, BarChart3, Archive, RotateCcw, Pause, Play,
-  AlertTriangle, Clock, Layers, Eye,
+  AlertTriangle, Clock, Layers, Eye, KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -417,6 +417,9 @@ function UsersTab({ user }: { user: { id: string } }) {
   const [selectedUserEmail, setSelectedUserEmail] = useState("");
   const [selectedOrgForAdd, setSelectedOrgForAdd] = useState("");
   const [selectedRoleForAdd, setSelectedRoleForAdd] = useState("viewer");
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-all-users", search],
@@ -478,6 +481,23 @@ function UsersTab({ user }: { user: { id: string } }) {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-all-users"] }); setAddToOrgDialogOpen(false); toast.success("Käyttäjä lisätty organisaatioon"); },
     onError: (err) => toast.error((err as Error).message),
+  });
+
+  const setPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-set-password", {
+        body: { user_id: userId, password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      setPasswordDialogOpen(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Salasana vaihdettu");
+    },
+    onError: (err) => toast.error("Salasanan vaihto epäonnistui: " + (err as Error).message),
   });
 
   const removeFromOrgMutation = useMutation({
@@ -542,9 +562,14 @@ function UsersTab({ user }: { user: { id: string } }) {
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedUserId(u.user_id); setSelectedUserEmail(u.email); setSelectedOrgForAdd(""); setSelectedRoleForAdd("viewer"); setAddToOrgDialogOpen(true); }}>
-                        <UserPlus className="w-3 h-3 mr-1" />Lisää org:iin
-                      </Button>
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedUserId(u.user_id); setSelectedUserEmail(u.email); setSelectedOrgForAdd(""); setSelectedRoleForAdd("viewer"); setAddToOrgDialogOpen(true); }}>
+                          <UserPlus className="w-3 h-3 mr-1" />Lisää org:iin
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedUserId(u.user_id); setSelectedUserEmail(u.email); setNewPassword(""); setConfirmPassword(""); setPasswordDialogOpen(true); }}>
+                          <KeyRound className="w-3 h-3 mr-1" />Vaihda salasana
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -581,6 +606,37 @@ function UsersTab({ user }: { user: { id: string } }) {
           </div>
           <DialogFooter>
             <Button onClick={() => addToOrgMutation.mutate({ orgId: selectedOrgForAdd, email: selectedUserEmail, role: selectedRoleForAdd })} disabled={!selectedOrgForAdd || addToOrgMutation.isPending}>Lisää</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vaihda käyttäjän salasana</DialogTitle>
+            <DialogDescription>Uusi salasana otetaan käyttöön heti. Kerro se käyttäjälle turvallisesti.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground break-all">Käyttäjä: <strong>{selectedUserEmail || "—"}</strong></p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Uusi salasana</label>
+              <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Vähintään 6 merkkiä" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vahvista salasana</label>
+              <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Kirjoita salasana uudelleen" />
+            </div>
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">Salasanat eivät täsmää.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => selectedUserId && setPasswordMutation.mutate({ userId: selectedUserId, password: newPassword })}
+              disabled={!selectedUserId || newPassword.length < 6 || newPassword !== confirmPassword || setPasswordMutation.isPending}
+            >
+              {setPasswordMutation.isPending ? "Vaihdetaan..." : "Vaihda salasana"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
