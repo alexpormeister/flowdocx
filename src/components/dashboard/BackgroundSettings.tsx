@@ -40,7 +40,19 @@ export function BackgroundSettings({
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState<string | null>(currentBackground);
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // The bucket is private: resolve stored paths to short-lived signed URLs for display
+  useEffect(() => {
+    let cancelled = false;
+    resolveBackgroundUrl(currentBackground).then((url) => {
+      if (!cancelled) setResolvedImageUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBackground]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
