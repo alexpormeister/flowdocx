@@ -79,12 +79,9 @@ export function BackgroundSettings({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("backgrounds")
-        .getPublicUrl(fileName);
-
-      setSelectedBackground(publicUrl);
-      await onBackgroundChange(publicUrl);
+      // Store the private storage path; a signed URL is generated at display time
+      setSelectedBackground(fileName);
+      await onBackgroundChange(fileName);
       toast.success(t("background.uploaded"));
     } catch (error) {
       console.error("Upload error:", error);
@@ -136,7 +133,7 @@ export function BackgroundSettings({
           <p className="text-sm font-medium mb-2">{t("background.current")}</p>
           <div className="relative rounded-lg overflow-hidden border">
             <img
-              src={currentBackground}
+              src={resolvedImageUrl || undefined}
               alt="Current background"
               className="w-full h-24 object-cover"
             />
