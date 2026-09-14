@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { resolveBackgroundUrl } from "@/lib/backgroundImage";
 import { Image, Upload, Trash2, X, Check } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,19 @@ export function BackgroundSettings({
   const [isOpen, setIsOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState<string | null>(currentBackground);
+  const [resolvedImageUrl, setResolvedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // The bucket is private: resolve stored paths to short-lived signed URLs for display
+  useEffect(() => {
+    let cancelled = false;
+    resolveBackgroundUrl(currentBackground).then((url) => {
+      if (!cancelled) setResolvedImageUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBackground]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,12 +79,9 @@ export function BackgroundSettings({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("backgrounds")
-        .getPublicUrl(fileName);
-
-      setSelectedBackground(publicUrl);
-      await onBackgroundChange(publicUrl);
+      // Store the private storage path; a signed URL is generated at display time
+      setSelectedBackground(fileName);
+      await onBackgroundChange(fileName);
       toast.success(t("background.uploaded"));
     } catch (error) {
       console.error("Upload error:", error);
@@ -123,7 +133,7 @@ export function BackgroundSettings({
           <p className="text-sm font-medium mb-2">{t("background.current")}</p>
           <div className="relative rounded-lg overflow-hidden border">
             <img
-              src={currentBackground}
+              src={resolvedImageUrl || undefined}
               alt="Current background"
               className="w-full h-24 object-cover"
             />

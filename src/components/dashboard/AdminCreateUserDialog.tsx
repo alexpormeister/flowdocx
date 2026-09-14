@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -14,8 +14,6 @@ import { Label } from "@/components/ui/label";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
-const ADMIN_EMAILS = ["pormeisteralex@gmail.com"];
-
 export default function AdminCreateUserDialog() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -23,8 +21,25 @@ export default function AdminCreateUserDialog() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  if (!user || !ADMIN_EMAILS.includes(user.email || "")) {
+  useEffect(() => {
+    if (!user) {
+      setIsSuperAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .rpc("is_superadmin", { _user_id: user.id })
+      .then(({ data }) => {
+        if (!cancelled) setIsSuperAdmin(!!data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  if (!user || !isSuperAdmin) {
     return null;
   }
 
