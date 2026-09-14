@@ -562,9 +562,14 @@ function UsersTab({ user }: { user: { id: string } }) {
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedUserId(u.user_id); setSelectedUserEmail(u.email); setSelectedOrgForAdd(""); setSelectedRoleForAdd("viewer"); setAddToOrgDialogOpen(true); }}>
-                        <UserPlus className="w-3 h-3 mr-1" />Lisää org:iin
-                      </Button>
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedUserId(u.user_id); setSelectedUserEmail(u.email); setSelectedOrgForAdd(""); setSelectedRoleForAdd("viewer"); setAddToOrgDialogOpen(true); }}>
+                          <UserPlus className="w-3 h-3 mr-1" />Lisää org:iin
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedUserId(u.user_id); setSelectedUserEmail(u.email); setNewPassword(""); setConfirmPassword(""); setPasswordDialogOpen(true); }}>
+                          <KeyRound className="w-3 h-3 mr-1" />Vaihda salasana
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
