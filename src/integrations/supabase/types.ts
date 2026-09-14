@@ -1227,6 +1227,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      org_has_members: { Args: { _org_id: string }; Returns: boolean }
     }
     Enums: {
       org_role: "owner" | "admin" | "editor" | "viewer"
