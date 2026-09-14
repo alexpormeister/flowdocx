@@ -677,21 +677,39 @@ export default function Dashboard() {
     setShowRootProjects(false);
   }, [selectedFolderParam, filteredFolders]);
 
-  // Background style
-  const backgroundStyle = useMemo(() => {
-    const bgUrl = profile?.dashboard_background_url;
-    if (!bgUrl) return {};
+  // Background style (bucket is private: resolve stored paths to signed URLs)
+  const [resolvedBgUrl, setResolvedBgUrl] = useState<string | null>(null);
 
-    if (bgUrl.startsWith("linear-gradient")) {
-      return { background: bgUrl };
+  useEffect(() => {
+    const bgValue = profile?.dashboard_background_url;
+    if (!bgValue || bgValue.startsWith("linear-gradient")) {
+      setResolvedBgUrl(null);
+      return;
     }
+    let cancelled = false;
+    resolveBackgroundUrl(bgValue).then((url) => {
+      if (!cancelled) setResolvedBgUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.dashboard_background_url]);
+
+  const backgroundStyle = useMemo(() => {
+    const bgValue = profile?.dashboard_background_url;
+    if (!bgValue) return {};
+
+    if (bgValue.startsWith("linear-gradient")) {
+      return { background: bgValue };
+    }
+    if (!resolvedBgUrl) return {};
     return {
-      backgroundImage: `url(${bgUrl})`,
+      backgroundImage: `url(${resolvedBgUrl})`,
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundAttachment: "fixed",
     };
-  }, [profile?.dashboard_background_url]);
+  }, [profile?.dashboard_background_url, resolvedBgUrl]);
 
   // Org brand theme as inline CSS custom properties
   const orgThemeStyle = useMemo(() => {
