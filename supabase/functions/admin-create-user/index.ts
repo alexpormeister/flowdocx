@@ -1,8 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const ADMIN_EMAILS = ["pormeisteralex@gmail.com"];
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -28,14 +26,14 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const authClient = createClient(supabaseUrl, serviceRoleKey, {
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    const callerEmail = claimsData?.claims?.email;
+    const { data: claimsData, error: claimsError } = await adminClient.auth.getClaims(token);
+    const callerId = claimsData?.claims?.sub;
 
-    if (claimsError || !claimsData?.claims?.sub || !callerEmail) {
+    if (claimsError || !callerId) {
       console.error("Claims error:", claimsError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -43,8 +41,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!ADMIN_EMAILS.includes(String(callerEmail))) {
-      return new Response(JSON.stringify({ error: "Not an admin" }), {
+    // Authorize via the superadmins table (single source of truth)
+    const { data: sa, error: saError } = await adminClient
+      .from("superadmins")
+      .select("id")
+      .eq("user_id", callerId)
+      .maybeSingle();
+
+    if (saError || !sa) {
+      return new Response(JSON.stringify({ error: "Not a superadmin" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -52,16 +57,19 @@ Deno.serve(async (req) => {
 
     const { email, password, display_name } = await req.json();
 
-    if (!email || !password) {
+    if (!email || !password || typeof email !== "string" || typeof password !== "string") {
       return new Response(JSON.stringify({ error: "Email and password are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    if (password.length < 6 || password.length > 128 || email.length > 320) {
+      return new Response(JSON.stringify({ error: "Invalid email or password length" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data, error } = await adminClient.auth.admin.createUser({
       email,
