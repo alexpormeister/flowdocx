@@ -22,7 +22,7 @@ import {
 import {
   Shield, Search, ArrowLeft, UserPlus, Building2, Crown, Trash2, Users,
   Activity, FileText, Settings, BarChart3, Archive, RotateCcw, Pause, Play,
-  AlertTriangle, Clock, Layers, Eye,
+  AlertTriangle, Clock, Layers, Eye, KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -417,6 +417,9 @@ function UsersTab({ user }: { user: { id: string } }) {
   const [selectedUserEmail, setSelectedUserEmail] = useState("");
   const [selectedOrgForAdd, setSelectedOrgForAdd] = useState("");
   const [selectedRoleForAdd, setSelectedRoleForAdd] = useState("viewer");
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-all-users", search],
@@ -478,6 +481,23 @@ function UsersTab({ user }: { user: { id: string } }) {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-all-users"] }); setAddToOrgDialogOpen(false); toast.success("Käyttäjä lisätty organisaatioon"); },
     onError: (err) => toast.error((err as Error).message),
+  });
+
+  const setPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke("admin-set-password", {
+        body: { user_id: userId, password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      setPasswordDialogOpen(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Salasana vaihdettu");
+    },
+    onError: (err) => toast.error("Salasanan vaihto epäonnistui: " + (err as Error).message),
   });
 
   const removeFromOrgMutation = useMutation({
