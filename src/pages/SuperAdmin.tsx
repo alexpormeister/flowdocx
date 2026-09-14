@@ -609,6 +609,37 @@ function UsersTab({ user }: { user: { id: string } }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vaihda käyttäjän salasana</DialogTitle>
+            <DialogDescription>Uusi salasana otetaan käyttöön heti. Kerro se käyttäjälle turvallisesti.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground break-all">Käyttäjä: <strong>{selectedUserEmail || "—"}</strong></p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Uusi salasana</label>
+              <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Vähintään 6 merkkiä" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vahvista salasana</label>
+              <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Kirjoita salasana uudelleen" />
+            </div>
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">Salasanat eivät täsmää.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => selectedUserId && setPasswordMutation.mutate({ userId: selectedUserId, password: newPassword })}
+              disabled={!selectedUserId || newPassword.length < 6 || newPassword !== confirmPassword || setPasswordMutation.isPending}
+            >
+              {setPasswordMutation.isPending ? "Vaihdetaan..." : "Vaihda salasana"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
