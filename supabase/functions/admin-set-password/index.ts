@@ -23,9 +23,9 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: claimsData, error: claimsError } = await adminClient.auth.getClaims(token);
-    const callerId = claimsData?.claims?.sub;
-    if (claimsError || !callerId) return json({ error: "Unauthorized" }, 401);
+    const { data: userData, error: userError } = await adminClient.auth.getUser(token);
+    const callerId = userData?.user?.id;
+    if (userError || !callerId) return json({ error: "Unauthorized" }, 401);
 
     const { data: sa } = await adminClient
       .from("superadmins")
