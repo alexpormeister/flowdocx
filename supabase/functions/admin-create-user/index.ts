@@ -30,11 +30,11 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: claimsData, error: claimsError } = await adminClient.auth.getClaims(token);
-    const callerId = claimsData?.claims?.sub;
+    const { data: userData, error: userError } = await adminClient.auth.getUser(token);
+    const callerId = userData?.user?.id;
 
-    if (claimsError || !callerId) {
-      console.error("Claims error:", claimsError?.message);
+    if (userError || !callerId) {
+      console.error("Auth error:", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
