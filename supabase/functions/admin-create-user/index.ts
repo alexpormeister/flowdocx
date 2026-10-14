@@ -79,7 +79,17 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error("createUser failed:", error.status, error.code, error.message);
+      const msg = (error.message || "").toLowerCase();
+      let friendly = error.message;
+      if (msg.includes("already") && msg.includes("registered")) {
+        friendly = "Tällä sähköpostilla on jo käyttäjätunnus / A user with this email already exists";
+      } else if (msg.includes("weak") || msg.includes("pwned") || msg.includes("leaked")) {
+        friendly = "Salasana on liian heikko tai esiintynyt tietovuodoissa — valitse vahvempi salasana / Password is too weak or found in a data breach";
+      } else if (msg.includes("invalid") && msg.includes("email")) {
+        friendly = "Virheellinen sähköpostiosoite / Invalid email address";
+      }
+      return new Response(JSON.stringify({ error: friendly }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
