@@ -55,7 +55,19 @@ export default function AdminCreateUserDialog() {
         body: { email, password, display_name: displayName || undefined },
       });
 
-      if (error) throw error;
+      if (error) {
+        let message = error.message;
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            if (body?.error) message = body.error;
+          }
+        } catch {
+          // keep default message
+        }
+        throw new Error(message);
+      }
       if (data?.error) throw new Error(data.error);
 
       toast.success(`User ${email} created successfully`);
