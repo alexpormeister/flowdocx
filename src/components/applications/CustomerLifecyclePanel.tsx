@@ -475,6 +475,28 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     return orgProjects.filter(p => !linked.has(p.id));
   }, [orgProjects, stageProcesses, linkingStageId]);
 
+  // Group available projects by their folder path for the link picker
+  const groupedProjects = useMemo(() => {
+    const groups = new Map<string, Project[]>();
+    const sorted = [...availableProjects].sort((a, b) => a.name.localeCompare(b.name, "fi"));
+    for (const p of sorted) {
+      const path = (p.folder_id && folderPathMap.get(p.folder_id)) || "Ilman kansiota";
+      const list = groups.get(path) || [];
+      list.push(p);
+      groups.set(path, list);
+    }
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === "Ilman kansiota") return 1;
+      if (b === "Ilman kansiota") return -1;
+      return a.localeCompare(b, "fi");
+    });
+  }, [availableProjects, folderPathMap]);
+
+  const selectedProject = useMemo(
+    () => orgProjects.find(p => p.id === selectedProjectId) || null,
+    [orgProjects, selectedProjectId]
+  );
+
   // Canvas mouse handlers
   const screenToCanvas = useCallback((clientX: number, clientY: number) => {
     const rect = canvasRef.current?.getBoundingClientRect();
