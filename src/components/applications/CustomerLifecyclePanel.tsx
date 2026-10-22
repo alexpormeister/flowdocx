@@ -141,6 +141,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const [linkingStageId, setLinkingStageId] = useState<string | null>(null);
   const [linkingLifecycleStageId, setLinkingLifecycleStageId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [processPickerOpen, setProcessPickerOpen] = useState(false);
   const [selectedLifecycleToLink, setSelectedLifecycleToLink] = useState("");
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [connectionLabel, setConnectionLabel] = useState("");
@@ -239,10 +240,45 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     enabled: !!user,
   });
 
+  const { data: allFolders = [] } = useQuery({
+    queryKey: ["folders"],
+    queryFn: getFolders,
+    enabled: !!user,
+  });
+
   const orgProjects = useMemo(
     () => projects.filter(p => p.organization_id === orgId),
     [projects, orgId]
   );
+
+  const orgFolders = useMemo(
+    () => allFolders.filter(f => f.organization_id === orgId),
+    [allFolders, orgId]
+  );
+
+  // Build "Parent / Child" style path for each folder
+  const folderPathMap = useMemo(() => {
+    const byId = new Map(orgFolders.map(f => [f.id, f]));
+    const cache = new Map<string, string>();
+    const buildPath = (folder: Folder): string => {
+      const cached = cache.get(folder.id);
+      if (cached) return cached;
+      let path = folder.name;
+      let current = folder;
+      const seen = new Set<string>([folder.id]);
+      while (current.parent_id && byId.has(current.parent_id) && !seen.has(current.parent_id)) {
+        const parent = byId.get(current.parent_id)!;
+        seen.add(parent.id);
+        path = `${parent.name} / ${path}`;
+        current = parent;
+      }
+      cache.set(folder.id, path);
+      return path;
+    };
+    const map = new Map<string, string>();
+    orgFolders.forEach(f => map.set(f.id, buildPath(f)));
+    return map;
+  }, [orgFolders]);
 
   // Mutations
   const addLifecycle = useMutation({
