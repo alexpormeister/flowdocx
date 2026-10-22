@@ -1007,20 +1007,60 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
       </Dialog>
 
       {/* Link Process Dialog */}
-      <Dialog open={!!linkingStageId} onOpenChange={open => !open && setLinkingStageId(null)}>
+      <Dialog open={!!linkingStageId} onOpenChange={open => { if (!open) { setLinkingStageId(null); setProcessPickerOpen(false); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Linkitä prosessi</DialogTitle></DialogHeader>
-          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <SelectTrigger><SelectValue placeholder="Valitse prosessi..." /></SelectTrigger>
-            <SelectContent>
-              {availableProjects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-              {availableProjects.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">Ei saatavilla</div>
-              )}
-            </SelectContent>
-          </Select>
+          <Popover open={processPickerOpen} onOpenChange={setProcessPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={processPickerOpen}
+                className="w-full justify-between font-normal"
+              >
+                <span className="truncate">
+                  {selectedProject ? selectedProject.name : "Valitse prosessi..."}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Hae prosessia..." />
+                <CommandList>
+                  <CommandEmpty>Ei tuloksia</CommandEmpty>
+                  {groupedProjects.map(([path, projs]) => (
+                    <CommandGroup
+                      key={path}
+                      heading={
+                        <span className="flex items-center gap-1.5">
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          {path}
+                        </span>
+                      }
+                    >
+                      {projs.map(p => (
+                        <CommandItem
+                          key={p.id}
+                          value={`${p.name} ${path}`}
+                          onSelect={() => {
+                            setSelectedProjectId(p.id);
+                            setProcessPickerOpen(false);
+                          }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${selectedProjectId === p.id ? "opacity-100" : "opacity-0"}`} />
+                          <span className="truncate">{p.name}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ))}
+                  {availableProjects.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Ei saatavilla olevia prosesseja</div>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkingStageId(null)}>Peruuta</Button>
             <Button onClick={() => { if (linkingStageId && selectedProjectId) linkProcess.mutate({ stageId: linkingStageId, projectId: selectedProjectId }); }} disabled={!selectedProjectId}>Linkitä</Button>
