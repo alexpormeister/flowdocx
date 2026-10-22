@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getProjects, type Project } from "@/lib/api";
+import { getProjects, getFolders, type Project, type Folder } from "@/lib/api";
 import { getPresentationTokens, createPresentationToken, deletePresentationToken } from "@/lib/presentationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -39,6 +52,9 @@ import {
   Copy,
   Heart,
   ExternalLink,
+  Check,
+  ChevronsUpDown,
+  FolderOpen,
 } from "lucide-react";
 
 // Types
