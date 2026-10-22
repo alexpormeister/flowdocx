@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getProjects, type Project } from "@/lib/api";
+import { getProjects, getFolders, type Project, type Folder } from "@/lib/api";
 import { getPresentationTokens, createPresentationToken, deletePresentationToken } from "@/lib/presentationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -39,6 +52,9 @@ import {
   Copy,
   Heart,
   ExternalLink,
+  Check,
+  ChevronsUpDown,
+  FolderOpen,
 } from "lucide-react";
 
 // Types
@@ -125,6 +141,7 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
   const [linkingStageId, setLinkingStageId] = useState<string | null>(null);
   const [linkingLifecycleStageId, setLinkingLifecycleStageId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [processPickerOpen, setProcessPickerOpen] = useState(false);
   const [selectedLifecycleToLink, setSelectedLifecycleToLink] = useState("");
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
   const [connectionLabel, setConnectionLabel] = useState("");
@@ -223,10 +240,45 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     enabled: !!user,
   });
 
+  const { data: allFolders = [] } = useQuery({
+    queryKey: ["folders"],
+    queryFn: getFolders,
+    enabled: !!user,
+  });
+
   const orgProjects = useMemo(
     () => projects.filter(p => p.organization_id === orgId),
     [projects, orgId]
   );
+
+  const orgFolders = useMemo(
+    () => allFolders.filter(f => f.organization_id === orgId),
+    [allFolders, orgId]
+  );
+
+  // Build "Parent / Child" style path for each folder
+  const folderPathMap = useMemo(() => {
+    const byId = new Map(orgFolders.map(f => [f.id, f]));
+    const cache = new Map<string, string>();
+    const buildPath = (folder: Folder): string => {
+      const cached = cache.get(folder.id);
+      if (cached) return cached;
+      let path = folder.name;
+      let current = folder;
+      const seen = new Set<string>([folder.id]);
+      while (current.parent_id && byId.has(current.parent_id) && !seen.has(current.parent_id)) {
+        const parent = byId.get(current.parent_id)!;
+        seen.add(parent.id);
+        path = `${parent.name} / ${path}`;
+        current = parent;
+      }
+      cache.set(folder.id, path);
+      return path;
+    };
+    const map = new Map<string, string>();
+    orgFolders.forEach(f => map.set(f.id, buildPath(f)));
+    return map;
+  }, [orgFolders]);
 
   // Mutations
   const addLifecycle = useMutation({
@@ -422,6 +474,28 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
     const linked = new Set(stageProcesses.filter(sp => sp.stage_id === linkingStageId).map(sp => sp.project_id));
     return orgProjects.filter(p => !linked.has(p.id));
   }, [orgProjects, stageProcesses, linkingStageId]);
+
+  // Group available projects by their folder path for the link picker
+  const groupedProjects = useMemo(() => {
+    const groups = new Map<string, Project[]>();
+    const sorted = [...availableProjects].sort((a, b) => a.name.localeCompare(b.name, "fi"));
+    for (const p of sorted) {
+      const path = (p.folder_id && folderPathMap.get(p.folder_id)) || "Ilman kansiota";
+      const list = groups.get(path) || [];
+      list.push(p);
+      groups.set(path, list);
+    }
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === "Ilman kansiota") return 1;
+      if (b === "Ilman kansiota") return -1;
+      return a.localeCompare(b, "fi");
+    });
+  }, [availableProjects, folderPathMap]);
+
+  const selectedProject = useMemo(
+    () => orgProjects.find(p => p.id === selectedProjectId) || null,
+    [orgProjects, selectedProjectId]
+  );
 
   // Canvas mouse handlers
   const screenToCanvas = useCallback((clientX: number, clientY: number) => {
@@ -933,20 +1007,60 @@ export default function CustomerLifecyclePanel({ orgId }: { orgId: string }) {
       </Dialog>
 
       {/* Link Process Dialog */}
-      <Dialog open={!!linkingStageId} onOpenChange={open => !open && setLinkingStageId(null)}>
+      <Dialog open={!!linkingStageId} onOpenChange={open => { if (!open) { setLinkingStageId(null); setProcessPickerOpen(false); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Linkitä prosessi</DialogTitle></DialogHeader>
-          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <SelectTrigger><SelectValue placeholder="Valitse prosessi..." /></SelectTrigger>
-            <SelectContent>
-              {availableProjects.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-              {availableProjects.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">Ei saatavilla</div>
-              )}
-            </SelectContent>
-          </Select>
+          <Popover open={processPickerOpen} onOpenChange={setProcessPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={processPickerOpen}
+                className="w-full justify-between font-normal"
+              >
+                <span className="truncate">
+                  {selectedProject ? selectedProject.name : "Valitse prosessi..."}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Hae prosessia..." />
+                <CommandList>
+                  <CommandEmpty>Ei tuloksia</CommandEmpty>
+                  {groupedProjects.map(([path, projs]) => (
+                    <CommandGroup
+                      key={path}
+                      heading={
+                        <span className="flex items-center gap-1.5">
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          {path}
+                        </span>
+                      }
+                    >
+                      {projs.map(p => (
+                        <CommandItem
+                          key={p.id}
+                          value={`${p.name} ${path}`}
+                          onSelect={() => {
+                            setSelectedProjectId(p.id);
+                            setProcessPickerOpen(false);
+                          }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${selectedProjectId === p.id ? "opacity-100" : "opacity-0"}`} />
+                          <span className="truncate">{p.name}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ))}
+                  {availableProjects.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Ei saatavilla olevia prosesseja</div>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLinkingStageId(null)}>Peruuta</Button>
             <Button onClick={() => { if (linkingStageId && selectedProjectId) linkProcess.mutate({ stageId: linkingStageId, projectId: selectedProjectId }); }} disabled={!selectedProjectId}>Linkitä</Button>
