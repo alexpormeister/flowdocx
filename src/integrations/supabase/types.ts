@@ -831,6 +831,227 @@ export type Database = {
         }
         Relationships: []
       }
+      pd_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          comment: string
+          has_changes: boolean
+          id: string
+          process_id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          comment?: string
+          has_changes?: boolean
+          id?: string
+          process_id: string
+          user_id?: string
+        }
+        Update: {
+          acknowledged_at?: string
+          comment?: string
+          has_changes?: boolean
+          id?: string
+          process_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pd_acknowledgements_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "pd_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pd_process_steps: {
+        Row: {
+          id: string
+          is_decision: boolean
+          next_step_codes: string[]
+          notes: string
+          output: string
+          performer_role_id: string | null
+          process_id: string
+          sort_order: number
+          step_code: string
+          system_id: string | null
+          task: string
+        }
+        Insert: {
+          id?: string
+          is_decision?: boolean
+          next_step_codes?: string[]
+          notes?: string
+          output?: string
+          performer_role_id?: string | null
+          process_id: string
+          sort_order?: number
+          step_code?: string
+          system_id?: string | null
+          task?: string
+        }
+        Update: {
+          id?: string
+          is_decision?: boolean
+          next_step_codes?: string[]
+          notes?: string
+          output?: string
+          performer_role_id?: string | null
+          process_id?: string
+          sort_order?: number
+          step_code?: string
+          system_id?: string | null
+          task?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pd_process_steps_performer_role_id_fkey"
+            columns: ["performer_role_id"]
+            isOneToOne: false
+            referencedRelation: "pd_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pd_process_steps_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "pd_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pd_process_steps_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "pd_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pd_processes: {
+        Row: {
+          bpmn_model_id: string | null
+          created_at: string
+          description: string
+          folder_id: string
+          id: string
+          name: string
+          organization_id: string
+          owner_user_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          bpmn_model_id?: string | null
+          created_at?: string
+          description?: string
+          folder_id: string
+          id?: string
+          name: string
+          organization_id: string
+          owner_user_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          bpmn_model_id?: string | null
+          created_at?: string
+          description?: string
+          folder_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          owner_user_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pd_processes_bpmn_model_id_fkey"
+            columns: ["bpmn_model_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pd_processes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pd_processes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pd_roles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pd_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pd_systems: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pd_systems_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presentation_tokens: {
         Row: {
           created_at: string
@@ -1228,6 +1449,28 @@ export type Database = {
         }
       }
       org_has_members: { Args: { _org_id: string }; Returns: boolean }
+      save_pd_process: {
+        Args: { _expected_version?: number; _process: Json; _steps: Json }
+        Returns: {
+          bpmn_model_id: string | null
+          created_at: string
+          description: string
+          folder_id: string
+          id: string
+          name: string
+          organization_id: string
+          owner_user_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pd_processes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       org_role: "owner" | "admin" | "editor" | "viewer"
