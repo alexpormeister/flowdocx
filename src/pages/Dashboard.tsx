@@ -908,6 +908,15 @@ export default function Dashboard() {
             <>
               <Button
                 variant="ghost"
+                size="sm"
+                title="PD — Process Development"
+                onClick={() => navigate(`/pd?${new URLSearchParams({ org: selectedOrgId, ...(selectedFolder ? { folder: selectedFolder } : {}) })}`)}
+              >
+                <FileText className="w-4 h-4" />
+                PD
+              </Button>
+              <Button
+                variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 title="Applications"

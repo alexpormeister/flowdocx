@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import PublicPresentation from "./pages/PublicPresentation";
 import PublicLifecycle from "./pages/PublicLifecycle";
 import NotFound from "./pages/NotFound";
+import ProcessDevelopment from "./pages/ProcessDevelopment";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/presentation/:id" element={<Presentation />} />
               <Route path="/documentation/:id" element={<Documentation />} />
               <Route path="/applications" element={<Applications />} />
+              <Route path="/pd" element={<ProcessDevelopment />} />
               <Route path="/admin" element={<SuperAdmin />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/present/:token" element={<PublicPresentation />} />

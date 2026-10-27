@@ -54,6 +54,10 @@
     
     --tag: 175 50% 92%;
     --tag-foreground: 175 60% 28%;
+    --pd-active: 145 45% 92%;
+    --pd-active-foreground: 145 60% 25%;
+    --pd-review: 45 90% 93%;
+    --pd-review-foreground: 35 70% 28%;
   }
 
 }
@@ -106,6 +110,15 @@
 }
 
 /* Custom scrollbar */
+.pd-status-active {
+  background: hsl(var(--pd-active));
+  color: hsl(var(--pd-active-foreground));
+}
+.pd-status-review {
+  background: hsl(var(--pd-review));
+  color: hsl(var(--pd-review-foreground));
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
