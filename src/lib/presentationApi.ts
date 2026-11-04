@@ -9,6 +9,7 @@ export interface PresentationToken {
   expires_at: string | null;
   is_active: boolean;
   created_at: string;
+  folder_ids?: string[] | null;
 }
 
 export async function getPresentationTokens(orgId: string): Promise<PresentationToken[]> {
@@ -24,7 +25,8 @@ export async function getPresentationTokens(orgId: string): Promise<Presentation
 export async function createPresentationToken(
   orgId: string,
   name: string,
-  expiresAt?: string
+  expiresAt?: string,
+  folderIds?: string[]
 ): Promise<PresentationToken> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -36,11 +38,20 @@ export async function createPresentationToken(
       name,
       created_by: user.id,
       expires_at: expiresAt || null,
+      folder_ids: folderIds && folderIds.length ? folderIds : null,
     } as any)
     .select()
     .single();
   if (error) throw error;
   return data as PresentationToken;
+}
+
+export async function updatePresentationTokenFolders(id: string, folderIds: string[]): Promise<void> {
+  const { error } = await supabase
+    .from("presentation_tokens")
+    .update({ folder_ids: folderIds.length ? folderIds : null } as any)
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function deletePresentationToken(id: string): Promise<void> {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Settings, Users, Tags, Building2, Trash2, Crown, Shield, Edit3, Eye, Mail, X, Plus, Network, Download, FolderOpen, Palette, GripVertical, Check, Pencil, UsersRound, Link as LinkIcon, Copy, ToggleLeft, ToggleRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPresentationTokens, createPresentationToken, deletePresentationToken, togglePresentationToken } from "@/lib/presentationApi";
+import { getPresentationTokens, createPresentationToken, deletePresentationToken, togglePresentationToken, updatePresentationTokenFolders } from "@/lib/presentationApi";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { exportStructurePng, exportGroupsPng } from "@/lib/orgExportPng";
 import { Button } from "@/components/ui/button";
@@ -66,9 +66,59 @@ const roleIcons: Record<OrgRole, typeof Crown> = {
 
 // Old text export removed - using PNG export from orgExportPng.ts
 
-function ShareLinksSection({ organizationId }: { organizationId: string }) {
+function FolderScopePicker({ folders, value, onChange }: { folders: Folder[]; value: string[]; onChange: (ids: string[]) => void }) {
+  const [q, setQ] = useState("");
+  const pathOf = (f: Folder): string => {
+    const parts: string[] = [f.name];
+    let cur: any = f;
+    let guard = 0;
+    while (cur?.parent_id && guard++ < 20) {
+      cur = folders.find((x) => x.id === cur.parent_id);
+      if (cur) parts.unshift(cur.name);
+    }
+    return parts.join(" / ");
+  };
+  const items = folders
+    .map((f) => ({ f, path: pathOf(f) }))
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .filter((i) => i.path.toLowerCase().includes(q.trim().toLowerCase()));
+  const toggle = (id: string) => onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  return (
+    <div className="space-y-2">
+      <Input placeholder="Hae kansiota / Search folders..." value={q} onChange={(e) => setQ(e.target.value)} className="h-8 text-sm" />
+      <div className="max-h-56 overflow-y-auto border rounded-md divide-y">
+        {items.length === 0 ? (
+          <div className="p-3 text-xs text-muted-foreground">Ei kansioita / No folders</div>
+        ) : items.map(({ f, path }) => (
+          <label key={f.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-accent/50">
+            <Checkbox checked={value.includes(f.id)} onCheckedChange={() => toggle(f.id)} />
+            <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate">{path}</span>
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{value.length === 0 ? "Kaikki kansiot näkyvät / All folders visible" : `${value.length} valittu / selected (alikansiot mukana / incl. subfolders)`}</span>
+        {value.length > 0 && <button className="underline" onClick={() => onChange([])}>Tyhjennä / Clear</button>}
+      </div>
+    </div>
+  );
+}
+
+function ShareLinksSection({ organizationId, folders }: { organizationId: string; folders: Folder[] }) {
   const queryClient = useQueryClient();
   const [newLinkName, setNewLinkName] = useState("");
+  const [newFolderIds, setNewFolderIds] = useState<string[]>([]);
+  const [editing, setEditing] = useState<{ id: string; ids: string[] } | null>(null);
+  const folderName = (id: string) => folders.find((f) => f.id === id)?.name;
+
+  const scopeMutation = useMutation({
+    mutationFn: ({ id, ids }: { id: string; ids: string[] }) => updatePresentationTokenFolders(id, ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] });
+      setEditing(null);
+    },
+  });
 
   const { data: tokens = [], isLoading } = useQuery({
     queryKey: ["presentation-tokens", organizationId],
@@ -76,10 +126,11 @@ function ShareLinksSection({ organizationId }: { organizationId: string }) {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createPresentationToken(organizationId, newLinkName.trim() || "Share Link"),
+    mutationFn: () => createPresentationToken(organizationId, newLinkName.trim() || "Share Link", undefined, newFolderIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["presentation-tokens", organizationId] });
       setNewLinkName("");
+      setNewFolderIds([]);
     },
   });
 
@@ -124,6 +175,10 @@ function ShareLinksSection({ organizationId }: { organizationId: string }) {
           Create Link
         </Button>
       </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Linkissä näkyvät kansiot / Folders shown in link</Label>
+        <FolderScopePicker folders={folders} value={newFolderIds} onChange={setNewFolderIds} />
+      </div>
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Loading...</div>
@@ -143,7 +198,18 @@ function ShareLinksSection({ organizationId }: { organizationId: string }) {
                   )}
                 </div>
                 <p className="text-[10px] text-muted-foreground truncate mt-0.5">{getShareUrl(t.token)}</p>
+                <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                  <FolderOpen className="w-3 h-3 inline mr-1" />
+                  {t.folder_ids?.length ? t.folder_ids.map(folderName).filter(Boolean).join(", ") : "Kaikki kansiot / All folders"}
+                </p>
               </div>
+              <button
+                onClick={() => setEditing({ id: t.id, ids: t.folder_ids || [] })}
+                className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0"
+                title="Muokkaa kansioita / Edit folders"
+              >
+                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
               <button
                 onClick={() => copyLink(t.token)}
                 className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0"
@@ -173,6 +239,21 @@ function ShareLinksSection({ organizationId }: { organizationId: string }) {
           ))}
         </div>
       )}
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Linkin kansiot / Link folders</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <FolderScopePicker folders={folders} value={editing.ids} onChange={(ids) => setEditing({ ...editing, ids })} />
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Peruuta / Cancel</Button>
+            <Button size="sm" disabled={scopeMutation.isPending} onClick={() => editing && scopeMutation.mutate(editing)}>Tallenna / Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1021,7 +1102,7 @@ export function OrganizationSettings({
           {/* Share Links Tab */}
           {isAdmin && (
             <TabsContent value="share-links" className="space-y-4">
-              <ShareLinksSection organizationId={organization.id} />
+              <ShareLinksSection organizationId={organization.id} folders={folders} />
             </TabsContent>
           )}
 
