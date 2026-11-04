@@ -15,6 +15,13 @@
       "when": 1793088912932,
       "tag": "0001_pd_handbook_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793785310798,
+      "tag": "0002_migration",
+      "breakpoints": true
     }
   ]
 }

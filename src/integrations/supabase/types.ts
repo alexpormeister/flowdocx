@@ -1057,6 +1057,7 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string | null
+          folder_ids: string[] | null
           id: string
           is_active: boolean
           name: string
@@ -1067,6 +1068,7 @@ export type Database = {
           created_at?: string
           created_by: string
           expires_at?: string | null
+          folder_ids?: string[] | null
           id?: string
           is_active?: boolean
           name?: string
@@ -1077,6 +1079,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           expires_at?: string | null
+          folder_ids?: string[] | null
           id?: string
           is_active?: boolean
           name?: string
@@ -1435,6 +1438,7 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string | null
+          folder_ids: string[] | null
           id: string
           is_active: boolean
           name: string
