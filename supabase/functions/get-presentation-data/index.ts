@@ -105,8 +105,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       token: tokenData,
       organization: org,
-      projects: projects || [],
-      folders: folders || [],
+      projects: visibleProjects,
+      folders: visibleFolders,
       elementLinks,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
