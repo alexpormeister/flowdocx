@@ -70,8 +70,29 @@ Deno.serve(async (req) => {
       .eq('organization_id', orgId)
       .order('name');
 
+    let visibleProjects: any[] = projects || [];
+    let visibleFolders: any[] = folders || [];
+    const scope: string[] | null = Array.isArray(tokenData.folder_ids) && tokenData.folder_ids.length > 0
+      ? tokenData.folder_ids : null;
+    if (scope) {
+      const allowed = new Set<string>(scope);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const f of visibleFolders) {
+          if (f.parent_id && allowed.has(f.parent_id) && !allowed.has(f.id)) {
+            allowed.add(f.id); changed = true;
+          }
+        }
+      }
+      visibleFolders = visibleFolders
+        .filter((f: any) => allowed.has(f.id))
+        .map((f: any) => ({ ...f, parent_id: f.parent_id && allowed.has(f.parent_id) ? f.parent_id : null }));
+      visibleProjects = visibleProjects.filter((p: any) => p.folder_id && allowed.has(p.folder_id));
+    }
+
     // Get element links for all projects
-    const projectIds = (projects || []).map((p: any) => p.id);
+    const projectIds = visibleProjects.map((p: any) => p.id);
     let elementLinks: any[] = [];
     if (projectIds.length > 0) {
       const { data } = await supabase
